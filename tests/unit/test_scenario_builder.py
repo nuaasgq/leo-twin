@@ -8,6 +8,7 @@ from leo_twin.services.scenario_builder import (
     FullSystemScenarioBuilderConfig,
     build_full_system_scenario,
     load_full_system_scenario_builder_config,
+    scenario_builder_backend_summary,
     scenario_builder_config_from_sees_config,
     scenario_builder_config_from_mapping,
     scenario_builder_config_to_mapping,
@@ -316,6 +317,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.compute_memory_gb == 32.0
     assert generated.compute_storage_gb == 512.0
     assert generated.flow_count == 10
+    assert generated.flow_interval_seconds == 30
+    assert generated.task_interval_seconds == 60
+    assert generated.runtime_duration_seconds == 300
     assert generated.compute_scheduling_policy == "EARLIEST_DEADLINE_FIRST"
     assert generated.orbit_plane_count == 4
     assert generated.orbit_propagation_model == "KEPLERIAN"
@@ -350,6 +354,39 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.space_link_mode == "BOUNDED_CANDIDATE"
     assert generated.max_space_link_candidates_per_satellite == 6
     assert generated.batch_space_link_update_limit == 500
+
+
+def test_scenario_builder_backend_summary_reports_effective_schedule_semantics() -> None:
+    config = FullSystemScenarioBuilderConfig(
+        traffic_class="COMPUTE_SERVICE",
+        traffic_destination_type="COMPUTE_NODE",
+        flow_count=4,
+        flow_interval_seconds=10,
+        task_interval_seconds=30,
+        runtime_duration_seconds=120,
+    )
+
+    summary = scenario_builder_backend_summary(config)
+    schedule = summary["traffic_schedule_semantics_v1"]
+    traffic = summary["traffic_demand_summary"]
+
+    assert schedule["effective_arrival_interval_seconds"] == 30.0
+    assert schedule["effective_arrival_interval_source"] == (
+        "scenario.traffic_model.task_interval_seconds"
+    )
+    assert schedule["flow_arrival_schedule_source"] == (
+        "scenario.traffic_model.task_interval_seconds"
+    )
+    assert schedule["task_arrival_schedule_source"] == (
+        "scenario.traffic_model.task_interval_seconds"
+    )
+    assert schedule["schedule_policy"] == "CORRELATED_INPUT_FLOW_AND_TASK_INTERVAL"
+    assert schedule["configured_flow_interval_seconds"] == 10.0
+    assert schedule["configured_task_interval_seconds"] == 30.0
+    assert traffic["arrival_interval_seconds"] == 30.0
+    assert traffic["effective_arrival_interval_source"] == (
+        "scenario.traffic_model.task_interval_seconds"
+    )
 
 
 def test_default_generated_scenario_config_file_loads() -> None:

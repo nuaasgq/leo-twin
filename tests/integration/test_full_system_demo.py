@@ -250,6 +250,58 @@ def test_non_compute_traffic_mix_runs_without_compute_tasks() -> None:
     assert len(result.network_stack_traces) == 4
 
 
+def test_compute_service_summary_reports_actual_task_interval_schedule() -> None:
+    result = run_integration_demo(
+        replace(
+            load_demo_config(),
+            satellite_count=6,
+            ground_user_count=12,
+            ground_station_count=2,
+            compute_node_count=2,
+            duration_seconds=90,
+            flow_interval_seconds=10,
+            task_interval_seconds=30,
+            traffic_class="COMPUTE_SERVICE",
+            traffic_destination_type="COMPUTE_NODE",
+        )
+    )
+    flow_arrivals = tuple(
+        event
+        for event in result.scenario.initial_events
+        if event.event_type == EventType.FLOW_ARRIVAL.value
+    )
+    task_arrivals = tuple(
+        event
+        for event in result.scenario.initial_events
+        if event.event_type == EventType.TASK_ARRIVAL.value
+    )
+    backend_summary = result.scenario.frontend_config["backend_summary"]
+    traffic_summary = backend_summary["traffic_demand_summary"]
+    schedule = backend_summary["traffic_schedule_semantics_v1"]
+
+    assert len(flow_arrivals) == 6
+    assert len(task_arrivals) == 6
+    assert sorted({int(event.sim_time) for event in flow_arrivals}) == [0, 30, 60]
+    assert sorted({int(event.sim_time) for event in task_arrivals}) == [0, 30, 60]
+    assert traffic_summary["arrival_interval_seconds"] == 30.0
+    assert traffic_summary["effective_arrival_interval_source"] == (
+        "scenario.traffic_model.task_interval_seconds"
+    )
+    assert schedule["configured_flow_interval_seconds"] == 10.0
+    assert schedule["configured_task_interval_seconds"] == 30.0
+    assert schedule["effective_arrival_interval_seconds"] == 30.0
+    assert schedule["flow_arrival_schedule_source"] == (
+        "scenario.traffic_model.task_interval_seconds"
+    )
+    assert schedule["schedule_policy"] == "CORRELATED_INPUT_FLOW_AND_TASK_INTERVAL"
+    assert (
+        backend_summary["traffic_demand_explanation_v1"][
+            "traffic_schedule_semantics_v1"
+        ]
+        == schedule
+    )
+
+
 def test_scale_test_basic() -> None:
     result = _demo_result()
     summary = result.metrics_summary

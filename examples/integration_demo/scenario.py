@@ -293,7 +293,11 @@ def _backend_summary(
         compute_npu_tops_int8=config.compute_npu_tops_int8,
         compute_memory_gb=config.compute_memory_gb,
         compute_storage_gb=config.compute_storage_gb,
-        arrival_interval_seconds=config.flow_interval_seconds,
+        arrival_interval_seconds=_effective_traffic_arrival_interval_seconds(config),
+        flow_interval_seconds=config.flow_interval_seconds,
+        task_interval_seconds=config.task_interval_seconds,
+        arrival_interval_source=_effective_traffic_arrival_interval_source(config),
+        traffic_schedule_policy=_traffic_schedule_policy(config),
         orbit_altitude_m=config.orbit_altitude_m,
         orbit_inclination_deg=config.orbit_inclination_deg,
         phase_policy="SLOT_INDEX_PHASE_WITH_PLANE_OFFSET",
@@ -356,6 +360,31 @@ def _legacy_traffic_interval_seconds(
     if traffic_class == TrafficClass.COMPUTE_SERVICE:
         return config.task_interval_seconds
     return config.flow_interval_seconds
+
+
+def _effective_traffic_arrival_interval_seconds(config: DemoConfig) -> float:
+    if _traffic_service_mix_weights(config) is not None:
+        return _service_mix_arrival_interval_s(config)
+    traffic_class = TrafficClass(str(config.traffic_class))
+    return float(_legacy_traffic_interval_seconds(config, traffic_class))
+
+
+def _effective_traffic_arrival_interval_source(config: DemoConfig) -> str:
+    if _traffic_service_mix_weights(config) is not None:
+        return "derived_service_mix_request_spacing"
+    traffic_class = TrafficClass(str(config.traffic_class))
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return "scenario.traffic_model.task_interval_seconds"
+    return "scenario.traffic_model.flow_interval_seconds"
+
+
+def _traffic_schedule_policy(config: DemoConfig) -> str:
+    if _traffic_service_mix_weights(config) is not None:
+        return "WEIGHTED_SERVICE_MIX_EVEN_SPREAD"
+    traffic_class = TrafficClass(str(config.traffic_class))
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return "CORRELATED_INPUT_FLOW_AND_TASK_INTERVAL"
+    return "FLOW_ONLY_INTERVAL"
 
 
 def _network_satellites(config: DemoConfig) -> tuple[SatelliteProfile, ...]:

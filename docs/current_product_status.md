@@ -335,6 +335,10 @@ report artifact in the browser.
   and stops the runtime, reuses `verify_product_acceptance.ps1`, optionally
   exports a runtime package, verifies that required evidence files are listed in
   the package, and restores local runtime config drift files after execution.
+- Backend-generated summaries now include `traffic_schedule_semantics_v1`, so
+  control surfaces, generated configs, and export packages can tell whether
+  flow interval, task interval, or service-mix spacing actually drives the
+  deterministic request schedule.
 - The Cesium control view disables Cesium's default render-loop error overlay
   and routes render errors into the existing local error state, so render errors
   no longer block runtime control buttons.

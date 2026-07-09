@@ -433,6 +433,19 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
         "generated_task_count"
     ] == 0
+    schedule = ack["generated_config"]["backend_summary"][
+        "traffic_schedule_semantics_v1"
+    ]
+    assert schedule["configured_flow_interval_seconds"] == 30.0
+    assert schedule["configured_task_interval_seconds"] == 45.0
+    assert schedule["effective_arrival_interval_source"] == (
+        "scenario.traffic_model.flow_interval_seconds"
+    )
+    assert schedule["flow_arrival_schedule_source"] == (
+        "scenario.traffic_model.flow_interval_seconds"
+    )
+    assert schedule["task_arrival_schedule_source"] == "not_applicable"
+    assert schedule["schedule_policy"] == "FLOW_ONLY_INTERVAL"
     flow_arrivals = tuple(
         event
         for event in control_plane.result.scenario.initial_events

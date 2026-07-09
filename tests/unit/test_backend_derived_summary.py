@@ -125,11 +125,48 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "arrival_interval_seconds": 60.0,
         "system_request_rate_per_minute": 1.0,
         "average_user_request_rate_per_minute": 0.001,
+        "traffic_schedule_semantics_id": "leo_twin.traffic_schedule_semantics.v1",
+        "effective_arrival_interval_source": (
+            "scenario.traffic_model.task_interval_seconds"
+        ),
+        "effective_arrival_interval_seconds": 60.0,
+    }
+    assert first["traffic_schedule_semantics_v1"] == {
+        "summary_id": "leo_twin.traffic_schedule_semantics.v1",
+        "version": "v1",
+        "source": "backend_summary.traffic_demand_summary",
+        "traffic_class": "COMPUTE_SERVICE",
+        "service_mix_mode": "SINGLE_CLASS",
+        "service_mix_enabled": False,
+        "configured_flow_interval_seconds": None,
+        "configured_task_interval_seconds": None,
+        "effective_arrival_interval_seconds": 60.0,
+        "effective_arrival_interval_source": (
+            "scenario.traffic_model.task_interval_seconds"
+        ),
+        "flow_arrival_schedule_source": (
+            "scenario.traffic_model.task_interval_seconds"
+        ),
+        "task_arrival_schedule_source": (
+            "scenario.traffic_model.task_interval_seconds"
+        ),
+        "schedule_policy": "CORRELATED_INPUT_FLOW_AND_TASK_INTERVAL",
+        "generated_request_count": 1200,
+        "correlated_compute_service_pairs": True,
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "model_note": (
+            "Backend reports the deterministic flow-level request schedule used "
+            "to generate traffic demand; no packet-level arrivals are modeled."
+        ),
     }
     traffic_explanation = first["traffic_demand_explanation_v1"]
     assert traffic_explanation["explanation_id"] == (
         "leo_twin.traffic_demand_explanation.v1"
     )
+    assert traffic_explanation["traffic_schedule_semantics_v1"] == first[
+        "traffic_schedule_semantics_v1"
+    ]
     assert traffic_explanation["source"] == "backend_summary.traffic_demand_summary"
     assert traffic_explanation["request_count"] == 1200
     assert traffic_explanation["input_flow_count"] == 1200

@@ -75,6 +75,10 @@ def build_backend_derived_summary(
     compute_memory_gb: float = 32.0,
     compute_storage_gb: float = 512.0,
     arrival_interval_seconds: int | float | None = None,
+    flow_interval_seconds: int | float | None = None,
+    task_interval_seconds: int | float | None = None,
+    arrival_interval_source: str | None = None,
+    traffic_schedule_policy: str | None = None,
     orbit_altitude_m: float | None = None,
     orbit_inclination_deg: float | None = None,
     beam_count: int = 7,
@@ -163,6 +167,25 @@ def build_backend_derived_summary(
         traffic_summary["average_user_request_rate_per_minute"] = (
             system_rate / float(user_count) if user_count > 0 else 0.0
         )
+    traffic_schedule_semantics = _traffic_schedule_semantics_v1(
+        selected_traffic_class=selected_traffic_class,
+        traffic_summary=traffic_summary,
+        flow_count=flow_count,
+        arrival_interval_seconds=arrival_interval_seconds,
+        flow_interval_seconds=flow_interval_seconds,
+        task_interval_seconds=task_interval_seconds,
+        arrival_interval_source=arrival_interval_source,
+        traffic_schedule_policy=traffic_schedule_policy,
+    )
+    traffic_summary["traffic_schedule_semantics_id"] = traffic_schedule_semantics[
+        "summary_id"
+    ]
+    traffic_summary["effective_arrival_interval_source"] = (
+        traffic_schedule_semantics["effective_arrival_interval_source"]
+    )
+    traffic_summary["effective_arrival_interval_seconds"] = (
+        traffic_schedule_semantics["effective_arrival_interval_seconds"]
+    )
     traffic_demand_explanation = _traffic_demand_explanation_v1(
         traffic_summary,
         selected_traffic_class=selected_traffic_class,
@@ -175,6 +198,9 @@ def build_backend_derived_summary(
         task_data_size=task_data_size,
         traffic_output_data_size=traffic_output_data_size,
         arrival_interval_seconds=arrival_interval_seconds,
+    )
+    traffic_demand_explanation["traffic_schedule_semantics_v1"] = (
+        traffic_schedule_semantics
     )
 
     compute_summary = {
@@ -298,6 +324,7 @@ def build_backend_derived_summary(
         "derived_constellation_summary": constellation_summary,
         "traffic_demand_summary": traffic_summary,
         "traffic_demand_explanation_v1": traffic_demand_explanation,
+        "traffic_schedule_semantics_v1": traffic_schedule_semantics,
         "compute_resource_summary": compute_summary,
         "compute_resource_contract_v2": compute_resource_contract,
         "service_placement_contract_v2": service_placement_contract,
@@ -547,6 +574,118 @@ def _traffic_service_mix_summary(
             normalized_weights,
         ),
     }
+
+
+def _traffic_schedule_semantics_v1(
+    *,
+    selected_traffic_class: TrafficClass,
+    traffic_summary: Mapping[str, object],
+    flow_count: int,
+    arrival_interval_seconds: int | float | None,
+    flow_interval_seconds: int | float | None,
+    task_interval_seconds: int | float | None,
+    arrival_interval_source: str | None,
+    traffic_schedule_policy: str | None,
+) -> dict[str, object]:
+    service_mix_mode = str(traffic_summary.get("service_mix_mode", "SINGLE_CLASS"))
+    service_mix_enabled = (
+        service_mix_mode == "WEIGHTED_MIX"
+        or arrival_interval_source == "derived_service_mix_request_spacing"
+        or traffic_schedule_policy == "WEIGHTED_SERVICE_MIX_EVEN_SPREAD"
+    )
+    effective_source = arrival_interval_source or _default_arrival_interval_source(
+        selected_traffic_class,
+        service_mix_enabled=service_mix_enabled,
+    )
+    schedule_policy = traffic_schedule_policy or _default_traffic_schedule_policy(
+        selected_traffic_class,
+        service_mix_enabled=service_mix_enabled,
+    )
+    flow_source, task_source = _traffic_schedule_event_sources(
+        selected_traffic_class,
+        service_mix_enabled=service_mix_enabled,
+        effective_source=effective_source,
+    )
+    return {
+        "summary_id": "leo_twin.traffic_schedule_semantics.v1",
+        "version": "v1",
+        "source": "backend_summary.traffic_demand_summary",
+        "traffic_class": selected_traffic_class.value,
+        "service_mix_mode": service_mix_mode,
+        "service_mix_enabled": service_mix_enabled,
+        "configured_flow_interval_seconds": _optional_float(flow_interval_seconds),
+        "configured_task_interval_seconds": _optional_float(task_interval_seconds),
+        "effective_arrival_interval_seconds": _optional_float(
+            arrival_interval_seconds
+        ),
+        "effective_arrival_interval_source": effective_source,
+        "flow_arrival_schedule_source": flow_source,
+        "task_arrival_schedule_source": task_source,
+        "schedule_policy": schedule_policy,
+        "generated_request_count": max(0, int(flow_count)),
+        "correlated_compute_service_pairs": (
+            selected_traffic_class == TrafficClass.COMPUTE_SERVICE
+        ),
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "model_note": (
+            "Backend reports the deterministic flow-level request schedule used "
+            "to generate traffic demand; no packet-level arrivals are modeled."
+        ),
+    }
+
+
+def _default_arrival_interval_source(
+    selected_traffic_class: TrafficClass,
+    *,
+    service_mix_enabled: bool,
+) -> str:
+    if service_mix_enabled:
+        return "derived_service_mix_request_spacing"
+    if selected_traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return "scenario.traffic_model.task_interval_seconds"
+    return "scenario.traffic_model.flow_interval_seconds"
+
+
+def _default_traffic_schedule_policy(
+    selected_traffic_class: TrafficClass,
+    *,
+    service_mix_enabled: bool,
+) -> str:
+    if service_mix_enabled:
+        return "WEIGHTED_SERVICE_MIX_EVEN_SPREAD"
+    if selected_traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return "CORRELATED_INPUT_FLOW_AND_TASK_INTERVAL"
+    return "FLOW_ONLY_INTERVAL"
+
+
+def _traffic_schedule_event_sources(
+    selected_traffic_class: TrafficClass,
+    *,
+    service_mix_enabled: bool,
+    effective_source: str,
+) -> tuple[str, str]:
+    if service_mix_enabled:
+        return (
+            "derived_service_mix_request_spacing",
+            (
+                "derived_service_mix_request_spacing"
+                if selected_traffic_class == TrafficClass.COMPUTE_SERVICE
+                else "not_applicable"
+            ),
+        )
+    if selected_traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return (effective_source, effective_source)
+    return (effective_source, "not_applicable")
+
+
+def _optional_float(value: int | float | None) -> float | None:
+    if value is None:
+        return None
+    number = float(value)
+    if not isfinite(number):
+        raise ValueError("traffic schedule interval must be finite")
+    return number
 
 
 def _traffic_demand_explanation_v1(

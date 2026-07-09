@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-09 - Runtime Traffic Schedule Semantics v1
+
+- Branch: `feature/T450-runtime-model-semantics-v1`
+- Commit: pending in this commit
+- Scope: align backend traffic-demand explanations with the deterministic
+  schedule actually used by the integration demo and generated scenario
+  summary. Backend summaries now expose `traffic_schedule_semantics_v1`,
+  including configured flow/task intervals, the effective arrival interval,
+  the source field that drives flow arrivals, the source field that drives task
+  arrivals, and the schedule policy. Compute-service legacy scenarios report
+  `scenario.traffic_model.task_interval_seconds` as the effective correlated
+  input-flow/task schedule source, while flow-only traffic reports
+  `scenario.traffic_model.flow_interval_seconds`, and service-mix generation
+  reports derived request spacing. No Event Kernel behavior, packet-level
+  simulation, frontend architecture, or external simulator integration was
+  changed.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/scenario.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_scenario_builder.py`
+  - `tests/integration/test_full_system_demo.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\derived_summary.py src\leo_twin\services\scenario_builder.py examples\integration_demo\scenario.py tests\unit\test_backend_derived_summary.py tests\unit\test_scenario_builder.py tests\integration\test_full_system_demo.py tests\integration\test_config_control.py`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_backend_derived_summary.py tests\unit\test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields tests\unit\test_scenario_builder.py::test_scenario_builder_backend_summary_reports_effective_schedule_semantics -q`
+    - Result: passed, 13 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_full_system_demo.py::test_compute_service_summary_reports_actual_task_interval_schedule tests\integration\test_full_system_demo.py::test_non_compute_traffic_mix_runs_without_compute_tasks tests\integration\test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 3 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_traffic_demand_explanation_v1_is_deterministic tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 2 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package -q`
+    - Result: passed, 1 passed.
+- Problems encountered and handling:
+  - Initial inspection showed explicit `input_data_mb/output_data_mb` traffic
+    summary behavior and running-speed-factor guards were already implemented,
+    so this task avoided duplicating those prior fixes.
+  - A broad run of
+    `$env:PYTHONPATH='src;.'; pytest tests\unit\test_backend_derived_summary.py tests\unit\test_scenario_builder.py -q`
+    failed in `test_default_generated_scenario_config_file_loads` because the
+    local `configs/generated_full_system_demo.json` is currently dirty runtime
+    state with 72 satellites while the checked-in baseline test expects 6. The
+    failing file is a known local/generated config drift and remains outside
+    this commit.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - This task reports and aligns the current deterministic schedule semantics;
+    it does not redesign traffic generation into separate independent flow and
+    task arrival processes. A later traffic model v3 task can introduce that
+    behavior with an explicit lifecycle contract and migration tests.
+
 ## 2026-07-09 - Disposable Export Package Gate v1
 
 - Branch: `feature/T449-disposable-export-package-gate-v1`

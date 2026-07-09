@@ -109,6 +109,9 @@ class FullSystemScenarioBuilderConfig:
     traffic_bulk_downlink_weight: float = 0.0
     traffic_compute_service_weight: float = 0.0
     traffic_emergency_weight: float = 0.0
+    flow_interval_seconds: int = 60
+    task_interval_seconds: int = 60
+    runtime_duration_seconds: int = 600
 
     def __post_init__(self) -> None:
         _require_int(self.seed, "seed")
@@ -117,6 +120,9 @@ class FullSystemScenarioBuilderConfig:
             "user_count",
             "compute_node_count",
             "orbit_plane_count",
+            "flow_interval_seconds",
+            "task_interval_seconds",
+            "runtime_duration_seconds",
         ):
             _require_positive_int(getattr(self, field_name), field_name)
         _require_bool(self.orbit_plane_count_explicit, "orbit_plane_count_explicit")
@@ -428,10 +434,16 @@ def scenario_builder_backend_summary(
         compute_npu_tops_int8=config.compute_npu_tops_int8,
         compute_memory_gb=config.compute_memory_gb,
         compute_storage_gb=config.compute_storage_gb,
+        arrival_interval_seconds=_effective_traffic_arrival_interval_seconds(config),
+        flow_interval_seconds=config.flow_interval_seconds,
+        task_interval_seconds=config.task_interval_seconds,
+        arrival_interval_source=_effective_traffic_arrival_interval_source(config),
+        traffic_schedule_policy=_traffic_schedule_policy(config),
         orbit_altitude_m=(config.semi_major_axis_km - config.earth_radius_km) * 1000.0,
         orbit_inclination_deg=config.inclination_deg,
         phase_policy="SEEDED_RAAN_AND_MEAN_ANOMALY_OFFSETS",
         runtime_seed=config.seed,
+        runtime_duration_seconds=config.runtime_duration_seconds,
     )
     summary["network_temporal_pressure_profile"] = {
         "profile_id": "leo_twin.network_temporal_pressure_profile.v1",
@@ -453,6 +465,56 @@ def scenario_builder_backend_summary(
         ),
     }
     return summary
+
+
+def _effective_traffic_arrival_interval_seconds(
+    config: FullSystemScenarioBuilderConfig,
+) -> float:
+    if _service_mix_configured(config):
+        return _service_mix_arrival_interval_seconds(config)
+    traffic_class = TrafficClass(str(config.traffic_class))
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return float(config.task_interval_seconds)
+    return float(config.flow_interval_seconds)
+
+
+def _effective_traffic_arrival_interval_source(
+    config: FullSystemScenarioBuilderConfig,
+) -> str:
+    if _service_mix_configured(config):
+        return "derived_service_mix_request_spacing"
+    traffic_class = TrafficClass(str(config.traffic_class))
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return "scenario.traffic_model.task_interval_seconds"
+    return "scenario.traffic_model.flow_interval_seconds"
+
+
+def _traffic_schedule_policy(config: FullSystemScenarioBuilderConfig) -> str:
+    if _service_mix_configured(config):
+        return "WEIGHTED_SERVICE_MIX_EVEN_SPREAD"
+    traffic_class = TrafficClass(str(config.traffic_class))
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return "CORRELATED_INPUT_FLOW_AND_TASK_INTERVAL"
+    return "FLOW_ONLY_INTERVAL"
+
+
+def _service_mix_configured(config: FullSystemScenarioBuilderConfig) -> bool:
+    return (
+        config.traffic_data_transfer_weight
+        + config.traffic_telemetry_weight
+        + config.traffic_bulk_downlink_weight
+        + config.traffic_compute_service_weight
+        + config.traffic_emergency_weight
+    ) > 0.0
+
+
+def _service_mix_arrival_interval_seconds(
+    config: FullSystemScenarioBuilderConfig,
+) -> float:
+    if config.flow_count <= 1:
+        return 0.001
+    duration_window_s = max(0.001, float(config.runtime_duration_seconds) - 0.2)
+    return max(0.001, duration_window_s / float(config.flow_count - 1))
 
 
 def scenario_builder_config_from_mapping(
@@ -518,6 +580,9 @@ def scenario_builder_config_from_sees_config(
             config.scenario.traffic_model.compute_service_weight
         ),
         traffic_emergency_weight=config.scenario.traffic_model.emergency_weight,
+        flow_interval_seconds=config.scenario.traffic_model.flow_interval_seconds,
+        task_interval_seconds=config.scenario.traffic_model.task_interval_seconds,
+        runtime_duration_seconds=config.runtime.duration,
         application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
