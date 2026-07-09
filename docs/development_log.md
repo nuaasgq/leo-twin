@@ -21343,3 +21343,39 @@ change.
   - Benchmark acceptance fixtures should be aligned with the newer
     time-pressure configuration fields in a dedicated backend benchmark task.
 
+## 2026-07-09 - T418 benchmark time-pressure source binding v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: fix benchmark acceptance binding so expected-range checks can read
+  nested configuration values from the benchmark matrix `source` path. This
+  closes the standard 72/300/1200 scenario failure where
+  `network.time_pressure_*` guardrails existed in the matrix but were reported
+  as missing by the result-package benchmark binding. No Event Kernel,
+  simulation model, packet-level, external simulator, frontend rendering, or
+  runtime configuration behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - `git diff --check`.
+    - Result: passed; Git reported existing CRLF normalization warnings only.
+  - Direct targeted test runner with `PYTHONPATH=src` for
+    `tests.unit.test_result_package_contract_v1`.
+    - Result: 41 direct test functions passed.
+- Problems encountered:
+  - `pytest` remains unavailable in the bundled Python environment, so the
+    verification used direct function invocation rather than `pytest -q`.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Benchmark expected ranges now bind to configuration sources, but full
+    benchmark acceptance still needs a dedicated script-level gate that runs the
+    shipped 72/300/1200 scenarios end-to-end and archives the resulting package
+    evidence.
+

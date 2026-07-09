@@ -1439,6 +1439,12 @@ Current Phase 3 progress:
   diagnostics, scenario review bundles, artifact browser entries, reproducibility
   boundary metadata, and long-term audit indexes.
 
+- T418 fixes benchmark expected-range source binding for nested configuration
+  fields. Result-package benchmark acceptance now resolves matrix `source`
+  paths such as `network.time_pressure_period_s` from `config_snapshot.config`,
+  so the shipped 72/300/1200 scenarios can prove their deterministic temporal
+  pressure guardrails instead of reporting missing metrics.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

@@ -5122,7 +5122,12 @@ def _runtime_export_benchmark_expected_range_result(
     expected_range: Mapping[str, Any],
 ) -> dict[str, object]:
     metric = str(expected_range.get("metric", ""))
-    observed = _runtime_export_benchmark_metric_value(config_snapshot, metric)
+    source = str(expected_range.get("source", ""))
+    observed = _runtime_export_benchmark_metric_value(
+        config_snapshot,
+        metric,
+        source=source,
+    )
     issue_labels: tuple[str, ...] = ()
     status = "PASS"
     if observed is None:
@@ -5140,7 +5145,7 @@ def _runtime_export_benchmark_expected_range_result(
             issue_labels = ("BENCHMARK_METRIC_OUT_OF_RANGE",)
     result = {
         "metric": metric,
-        "source": str(expected_range.get("source", "")),
+        "source": source,
         "status": status,
         "evidence_artifact_filename": EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
         "evidence_artifact_role": "benchmark_acceptance_audit_index",
@@ -5421,6 +5426,8 @@ def _runtime_export_benchmark_status_result(
 def _runtime_export_benchmark_metric_value(
     config_snapshot: Mapping[str, Any],
     metric: str,
+    *,
+    source: str = "",
 ) -> object | None:
     config = _mapping(config_snapshot.get("config"))
     generated = _mapping(config_snapshot.get("generated_config"))
@@ -5490,7 +5497,31 @@ def _runtime_export_benchmark_metric_value(
         value = _runtime_export_nested_value(roots, path)
         if value is not None:
             return value
+    if source:
+        value = _runtime_export_benchmark_source_value(config_snapshot, source)
+        if value is not None:
+            return value
     return None
+
+
+def _runtime_export_benchmark_source_value(
+    config_snapshot: Mapping[str, Any],
+    source: str,
+) -> object | None:
+    parts = tuple(part for part in str(source).split(".") if part)
+    if not parts:
+        return None
+    roots = {
+        "config": _mapping(config_snapshot.get("config")),
+        "generated": _mapping(config_snapshot.get("generated_config")),
+        "generated_config": _mapping(config_snapshot.get("generated_config")),
+        "status": _mapping(config_snapshot.get("status")),
+    }
+    if parts[0] in roots:
+        path = parts
+    else:
+        path = ("config", *parts)
+    return _runtime_export_nested_value(roots, path)
 
 
 def _runtime_export_nested_value(

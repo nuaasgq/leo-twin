@@ -2927,6 +2927,15 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             result["status"] == "PASS"
             for result in binding["expected_range_results"]
         )
+        expected_range_results = {
+            result["metric"]: result for result in binding["expected_range_results"]
+        }
+        assert expected_range_results["time_pressure_period_s"][
+            "observed_value"
+        ] == config.network.time_pressure_period_s
+        assert expected_range_results["time_pressure_burst_amplitude"][
+            "observed_value"
+        ] == config.network.time_pressure_burst_amplitude
         assert all(result["status"] == "PASS" for result in binding["fidelity_results"])
         assert all(
             result["status"] == "PASS"
