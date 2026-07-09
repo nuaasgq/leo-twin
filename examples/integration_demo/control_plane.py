@@ -34,6 +34,7 @@ from leo_twin.schema import SatelliteState
 from leo_twin.schema.config import SEESConfig, config_to_dict
 from leo_twin.services.configuration_schema import (
     USER_CONFIGURATION_SCHEMA_V2_ID,
+    build_user_configuration_control_surface_evidence_v1,
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
 )
@@ -299,6 +300,9 @@ class DemoControlPlane:
         return {
             "type": "USER_CONFIGURATION_SCHEMA_V2",
             "summary": build_user_configuration_schema_v2(self._controller.config),
+            "control_surface_evidence": build_user_configuration_control_surface_evidence_v1(
+                self._controller.config
+            ),
         }
 
     def user_configuration_templates(self) -> dict[str, Any]:
@@ -2454,6 +2458,9 @@ class DemoControlPlane:
         )
         status["configuration_surface_summary"] = build_user_configuration_view(
             self._controller.config
+        )
+        status["user_configuration_control_surface_evidence_v1"] = (
+            build_user_configuration_control_surface_evidence_v1(self._controller.config)
         )
         metrics_summary = self._metrics_summary_json()
         status["metrics_summary"] = metrics_summary

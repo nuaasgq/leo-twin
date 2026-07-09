@@ -120,6 +120,14 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
     assert template_validation["all_templates_valid"] is True
     assert template_validation["template_count"] == len(first["template_profiles"])
     assert template_validation["evidence_hash"].startswith("sha256:")
+    control_surface_evidence = first["control_surface_evidence"]
+    assert isinstance(control_surface_evidence, dict)
+    assert control_surface_evidence["evidence_id"] == (
+        "sees.user_configuration_control_surface_evidence.v1"
+    )
+    assert control_surface_evidence["coverage_status"] == "COMPLETE"
+    assert control_surface_evidence["key_field_count"] == first["key_field_count"]
+    assert control_surface_evidence["evidence_hash"].startswith("sha256:")
     assert first["detailed_field_count"] > first["key_field_count"]
     assert _field(first, "scenario.satellite_count") == {
         "path": "scenario.satellite_count",
@@ -199,6 +207,11 @@ def test_user_configuration_reference_v1_summarizes_full_file_contract() -> None
     assert template_validation["all_templates_valid"] is True
     assert template_validation["template_count"] == len(first["template_profiles"])
     assert template_validation["evidence_hash"].startswith("sha256:")
+    control_surface_evidence = first["control_surface_evidence"]
+    assert isinstance(control_surface_evidence, dict)
+    assert control_surface_evidence["coverage_status"] == "COMPLETE"
+    assert control_surface_evidence["key_field_count"] == first["key_field_count"]
+    assert control_surface_evidence["evidence_hash"].startswith("sha256:")
     assert first["field_count"] == len(first["fields"])
     assert first["key_field_count"] > 0
     assert first["file_only_field_count"] > 0

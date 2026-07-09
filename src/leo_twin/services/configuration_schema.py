@@ -23,12 +23,17 @@ from leo_twin.schema.full_system import (
     RoutingProtocol,
     TransportProtocol,
 )
+from leo_twin.services.runtime_reproducibility import stable_hash_payload
 
 
 USER_CONFIGURATION_SCHEMA_V2_ID = "sees.user_configuration.v2"
+USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID = (
+    "sees.user_configuration_control_surface_evidence.v1"
+)
 
 UserConfigurationSchema = dict[str, object]
 UserConfigurationValidationReport = dict[str, object]
+UserConfigurationControlSurfaceEvidence = dict[str, object]
 
 
 CONTROL_PANEL_KEY_FIELD_PATHS = (
@@ -406,6 +411,70 @@ def build_user_configuration_schema_v2(
     }
 
 
+def build_user_configuration_control_surface_evidence_v1(
+    config: SEESConfig | None = None,
+) -> UserConfigurationControlSurfaceEvidence:
+    """Return deterministic evidence that key control fields match schema fields."""
+
+    schema = build_user_configuration_schema_v2(config)
+    fields = tuple(field for field in schema["fields"] if isinstance(field, Mapping))
+    fields_by_path = {str(field["path"]): field for field in fields}
+    key_paths = tuple(CONTROL_PANEL_KEY_FIELD_PATHS)
+    duplicate_paths = tuple(
+        path for index, path in enumerate(key_paths) if path in key_paths[:index]
+    )
+    missing_paths = tuple(path for path in key_paths if path not in fields_by_path)
+    wrong_surface_paths = tuple(
+        path
+        for path in key_paths
+        if path in fields_by_path
+        and fields_by_path[path].get("editable_surface") != "CONTROL_PANEL_KEY_FIELD"
+    )
+    flat_payload_keys = tuple(_flat_payload_key(path) for path in key_paths)
+    duplicate_flat_payload_keys = tuple(
+        key
+        for index, key in enumerate(flat_payload_keys)
+        if key in flat_payload_keys[:index]
+    )
+    coverage_status = (
+        "COMPLETE"
+        if not missing_paths and not wrong_surface_paths and not duplicate_paths
+        and not duplicate_flat_payload_keys
+        else "DRIFT_DETECTED"
+    )
+    payload: UserConfigurationControlSurfaceEvidence = {
+        "version": "v1",
+        "evidence_id": USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
+        "source": "BACKEND_USER_CONFIGURATION_SCHEMA",
+        "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+        "frontend_policy": "CONTROL_PANEL_KEY_FIELDS_ONLY",
+        "mutation_policy": "CONFIG_UPDATE_OR_INITIALIZE_CONTROL_PAYLOAD",
+        "unknown_key_policy": str(schema["unknown_key_policy"]),
+        "coverage_status": coverage_status,
+        "key_field_count": len(key_paths),
+        "schema_field_count": int(schema["field_count"]),
+        "covered_key_field_count": len(key_paths) - len(missing_paths),
+        "missing_key_paths": missing_paths,
+        "wrong_surface_paths": wrong_surface_paths,
+        "duplicate_key_paths": duplicate_paths,
+        "duplicate_flat_payload_keys": duplicate_flat_payload_keys,
+        "fields": tuple(
+            _control_surface_field(fields_by_path[path])
+            for path in key_paths
+            if path in fields_by_path
+        ),
+        "model_boundaries": {
+            "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+            "frontend_semantics_source": "BACKEND_USER_CONFIGURATION_SCHEMA",
+        },
+    }
+    payload["evidence_hash"] = stable_hash_payload(payload)
+    return payload
+
+
 def validate_user_configuration_mapping_v2(
     raw: Mapping[str, Any],
 ) -> UserConfigurationValidationReport:
@@ -438,6 +507,29 @@ def validate_user_configuration_mapping_v2(
         errors=(),
         normalized_config=config_to_dict(config),
     )
+
+
+def _control_surface_field(field: Mapping[str, object]) -> dict[str, object]:
+    path = str(field["path"])
+    result: dict[str, object] = {
+        "path": path,
+        "flat_payload_key": _flat_payload_key(path),
+        "section": str(field["section"]),
+        "label": str(field["label"]),
+        "value_type": str(field["value_type"]),
+        "editable_surface": str(field["editable_surface"]),
+        "current_value": field.get("current_value"),
+        "validation_rules": tuple(field.get("validation_rules", ())),
+    }
+    if "unit" in field:
+        result["unit"] = field["unit"]
+    if "enum_values" in field:
+        result["enum_values"] = field["enum_values"]
+    return result
+
+
+def _flat_payload_key(path: str) -> str:
+    return path.rsplit(".", maxsplit=1)[-1]
 
 
 def _validation_report(
@@ -599,9 +691,13 @@ def _flatten_paths(data: Mapping[str, Any]) -> dict[str, object]:
 
 
 __all__ = [
+    "CONTROL_PANEL_KEY_FIELD_PATHS",
+    "USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID",
     "USER_CONFIGURATION_SCHEMA_V2_ID",
+    "UserConfigurationControlSurfaceEvidence",
     "UserConfigurationSchema",
     "UserConfigurationValidationReport",
+    "build_user_configuration_control_surface_evidence_v1",
     "build_user_configuration_schema_v2",
     "validate_user_configuration_mapping_v2",
 ]

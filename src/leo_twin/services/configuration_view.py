@@ -12,6 +12,7 @@ from leo_twin.schema.config_loader import ConfigValidationError, load_config
 from leo_twin.services.configuration_schema import (
     CONTROL_PANEL_KEY_FIELD_PATHS,
     USER_CONFIGURATION_SCHEMA_V2_ID,
+    build_user_configuration_control_surface_evidence_v1,
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
 )
@@ -371,6 +372,9 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
         ),
         "file_only_sections": _file_only_section_summaries(file_only_fields),
         "file_only_fields": file_only_fields,
+        "control_surface_evidence": (
+            build_user_configuration_control_surface_evidence_v1(config)
+        ),
         "user_config_schema_v2": build_user_configuration_schema_v2(config),
         "notes": (
             "The control panel should expose key_fields for common operation.",
@@ -392,6 +396,9 @@ def build_user_configuration_reference(
         raise TypeError("config must be SEESConfig")
     schema = build_user_configuration_schema_v2(config)
     view = build_user_configuration_view(config)
+    control_surface_evidence = build_user_configuration_control_surface_evidence_v1(
+        config
+    )
     fields = tuple(
         field for field in schema["fields"] if isinstance(field, Mapping)
     )
@@ -414,6 +421,7 @@ def build_user_configuration_reference(
         "template_config_file": view["template_config_file"],
         "template_profiles": configuration_template_profiles(),
         "template_validation": build_user_configuration_template_validation_evidence(),
+        "control_surface_evidence": control_surface_evidence,
         "unknown_key_policy": schema["unknown_key_policy"],
         "defaulting_policy": schema["defaulting_policy"],
         "mutation_policy": {

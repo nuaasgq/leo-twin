@@ -691,6 +691,14 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     assert schema["type"] == "USER_CONFIGURATION_SCHEMA_V2"
     assert schema["summary"]["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
     assert schema["summary"]["unknown_key_policy"] == "REJECT"
+    schema_control_evidence = schema["control_surface_evidence"]
+    assert schema_control_evidence["evidence_id"] == (
+        "sees.user_configuration_control_surface_evidence.v1"
+    )
+    assert schema_control_evidence["coverage_status"] == "COMPLETE"
+    assert schema_control_evidence["missing_key_paths"] == ()
+    assert schema_control_evidence["wrong_surface_paths"] == ()
+    assert schema_control_evidence["evidence_hash"].startswith("sha256:")
     schema_fields = {
         field["path"]: field
         for field in schema["summary"]["fields"]
@@ -768,6 +776,7 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
         "FULL_USER_CONFIGURATION_FILE_AND_FRONTEND_SURFACE"
     )
     assert reference_summary["template_validation"] == validation_summary
+    assert reference_summary["control_surface_evidence"] == schema_control_evidence
     assert reference_summary["detailed_config_file"] == str(
         tmp_path / "sees_control.yaml"
     )
@@ -816,7 +825,14 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     json.dumps(template_validation, sort_keys=True)
     json.dumps(reference, sort_keys=True)
     json.dumps(exported, sort_keys=True)
-    assert control_plane.runtime_status()["status"]["initialized"] is True
+    runtime_status = control_plane.runtime_status()["status"]
+    assert runtime_status["initialized"] is True
+    assert runtime_status["user_configuration_control_surface_evidence_v1"] == (
+        schema_control_evidence
+    )
+    assert runtime_status["configuration_surface_summary"][
+        "control_surface_evidence"
+    ] == schema_control_evidence
 
 
 def test_control_plane_validates_user_configuration_without_applying(tmp_path) -> None:

@@ -1426,6 +1426,12 @@ Current Phase 3 progress:
   file-only, keeping frontend initialization, backend validation, and user
   configuration reference semantics aligned.
 
+- T416 adds `sees.user_configuration_control_surface_evidence.v1` as a
+  backend-generated drift guard for configuration control fields. Runtime
+  status, the schema endpoint, and the configuration reference now expose a
+  deterministic coverage hash, missing/wrong-surface path lists, duplicate flat
+  payload-key checks, and per-field payload-key mappings.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

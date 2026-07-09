@@ -6,7 +6,10 @@ from typing import Any
 
 from leo_twin.schema.config import RuntimeConfig, SEESConfig, ScenarioConfig, config_to_dict
 from leo_twin.services.configuration_schema import (
+    CONTROL_PANEL_KEY_FIELD_PATHS,
+    USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
     USER_CONFIGURATION_SCHEMA_V2_ID,
+    build_user_configuration_control_surface_evidence_v1,
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
 )
@@ -97,6 +100,53 @@ def test_user_configuration_schema_v2_covers_full_effective_config() -> None:
         "Non-zero loss, jitter, and route-pressure proxies."
     )
     assert templates["large_scale_1200sat"]["scale"] == "1200 satellites"
+
+
+def test_user_configuration_control_surface_evidence_v1_covers_key_fields() -> None:
+    config = SEESConfig(
+        scenario=ScenarioConfig(
+            satellite_count=120,
+            compute_nodes=120,
+            compute_cpu_gflops_fp64=6.0,
+            compute_gpu_tflops_fp32=2.5,
+            compute_gpu_tflops_fp16=5.0,
+            compute_npu_tops_int8=12.0,
+            compute_memory_gb=32.0,
+            compute_storage_gb=512.0,
+        ),
+        runtime=RuntimeConfig(mode="ACCELERATED", speed_factor=10.0),
+    )
+
+    evidence = build_user_configuration_control_surface_evidence_v1(config)
+    fields = {field["path"]: field for field in evidence["fields"]}
+
+    assert evidence["version"] == "v1"
+    assert evidence["evidence_id"] == USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID
+    assert evidence["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert evidence["source"] == "BACKEND_USER_CONFIGURATION_SCHEMA"
+    assert evidence["coverage_status"] == "COMPLETE"
+    assert evidence["key_field_count"] == len(CONTROL_PANEL_KEY_FIELD_PATHS)
+    assert evidence["covered_key_field_count"] == evidence["key_field_count"]
+    assert evidence["missing_key_paths"] == ()
+    assert evidence["wrong_surface_paths"] == ()
+    assert evidence["duplicate_key_paths"] == ()
+    assert evidence["duplicate_flat_payload_keys"] == ()
+    assert str(evidence["evidence_hash"]).startswith("sha256:")
+    assert set(fields) == set(CONTROL_PANEL_KEY_FIELD_PATHS)
+    for path in (
+        "scenario.compute_cpu_gflops_fp64",
+        "scenario.compute_gpu_tflops_fp32",
+        "scenario.compute_gpu_tflops_fp16",
+        "scenario.compute_npu_tops_int8",
+        "scenario.compute_memory_gb",
+        "scenario.compute_storage_gb",
+    ):
+        assert fields[path]["editable_surface"] == "CONTROL_PANEL_KEY_FIELD"
+        assert fields[path]["flat_payload_key"] == path.rsplit(".", maxsplit=1)[-1]
+    assert fields["scenario.compute_gpu_tflops_fp32"]["current_value"] == 2.5
+    assert json.loads(json.dumps(evidence, sort_keys=True))["evidence_id"] == (
+        USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID
+    )
 
 
 def test_user_configuration_schema_v2_validation_accepts_minimal_user_config() -> None:

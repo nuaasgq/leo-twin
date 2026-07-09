@@ -21251,3 +21251,47 @@ change.
     schema-driven UI grouping so the compact panel and detailed file remain
     understandable at product scale.
 
+## 2026-07-08 - T416 user configuration control surface evidence v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-generated control surface evidence for the user
+  configuration contract. The new
+  `sees.user_configuration_control_surface_evidence.v1` payload verifies that
+  every ordered control-panel key field exists in schema v2, has
+  `CONTROL_PANEL_KEY_FIELD` editable surface, has a deterministic flat control
+  payload key, and has no duplicate path/key drift. The evidence is exposed
+  through the user configuration schema endpoint, configuration view/reference,
+  and runtime status. No Event Kernel, runtime model, frontend rendering,
+  packet-level, or external simulator behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_schema.py`
+  - `src/leo_twin/services/configuration_view.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_user_configuration_schema_v2.py`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - `git diff --check`.
+    - Result: passed; Git reported existing CRLF normalization warnings only.
+  - Direct targeted test runner with local pytest shim for schema, view,
+    control-plane configuration contract, and runtime-status adapter paths.
+    - Result: 21 passed.
+- Problems encountered:
+  - PowerShell `Get-Content` displayed valid UTF-8 Chinese KPI explanation text
+    as mojibake in one inspection. `git show` and Python `py_compile` confirmed
+    the repository content is valid, so no text-only churn was made there.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The evidence proves backend schema/view/control-surface consistency, but it
+    does not parse TypeScript to prove every frontend input is generated from
+    the backend contract.
+  - A later frontend task should consume this evidence directly instead of
+    maintaining hand-written control assumptions.
+
