@@ -30,6 +30,11 @@ def test_start_pause_resume_stop_drive_live_advance_loop(tmp_path: Path) -> None
     control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
     )
+    initialized_status = control_plane.runtime_status()["status"]
+    initialized_closure = initialized_status["runtime_closure_readiness_v1"]
+    assert initialized_closure["closure_status"] == "NOT_STARTED"
+    assert initialized_closure["result_ready"] is False
+    assert initialized_closure["waiting_gate_count"] >= 1
 
     start_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
@@ -498,6 +503,23 @@ def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) ->
     assert status["runtime_completion_reason_label"] == "Runtime duration reached"
     assert status["runtime_completion_source"] == "SimulationSession"
     assert kpi_series["samples"][-1]["sim_time"] == 2.0
+    closure = status["runtime_closure_readiness_v1"]
+    assert closure["summary_id"] == "leo_twin.runtime_closure_readiness.v1"
+    assert closure["source"] == "BACKEND_RUNTIME_STATUS"
+    assert closure["target"] == "INDUSTRIAL_V2_RUNTIME_RESULT_CLOSURE"
+    assert closure["lifecycle_state"] == "COMPLETED"
+    assert closure["runtime_duration_reached"] is True
+    assert closure["closure_status"] in {
+        "COMPLETED_RESULT_READY",
+        "COMPLETED_WITH_RESULT_GAPS",
+    }
+    assert closure["packet_level_simulation"] is False
+    assert closure["frontend_inference_required"] is False
+    assert str(closure["closure_hash"]).startswith("sha256:")
+    gate_status = {gate["gate_id"]: gate["status"] for gate in closure["gates"]}
+    assert gate_status["runtime_terminal"] == "PASS"
+    assert gate_status["kpi_series_evidence"] == "PASS"
+    assert gate_status["compute_resource_vector"] == "PASS"
 
 
 def test_demo_background_loop_auto_completes_runtime_status(tmp_path: Path) -> None:

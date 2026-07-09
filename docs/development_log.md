@@ -22354,3 +22354,48 @@ change.
   - This task changes flow-level request scheduling only. It does not add
     packet-level queues, RF propagation, high-fidelity traffic processes, or
     frontend chart bindings.
+
+## 2026-07-09 - T438 runtime closure readiness v1
+
+- Branch: `feature/T438-runtime-closure-readiness-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `runtime_closure_readiness_v1` to `/runtime/status` so the product can distinguish an executable/configured runtime surface from a completed result loop. The new summary checks terminal runtime state, KPI time-series evidence, arrived traffic requests, terminal network-flow evidence, communication-compute service closure, and compute resource-vector presence. This reads existing runtime status only. No Event Kernel behavior, model formulas, packet-level simulation, frontend rendering, external simulator integration, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_closure_readiness.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_runtime_closure_readiness.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/runtime_closure_readiness_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_closure_readiness.py examples\integration_demo\control_plane.py tests\unit\test_runtime_closure_readiness.py tests\integration\test_live_runtime_streaming.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_runtime_closure_readiness.py`
+    - Result: 4 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py::test_start_pause_resume_stop_drive_live_advance_loop tests\integration\test_live_runtime_streaming.py::test_demo_runtime_status_completes_at_configured_duration`
+    - Result: 2 passed.
+  - `python -m pytest tests\unit\test_runtime_closure_readiness.py tests\unit\test_executable_readiness_v1.py tests\unit\test_result_package_contract_v1.py::test_runtime_export_v2_executable_readiness_v1_is_deterministic`
+    - Result: 9 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py`
+    - Result: 14 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py`
+    - Result: 24 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py`
+    - Result: 1 passed.
+- Problems encountered:
+  - A local probe initially tried to start a control plane without an explicit `INITIALIZE`, so the session stayed at `INITIALIZED` and did not advance. Existing integration tests confirmed the correct control path is `INITIALIZE` then `START`.
+  - Read-only explorer `Darwin` confirmed duration auto-completion already exists in `SimulationSession`, `SessionAdvanceLoop`, and `DemoControlPlane`, so T438 avoided reworking runtime completion and focused on result-closure evidence.
+  - Read-only explorer `Leibniz` confirmed `/runtime/status` KPI samples can advance with runtime observation time, while some frontend/snapshot surfaces may remain visually static. That is recorded as a follow-on candidate rather than mixed into this backend task.
+  - An initial result-package pytest target used a stale test name and returned
+    "no tests ran". The current file contains one integration test,
+    `test_runtime_export_package_satisfies_result_package_contract_v1`, so the
+    final validation ran the full `tests\integration\test_result_package_export_v1.py`
+    file instead.
+  - Local probe output directories were created during manual status inspection
+    and then removed before staging.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - `runtime_closure_readiness_v1` currently reports service-lifecycle closure gaps when a run finishes without complete communication-compute traces. This is intentional evidence, not a synthetic fix. A later backend task should improve service lifecycle completion for standard demo scenarios.
+  - The summary is not yet persisted into result packages. A follow-on export task should add `runtime_closure_readiness_v1.json` to the review bundle if this contract is accepted.
+  - Frontend panels may still need to bind this field so users see the difference between `READY_TO_RUN` and `RESULT_READY` without reading raw JSON.

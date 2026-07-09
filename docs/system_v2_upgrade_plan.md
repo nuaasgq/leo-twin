@@ -1517,6 +1517,14 @@ Current Phase 3 progress:
   incapable route-local candidate set to the configured compute pool while
   preserving route-local preference when a capable route candidate exists.
 
+- T438 adds backend-owned `runtime_closure_readiness_v1` to runtime status. It
+  separates "required runtime surfaces exist" from "this run has reached
+  terminal simulation time and produced enough KPI, traffic, network-flow,
+  service, and compute evidence for closed v2 demo review." This prevents
+  initialized or partially observed runs from being interpreted as completed
+  industrial demo results while preserving the existing
+  `v2_executable_readiness_v1` contract.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The
