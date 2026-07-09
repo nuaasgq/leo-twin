@@ -109,7 +109,7 @@ def test_replay_test() -> None:
 def test_network_stack_trace_uses_configured_protocols() -> None:
     result = _demo_result()
 
-    assert len(result.network_stack_traces) == 100
+    assert len(result.network_stack_traces) == 126
     assert {trace.application_protocol for trace in result.network_stack_traces} == {
         "TASK_OFFLOAD_FLOW"
     }
@@ -139,6 +139,13 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
     assert (
         result.metrics_summary["network_quality_effective_delay_variation_proxy_s"]
         > 0.0
+    )
+    assert result.metrics_summary["service_latency_task_count"] == 26
+    assert result.metrics_summary["service_latency_complete_count"] == 26
+    assert result.service_latency_history["service_count"] == 26
+    assert result.service_latency_history["item_count"] == 26
+    assert all(
+        item["complete"] is True for item in result.service_latency_history["items"]
     )
 
     udp_result = run_integration_demo(
@@ -248,14 +255,15 @@ def test_scale_test_basic() -> None:
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 32_154
+    assert len(result.processed_events) == 32_456
     assert summary["event_count"] >= 10_000
-    assert summary["routes_total"] == 100
-    assert summary["routes_available"] == 26
+    assert summary["routes_total"] == 126
+    assert summary["routes_available"] == 52
     assert summary["route_hop_count_avg"] >= 2.0
     assert 500.0 <= summary["satellite_altitude_avg"] <= 600.0
     assert summary["task_duration_avg"] >= 0.0
     assert summary["finished_tasks"] == 26
+    assert summary["service_latency_complete_count"] == 26
     assert summary["deadline_missed_tasks"] == 0
     assert len(result.state_timeline) <= len(result.processed_events) // 1000 + 1
     assert len(result.final_snapshot["links"]) <= 72 * 21

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
-from examples.integration_demo.config import DemoConfig
+from examples.integration_demo.config import DemoConfig, load_demo_config
 from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
@@ -1815,8 +1816,8 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert acceptance_report["handoff_ready"] is True
     assert acceptance_report["completion_status"] == "REVIEW_COMPLETE"
     assert acceptance_report["fail_count"] == 0
-    assert acceptance_report["warn_count"] == 1
-    assert acceptance_report["pass_count"] == acceptance_report["check_count"] - 1
+    assert acceptance_report["warn_count"] == 2
+    assert acceptance_report["pass_count"] == acceptance_report["check_count"] - 2
     assert [check["check_id"] for check in acceptance_report["checks"]] == [
         "required_artifacts",
         "review_completion",
@@ -1829,6 +1830,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "user_configuration",
         "forbidden_integrations",
     ]
+    network_benchmark_gate = next(
+        check
+        for check in acceptance_report["checks"]
+        if check["check_id"] == "network_kpi_benchmark"
+    )
+    assert network_benchmark_gate["status"] == "WARN"
+    assert network_benchmark_gate["issue_labels"] == (
+        "NETWORK_KPI_BENCHMARK_NOT_PASS",
+    )
     benchmark_gate = next(
         check
         for check in acceptance_report["checks"]
@@ -1879,6 +1889,55 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "benchmark_acceptance_binding_v1.json" in {
         str(record["filename"]) for record in latest["files"]
     }
+
+
+def test_runtime_export_package_uses_terminal_demo_result_closure_evidence(
+    tmp_path: Path,
+) -> None:
+    config = replace(
+        load_demo_config(),
+        duration_seconds=30,
+        state_snapshot_interval_events=200,
+        metric_sample_interval=10,
+    )
+    result = run_integration_demo(config)
+    control_plane = DemoControlPlane.from_result(
+        result,
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+
+    package = control_plane.export_runtime_package(tmp_path / "exports")
+    package_dir = Path(str(package["package_dir"]))
+    config_snapshot = json.loads(
+        (package_dir / "config_snapshot.json").read_text(encoding="utf-8")
+    )
+    service_lifecycle_trace = json.loads(
+        (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
+    )
+
+    status = config_snapshot["status"]
+    closure = status["runtime_closure_readiness_v1"]
+    stage_summary = status["service_lifecycle_stage_summary_v1"]
+    final_sim_time = max(event.sim_time for event in result.processed_events)
+
+    assert status["lifecycle_state"] == "COMPLETED"
+    assert status["runtime_completion_source"] == "DemoRunResult"
+    assert status["current_sim_time"] == final_sim_time
+    assert status["processed_event_count"] == len(result.processed_events)
+    assert status["queued_event_count"] == 0
+    assert closure["closure_status"] == "COMPLETED_RESULT_READY"
+    assert closure["result_ready"] is True
+    assert closure["blocking_gate_ids"] == []
+    assert stage_summary["service_count"] > 0
+    assert stage_summary["complete_service_count"] == stage_summary["service_count"]
+    assert stage_summary["incomplete_service_count"] == 0
+    assert service_lifecycle_trace["summary"]["complete_trace_count"] == (
+        stage_summary["complete_service_count"]
+    )
+    assert sum(1 for _ in (package_dir / "events.jsonl").open(encoding="utf-8")) == (
+        len(result.processed_events)
+    )
 
 
 def _base_demo_config() -> DemoConfig:

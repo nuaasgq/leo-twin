@@ -22465,3 +22465,56 @@ change.
 - Known remaining issues:
   - `runtime_closure_readiness_v1` may still report service lifecycle result gaps in standard demo exports. This task makes the evidence reviewable; it does not fix the underlying communication-compute lifecycle completeness.
   - Frontend panels still need a follow-on binding task to prefer `runtime_dashboard_kpi_v1` and display closure-readiness evidence from exported packages or live status where appropriate.
+
+## 2026-07-09 - T441 standard demo service closure v1
+
+- Branch: `feature/T441-standard-demo-service-closure-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: close the standard demo backend evidence loop for result-package export. Precomputed `DemoRunResult` now carries terminal KPI, satellite KPI, service-latency, route-pressure, metrics CSV, and summary JSON evidence. Runtime result-package export uses this terminal run evidence when exporting an uninitialized `from_result(...)` demo instead of rebuilding status from the fresh 0-second live session. Legacy single-class `COMPUTE_SERVICE` demand now carries correlated output-flow metadata and task `flow_id`, and the position-driven network supplies target-side access links for deterministic `*-output` result-return routing. This does not change Event Kernel ordering, packet-level boundaries, frontend rendering, or external simulator policy.
+- Changed files/modules:
+  - `examples/integration_demo/runtime.py`
+  - `examples/integration_demo/scenario.py`
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_full_system_demo.py`
+  - `tests/integration/test_full_domain_pipeline_v1.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples\integration_demo\runtime.py examples\integration_demo\scenario.py examples\integration_demo\control_plane.py`
+    - Result: passed.
+  - `python -m py_compile src\leo_twin\models\network\position_engine.py examples\integration_demo\runtime.py examples\integration_demo\scenario.py examples\integration_demo\control_plane.py`
+    - Result: passed.
+  - `python -m py_compile tests\integration\test_result_package_export_v1.py`
+    - Result: passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py::test_runtime_export_package_uses_terminal_demo_result_closure_evidence -q`
+    - Result: 1 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: 2 passed.
+  - `python -m pytest tests\integration\test_full_system_demo.py -q`
+    - Result: 6 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py -q`
+    - Result: 14 passed.
+  - `python -m pytest tests\integration\test_compute_service_lifecycle.py -q`
+    - Result: 1 passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py -q`
+    - Result: 47 passed.
+  - `python -m pytest tests\integration\test_full_domain_pipeline_v1.py tests\integration\test_benchmark_acceptance_v1.py -q`
+    - Result: 17 passed.
+  - `python -m pytest tests\unit\test_position_driven_network_engine.py tests\unit\test_network_routing_runtime.py tests\unit\test_network_aware_compute.py tests\unit\test_network_flow_lifecycle_summary.py -q`
+    - Result: 54 passed.
+  - `python -m pytest tests\integration\test_product_acceptance_scenarios.py -q`
+    - Result: 5 passed.
+  - `python -m pytest tests\integration\test_generated_full_system_demo.py -q`
+    - Result: 9 passed.
+- Problems encountered:
+  - The first export probe showed `config_snapshot.status` was built from the fresh initialized live session (`INITIALIZED`, 0 seconds, no service evidence) even though `run_integration_demo(...)` had already produced terminal events. Export now uses terminal `DemoRunResult` evidence for that path.
+  - Adding output-flow metadata alone did not produce service traces because the legacy single-class compute task did not set `TaskRequest.flow_id`. The task now carries the input flow id so route-aware compute emits input-network, queue, execution, output-network, and total-latency component metrics.
+  - Output result flows were initially all blocked because the network routed `satellite -> user` output flows using only links touching the source satellite. The routing input now includes target-user access links for `*-output` flows, which keeps the change bounded to result-return routing.
+  - The 8-satellite contract fixture remains a low-coverage export contract scenario and still reports `runtime_closure_readiness_v1` result gaps. A separate 72-satellite, 30-second test now verifies the standard closed-loop path reaches `COMPLETED_RESULT_READY`.
+  - Existing acceptance-report warning counts changed because terminal export status now surfaces `network_kpi_benchmark` WARN evidence in addition to the non-standard benchmark-scenario warning.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - Output result-return routing is still a flow-level deterministic approximation. It does not model packet queues, RF propagation, antenna patterns, retries, or stochastic transport effects.
+  - Small low-coverage scenarios can still complete with service-closure gaps; that is now explicit evidence rather than a hidden export artifact problem.
+  - Frontend surfaces still need a follow-on binding to explain `COMPLETED_RESULT_READY` versus `COMPLETED_WITH_RESULT_GAPS` directly to users.

@@ -359,10 +359,13 @@ class PositionDrivenNetworkEngine(SimulationModule):
         return self._application_runtime.apply(request)
 
     def _routing_links_for_request(self, request: FlowRequest) -> tuple[LinkState, ...]:
+        endpoint_ids = {request.source_id}
+        if request.flow_id.endswith("-output"):
+            endpoint_ids.add(request.target_id)
         access_links = tuple(
             link
             for link in self._active_links.values()
-            if link.target_id == request.source_id or link.source_id == request.source_id
+            if link.target_id in endpoint_ids or link.source_id in endpoint_ids
         )
         return tuple(
             sorted(

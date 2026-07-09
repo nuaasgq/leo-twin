@@ -59,6 +59,13 @@ class DemoRunResult:
     final_snapshot: dict[str, JsonValue]
     state_timeline: tuple[dict[str, JsonValue], ...]
     metrics_summary: dict[str, str | float | int | bool]
+    kpi_time_series: dict[str, object]
+    satellite_kpi_slices: dict[str, object]
+    satellite_kpi_history: dict[str, object]
+    service_latency_history: dict[str, object]
+    route_pressure_evidence: dict[str, object]
+    metrics_csv_text: str
+    metrics_summary_json_text: str
     network_stack_traces: tuple[NetworkStackTrace, ...]
     replay: ReplayResult
 
@@ -194,6 +201,7 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
                 ComputeSchedulingPolicy(str(config.compute_scheduling_policy))
             ),
             state_update_targets=("network",),
+            output_flow_metadata=scenario.traffic_demand.output_flow_metadata,
         ),
         metrics,
         frontend_sink,
@@ -233,6 +241,10 @@ def finalize_integration_demo_run(
     )
     for event in processed_events:
         projector.apply(event)
+    final_sim_time = max(
+        (float(event.sim_time) for event in processed_events),
+        default=0.0,
+    )
 
     replay = replay_events(
         processed_events,
@@ -246,7 +258,17 @@ def finalize_integration_demo_run(
         frontend_events=context.frontend_sink.events(),
         final_snapshot=projector.snapshot(),
         state_timeline=projector.timeline(),
-        metrics_summary=context.metrics.summary(),
+        metrics_summary=context.metrics.summary(sim_time=final_sim_time),
+        kpi_time_series=context.metrics.kpi_time_series(
+            sim_time=final_sim_time,
+            include_initial_baseline=True,
+        ),
+        satellite_kpi_slices=context.metrics.satellite_kpi_slices(),
+        satellite_kpi_history=context.metrics.satellite_kpi_history(),
+        service_latency_history=context.metrics.service_latency_history(),
+        route_pressure_evidence=context.metrics.route_pressure_evidence(),
+        metrics_csv_text=context.metrics.metrics_csv(),
+        metrics_summary_json_text=context.metrics.summary_json(),
         network_stack_traces=context.network.stack_traces(),
         replay=replay,
     )

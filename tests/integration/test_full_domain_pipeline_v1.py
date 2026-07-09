@@ -23,9 +23,13 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
         EventType.ACCESS_START.value,
         EventType.LINK_UPDATE.value,
         EventType.FLOW_ARRIVAL.value,
+        EventType.LINK_UPDATE.value,
         EventType.ROUTE_UPDATE.value,
         EventType.ROUTE_UPDATE.value,
         EventType.ROUTE_UPDATE.value,
+        EventType.FLOW_COMPLETE.value,
+        "NETWORK_FLOW_RELEASE",
+        EventType.LINK_UPDATE.value,
         EventType.TASK_START.value,
         COMPUTE_NODE_UPDATE,
         COMPUTE_NODE_UPDATE,
@@ -37,15 +41,19 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
         EventType.ORBIT_UPDATE.value,
         EventType.ACCESS_START.value,
         EventType.LINK_UPDATE.value,
+        EventType.LINK_UPDATE.value,
         EventType.ROUTE_UPDATE.value,
+        EventType.FLOW_COMPLETE.value,
+        EventType.LINK_UPDATE.value,
         EventType.TASK_START.value,
         COMPUTE_NODE_UPDATE,
         EventType.TASK_FINISH.value,
         COMPUTE_NODE_UPDATE,
     )
-    assert result.metrics_summary["event_count"] == 8
+    assert result.metrics_summary["event_count"] == 11
     assert result.metrics_summary["active_links"] == 1
     assert result.metrics_summary["available_link_capacity"] == pytest.approx(4161.620976)
+    assert result.metrics_summary["completed_flows"] == 1
     assert result.metrics_summary["routes_total"] == 1
     assert result.metrics_summary["routes_available"] == 1
     assert result.metrics_summary["running_tasks"] == 0

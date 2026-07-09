@@ -9,6 +9,7 @@ from leo_twin.models.compute import ComputeNode
 from leo_twin.models.network import GroundEndpoint
 from leo_twin.models.orbit import AutoPlaneAllocator, ConstellationAllocation, OrbitSatelliteConfig
 from leo_twin.models.traffic import (
+    ComputeOutputFlowMetadata,
     TrafficClass,
     TrafficDemandBatch,
     TrafficDemandRecord,
@@ -561,6 +562,19 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                 target_id=target_id,
                 demand_capacity=config.flow_demand_capacity,
             )
+            output_flow = (
+                ComputeOutputFlowMetadata(
+                    flow_id=f"{flow_id}-output",
+                    task_id=flow_id,
+                    input_flow_id=flow_id,
+                    source_id=target_id,
+                    target_id=source_id,
+                    data_size=config.traffic_output_data_size,
+                    priority=input_flow.priority,
+                )
+                if traffic_class == TrafficClass.COMPUTE_SERVICE
+                else None
+            )
             task = (
                 TaskRequest(
                     task_id=flow_id,
@@ -569,6 +583,7 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                     compute_demand=config.task_compute_demand + float(flow_index % 5),
                     data_size=input_data_mb,
                     deadline=deadline,
+                    flow_id=flow_id,
                     input_data_mb=input_data_mb,
                     output_data_mb=config.traffic_output_data_size,
                 )
@@ -584,6 +599,7 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                     output_data_size=config.traffic_output_data_size,
                     input_flow=input_flow,
                     task=task,
+                    output_flow=output_flow,
                     input_data_mb=input_data_mb,
                     output_data_mb=config.traffic_output_data_size,
                 )

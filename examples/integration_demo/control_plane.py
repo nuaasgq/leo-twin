@@ -296,6 +296,7 @@ class DemoControlPlane:
     _export_history: list[dict[str, Any]] = field(default_factory=list)
     _export_history_limit: int = 8
     _export_sequence: int = 0
+    _use_result_evidence_for_status: bool = False
 
     @classmethod
     def from_result(
@@ -823,16 +824,31 @@ class DemoControlPlane:
         if self._runtime_context is None:
             raise RuntimeError("runtime metrics are unavailable for export")
         generated_config = self._generated_config_json()
-        status = self._status_json(generated_config)
-        package_id = _runtime_export_package_id(
-            self._require_session().session_id,
-            status,
+        use_result_evidence = (
+            not self._initialized and len(self._result.processed_events) > 0
         )
+        self._use_result_evidence_for_status = use_result_evidence
+        try:
+            status = self._status_json(generated_config)
+            package_id = _runtime_export_package_id(
+                self._require_session().session_id,
+                status,
+            )
+        finally:
+            self._use_result_evidence_for_status = False
         package_dir = Path(output_root) / package_id
         package_dir.mkdir(parents=True, exist_ok=True)
 
-        written_files = dict(self._runtime_context.metrics.write_outputs(package_dir))
-        export_status = self._runtime_export_status_json(status)
+        written_files = (
+            _write_demo_result_outputs(package_dir, self._result)
+            if use_result_evidence
+            else dict(self._runtime_context.metrics.write_outputs(package_dir))
+        )
+        self._use_result_evidence_for_status = use_result_evidence
+        try:
+            export_status = self._runtime_export_status_json(status)
+        finally:
+            self._use_result_evidence_for_status = False
         user_configuration_template_validation = (
             build_user_configuration_template_validation_evidence()
         )
@@ -2334,6 +2350,8 @@ class DemoControlPlane:
         return response
 
     def visible_snapshot(self) -> dict[str, JsonValue]:
+        if self._use_result_evidence_for_status:
+            return self._result.final_snapshot
         session = self._require_session()
         if self._initialized and session.lifecycle_state in {
             RuntimeLifecycleState.INITIALIZED,
@@ -2615,7 +2633,15 @@ class DemoControlPlane:
         self,
         generated_config: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        runtime_status = self._require_session().get_status().to_dict()
+        runtime_status = (
+            _runtime_status_from_result(
+                self._result,
+                session_id=self._require_session().session_id,
+                config_version=self._controller.snapshot().config_version,
+            )
+            if self._use_result_evidence_for_status
+            else self._require_session().get_status().to_dict()
+        )
         status = dict(runtime_status)
         status.update(self._controller.snapshot().to_json())
         status["lifecycle_state"] = runtime_status["lifecycle_state"]
@@ -2631,6 +2657,8 @@ class DemoControlPlane:
                 self._require_session().runtime_config.duration,
             )
         )
+        if self._use_result_evidence_for_status:
+            status["runtime_completion_source"] = "DemoRunResult"
         if runtime_status["lifecycle_state"] in {"COMPLETED", "ERROR"}:
             status["status"] = runtime_status["status"]
         status["initialized"] = self._initialized
@@ -2871,6 +2899,8 @@ class DemoControlPlane:
         }
 
     def _metrics_summary_json(self) -> dict[str, Any]:
+        if self._use_result_evidence_for_status:
+            return dict(self._result.metrics_summary)
         if self._runtime_context is not None:
             return dict(
                 self._runtime_context.metrics.summary(
@@ -2880,6 +2910,8 @@ class DemoControlPlane:
         return dict(self._result.metrics_summary)
 
     def _kpi_time_series_json(self) -> dict[str, Any]:
+        if self._use_result_evidence_for_status:
+            return dict(self._result.kpi_time_series)
         if self._runtime_context is None:
             return {
                 "version": "v1",
@@ -2897,6 +2929,8 @@ class DemoControlPlane:
         )
 
     def _runtime_observation_sim_time(self) -> float:
+        if self._use_result_evidence_for_status:
+            return _result_final_sim_time(self._result)
         runtime_status = self._require_session().get_status()
         return (
             runtime_status.runtime_target_sim_time
@@ -2905,6 +2939,8 @@ class DemoControlPlane:
         )
 
     def _satellite_kpi_slices_json(self) -> dict[str, Any]:
+        if self._use_result_evidence_for_status:
+            return dict(self._result.satellite_kpi_slices)
         if self._runtime_context is None:
             return {
                 "version": "v1",
@@ -2917,6 +2953,8 @@ class DemoControlPlane:
         return dict(self._runtime_context.metrics.satellite_kpi_slices())
 
     def _satellite_kpi_history_json(self) -> dict[str, Any]:
+        if self._use_result_evidence_for_status:
+            return dict(self._result.satellite_kpi_history)
         if self._runtime_context is None:
             return {
                 "version": "v1",
@@ -2930,6 +2968,8 @@ class DemoControlPlane:
         return dict(self._runtime_context.metrics.satellite_kpi_history())
 
     def _service_latency_history_json(self) -> dict[str, Any]:
+        if self._use_result_evidence_for_status:
+            return dict(self._result.service_latency_history)
         if self._runtime_context is None:
             return {
                 "version": "v1",
@@ -2942,6 +2982,8 @@ class DemoControlPlane:
         return dict(self._runtime_context.metrics.service_latency_history())
 
     def _route_pressure_evidence_json(self) -> dict[str, Any]:
+        if self._use_result_evidence_for_status:
+            return dict(self._result.route_pressure_evidence)
         if self._runtime_context is None:
             return {
                 "version": "v1",
@@ -4024,6 +4066,66 @@ def _runtime_export_file_record(name: str, path: Path) -> dict[str, Any]:
         "bytes": len(data),
         "sha256": f"sha256:{hashlib.sha256(data).hexdigest()}",
     }
+
+
+def _write_demo_result_outputs(
+    output_dir: Path,
+    result: DemoRunResult,
+) -> dict[str, Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    files = {
+        "events": output_dir / "events.jsonl",
+        "metrics": output_dir / "metrics.csv",
+        "summary": output_dir / "summary.json",
+    }
+    files["events"].write_text(result.event_log_jsonl(), encoding="utf-8")
+    files["metrics"].write_text(result.metrics_csv_text, encoding="utf-8")
+    files["summary"].write_text(result.metrics_summary_json_text, encoding="utf-8")
+    return files
+
+
+def _runtime_status_from_result(
+    result: DemoRunResult,
+    *,
+    session_id: str,
+    config_version: int,
+) -> dict[str, Any]:
+    sim_time = _result_final_sim_time(result)
+    lifecycle_state = RuntimeLifecycleState.COMPLETED.value
+    simulation_mode = str(result.config.runtime_mode)
+    return {
+        "session_id": session_id,
+        "lifecycle_state": lifecycle_state,
+        "status": lifecycle_state,
+        "simulation_mode": simulation_mode,
+        "mode": simulation_mode,
+        "speed_factor": float(result.config.runtime_speed_factor),
+        "current_sim_time": sim_time,
+        "wall_clock_start_time": None,
+        "processed_event_count": len(result.processed_events),
+        "queued_event_count": 0,
+        "kernel_current_sim_time": sim_time,
+        "runtime_target_sim_time": sim_time,
+        "event_clock_lag_s": 0.0,
+        "runtime_time_source": "DEMO_RUN_RESULT",
+        "last_error": None,
+        "deterministic_replay": False,
+        "config_version": int(config_version),
+        "profiling_summary": None,
+        "backpressure_summary": None,
+    }
+
+
+def _result_final_sim_time(result: DemoRunResult) -> float:
+    if result.processed_events:
+        return max(float(event.sim_time) for event in result.processed_events)
+    summary_time = _control_optional_float(result.metrics_summary.get("last_sim_time"))
+    if summary_time is not None:
+        return summary_time
+    snapshot_time = _control_optional_float(result.final_snapshot.get("last_sim_time"))
+    if snapshot_time is not None:
+        return snapshot_time
+    return 0.0
 
 
 def _runtime_export_status_snapshot(status: dict[str, Any]) -> dict[str, Any]:
