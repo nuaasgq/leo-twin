@@ -42,6 +42,9 @@ from leo_twin.services.configuration_schema import (
 from leo_twin.services.compute_resource_pool_summary import (
     build_compute_resource_pool_summary_v1,
 )
+from leo_twin.services.business_request_lifecycle import (
+    build_business_request_lifecycle_v2,
+)
 from leo_twin.services.configuration_view import (
     build_user_configuration_reference,
     build_user_configuration_template_validation_evidence,
@@ -2759,6 +2762,13 @@ class DemoControlPlane:
         status["traffic_business_activity_window_v1"] = (
             self._traffic_business_activity_window_json(
                 float(status["current_sim_time"])
+            )
+        )
+        status["business_request_lifecycle_v2"] = (
+            build_business_request_lifecycle_v2(
+                status["traffic_request_timeline_v1"],
+                status["service_latency_history_v1"],
+                current_sim_time=float(status["current_sim_time"]),
             )
         )
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()

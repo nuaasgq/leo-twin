@@ -352,6 +352,20 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert business_window["item_count"] <= business_window["item_limit"]
     assert "ACTIVE_BUSINESS" in business_window["state_counts"]
     assert str(business_window["summary_hash"]).startswith("sha256:")
+    business_lifecycle = status_after_tick["business_request_lifecycle_v2"]
+    assert business_lifecycle["version"] == "v2"
+    assert business_lifecycle["summary_id"] == (
+        "leo_twin.business_request_lifecycle.v2"
+    )
+    assert business_lifecycle["source"] == (
+        "traffic_request_timeline_v1 + service_latency_history_v1"
+    )
+    assert business_lifecycle["packet_level_simulation"] is False
+    assert business_lifecycle["frontend_inference_required"] is False
+    assert business_lifecycle["current_sim_time"] == status_after_tick["current_sim_time"]
+    assert business_lifecycle["request_count"] == traffic_timeline["request_count"]
+    assert business_lifecycle["item_count"] <= business_lifecycle["limit"]
+    assert str(business_lifecycle["summary_hash"]).startswith("sha256:")
     readiness = status_after_tick["v2_executable_readiness_v1"]
     assert readiness["version"] == "v1"
     assert readiness["readiness_id"] == "leo_twin.v2_executable_readiness.v1"

@@ -22518,3 +22518,34 @@ change.
   - Output result-return routing is still a flow-level deterministic approximation. It does not model packet queues, RF propagation, antenna patterns, retries, or stochastic transport effects.
   - Small low-coverage scenarios can still complete with service-closure gaps; that is now explicit evidence rather than a hidden export artifact problem.
   - Frontend surfaces still need a follow-on binding to explain `COMPLETED_RESULT_READY` versus `COMPLETED_WITH_RESULT_GAPS` directly to users.
+
+## 2026-07-09 - T442 business request lifecycle v2
+
+- Branch: `feature/T442-business-request-lifecycle-v2`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `business_request_lifecycle_v2` runtime status evidence. The new summary deterministically joins `traffic_request_timeline_v1` with `service_latency_history_v1` by request id, task id, input flow id, and output flow id, then exposes per-request lifecycle state, current stage, component latencies, service trace ids, stage counts, and stable hashes. This is a backend semantic-alignment task only; it does not change Event Kernel behavior, traffic generation, network/orbit/compute models, frontend rendering, packet-level boundaries, external simulator policy, or runtime generated config behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/business_request_lifecycle.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_business_request_lifecycle_v2.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/business_request_lifecycle_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\business_request_lifecycle.py examples\integration_demo\control_plane.py tests\unit\test_business_request_lifecycle_v2.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_business_request_lifecycle_v2.py -q`
+    - Result: 4 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: 1 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py -q`
+    - Result: 14 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: 2 passed.
+- Problems encountered:
+  - Existing runtime status already exposed user-level request and service-latency summaries, but lacked a direct per-business-request lifecycle object. The new service keeps that join in `src/leo_twin/services` instead of forcing the frontend to infer lifecycle state.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - `business_request_lifecycle_v2` is a flow-level deterministic evidence join. It still does not model packet queues, retransmissions, RF propagation, stochastic transport effects, antenna patterns, or external simulators.
+  - Communication-only requests can be reported without compute-service trace evidence; richer non-compute service lifecycle detail should be a follow-on network lifecycle task.
+  - Frontend panels still need a binding task to display this backend-owned request lifecycle object in the standalone data dashboard.
