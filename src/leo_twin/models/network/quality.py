@@ -39,6 +39,13 @@ class NetworkQualityInputs:
     successful_flow_count: int
     flow_latency_avg_s: float
     flow_latency_variation_proxy_s: float
+    active_flow_count: int = 0
+    active_available_flow_count: int = 0
+    active_flow_demand_mbps: float = 0.0
+    active_flow_capacity_mbps: float = 0.0
+    active_flow_latency_avg_s: float = 0.0
+    active_flow_latency_variation_proxy_s: float = 0.0
+    active_flow_blocking_ratio: float = 0.0
     time_pressure_period_s: float = NETWORK_TIME_PRESSURE_PERIOD_S
     time_pressure_burst_center_phase: float = 0.5
     time_pressure_burst_width_phase: float = 0.25
@@ -74,6 +81,34 @@ class NetworkQualityInputs:
             self.flow_latency_variation_proxy_s,
             "flow_latency_variation_proxy_s",
         )
+        if self.active_flow_count < 0:
+            raise ValueError("active_flow_count must be non-negative")
+        if self.active_available_flow_count < 0:
+            raise ValueError("active_available_flow_count must be non-negative")
+        if self.active_available_flow_count > self.active_flow_count:
+            raise ValueError(
+                "active_available_flow_count must not exceed active_flow_count"
+            )
+        _require_non_negative(
+            self.active_flow_demand_mbps,
+            "active_flow_demand_mbps",
+        )
+        _require_non_negative(
+            self.active_flow_capacity_mbps,
+            "active_flow_capacity_mbps",
+        )
+        _require_non_negative(
+            self.active_flow_latency_avg_s,
+            "active_flow_latency_avg_s",
+        )
+        _require_non_negative(
+            self.active_flow_latency_variation_proxy_s,
+            "active_flow_latency_variation_proxy_s",
+        )
+        _require_probability(
+            self.active_flow_blocking_ratio,
+            "active_flow_blocking_ratio",
+        )
         _require_positive(self.time_pressure_period_s, "time_pressure_period_s")
         _require_probability(
             self.time_pressure_burst_center_phase,
@@ -100,6 +135,7 @@ class NetworkQualityEstimate:
     demand_pressure_proxy: float
     demand_loss_proxy_rate: float
     throughput_pressure_proxy: float
+    active_flow_pressure_proxy: float
     temporal_pressure: TemporalPressureState
     time_pressure_factor: float
     time_pressure_loss_proxy_rate: float
@@ -113,6 +149,7 @@ class NetworkQualityEstimate:
     effective_delay_variation_proxy_s: float
     effective_available_throughput_mbps: float
     time_adjusted_completed_throughput_mbps: float
+    time_adjusted_active_throughput_mbps: float
     effective_throughput_mbps: float
     throughput_source: str
     latency_source: str
@@ -128,6 +165,7 @@ class NetworkQualityEstimate:
             "demand_pressure_proxy": self.demand_pressure_proxy,
             "demand_loss_proxy_rate": self.demand_loss_proxy_rate,
             "throughput_pressure_proxy": self.throughput_pressure_proxy,
+            "active_flow_pressure_proxy": self.active_flow_pressure_proxy,
             "temporal_pressure": self.temporal_pressure.to_dict(),
             "time_pressure_factor": self.time_pressure_factor,
             "time_pressure_loss_proxy_rate": self.time_pressure_loss_proxy_rate,
@@ -151,6 +189,9 @@ class NetworkQualityEstimate:
             "time_adjusted_completed_throughput_mbps": (
                 self.time_adjusted_completed_throughput_mbps
             ),
+            "time_adjusted_active_throughput_mbps": (
+                self.time_adjusted_active_throughput_mbps
+            ),
             "effective_throughput_mbps": self.effective_throughput_mbps,
             "throughput_source": self.throughput_source,
             "latency_source": self.latency_source,
@@ -173,21 +214,41 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
             inputs.route_blocking_ratio,
             inputs.failed_flow_ratio,
             inputs.route_loss_proxy_rate,
+            inputs.active_flow_blocking_ratio,
             congestion_loss_proxy_rate,
         )
     )
     demand_pressure_proxy = _demand_pressure_proxy(
-        requested_route_demand_mbps=inputs.requested_route_demand_mbps,
+        requested_route_demand_mbps=max(
+            inputs.requested_route_demand_mbps,
+            inputs.active_flow_demand_mbps,
+        ),
         offered_route_capacity_mbps=inputs.offered_route_capacity_mbps,
     )
     demand_loss_proxy_rate = quality_congestion_loss_proxy_rate(demand_pressure_proxy)
-    throughput_pressure_proxy = _clamp_probability(
+    completed_throughput_pressure_proxy = _clamp_probability(
         inputs.completed_flow_capacity_mbps / inputs.offered_route_capacity_mbps
         if inputs.offered_route_capacity_mbps > 0.0
         else 0.0
     )
-    flow_pressure_proxy = (
-        throughput_pressure_proxy if inputs.successful_flow_count > 1 else 0.0
+    active_flow_pressure_proxy = _demand_pressure_proxy(
+        requested_route_demand_mbps=inputs.active_flow_demand_mbps,
+        offered_route_capacity_mbps=inputs.offered_route_capacity_mbps,
+    )
+    active_throughput_pressure_proxy = _clamp_probability(
+        inputs.active_flow_capacity_mbps / inputs.offered_route_capacity_mbps
+        if inputs.offered_route_capacity_mbps > 0.0
+        else 0.0
+    )
+    throughput_pressure_proxy = max(
+        completed_throughput_pressure_proxy,
+        active_throughput_pressure_proxy,
+    )
+    flow_pressure_proxy = max(
+        completed_throughput_pressure_proxy
+        if inputs.successful_flow_count > 1
+        else 0.0,
+        active_flow_pressure_proxy if inputs.active_flow_count > 0 else 0.0,
     )
     temporal_pressure = time_varying_pressure_state(
         inputs.sim_time,
@@ -202,8 +263,10 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
         time_pressure_factor
     )
     throughput_pressure_loss_proxy_rate = (
-        quality_congestion_loss_proxy_rate(throughput_pressure_proxy)
-        if inputs.successful_flow_count > 1
+        quality_congestion_loss_proxy_rate(
+            max(completed_throughput_pressure_proxy, active_flow_pressure_proxy)
+        )
+        if inputs.successful_flow_count > 1 or inputs.active_flow_count > 0
         else 0.0
     )
     pressure_loss_proxy_rate = max(
@@ -217,6 +280,8 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
     effective_latency_avg_s = (
         inputs.flow_latency_avg_s
         if inputs.flow_latency_avg_s > 0.0
+        else inputs.active_flow_latency_avg_s
+        if inputs.active_flow_latency_avg_s > 0.0
         else inputs.route_latency_avg_s
     )
     time_pressure_delay_variation_proxy_s = time_varying_pressure_delay_variation(
@@ -235,6 +300,7 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
     effective_delay_variation_proxy_s = max(
         inputs.route_delay_variation_proxy_s,
         inputs.flow_latency_variation_proxy_s,
+        inputs.active_flow_latency_variation_proxy_s,
         pressure_delay_variation_proxy_s,
     )
     effective_available_throughput_mbps = inputs.offered_route_capacity_mbps * (
@@ -243,19 +309,28 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
     time_adjusted_completed_throughput_mbps = inputs.completed_flow_capacity_mbps * (
         1.0 - time_pressure_loss_proxy_rate
     )
+    time_adjusted_active_throughput_mbps = inputs.active_flow_capacity_mbps * (
+        1.0 - time_pressure_loss_proxy_rate
+    )
     effective_throughput_mbps = (
         time_adjusted_completed_throughput_mbps
         if inputs.completed_flow_capacity_mbps > 0.0
+        else time_adjusted_active_throughput_mbps
+        if inputs.active_flow_count > 0
         else effective_available_throughput_mbps
     )
     throughput_source = (
         "COMPLETED_FLOW_CAPACITY"
         if inputs.completed_flow_capacity_mbps > 0.0
+        else "ACTIVE_FLOW_CAPACITY"
+        if inputs.active_flow_count > 0
         else "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS"
     )
     latency_source = (
         "COMPLETED_FLOW_LATENCY"
         if inputs.flow_latency_avg_s > 0.0
+        else "ACTIVE_FLOW_LATENCY"
+        if inputs.active_flow_latency_avg_s > 0.0
         else "AVAILABLE_ROUTE_LATENCY"
     )
     loss_source = dominant_network_quality_proxy_source(
@@ -263,6 +338,7 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
             ("ROUTE_BLOCKING_RATIO", inputs.route_blocking_ratio),
             ("FAILED_FLOW_RATIO", inputs.failed_flow_ratio),
             ("ROUTE_LOSS_RATE", inputs.route_loss_proxy_rate),
+            ("ACTIVE_FLOW_BLOCKING_RATIO", inputs.active_flow_blocking_ratio),
             ("CONGESTION_LOSS_PROXY", congestion_loss_proxy_rate),
             ("PRESSURE_LOSS_PROXY", pressure_loss_proxy_rate),
             ("TIME_PRESSURE_LOSS_PROXY", time_pressure_loss_proxy_rate),
@@ -272,6 +348,10 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
         (
             ("ROUTE_LATENCY_VARIATION", inputs.route_delay_variation_proxy_s),
             ("FLOW_LATENCY_VARIATION", inputs.flow_latency_variation_proxy_s),
+            (
+                "ACTIVE_FLOW_LATENCY_VARIATION",
+                inputs.active_flow_latency_variation_proxy_s,
+            ),
             ("PRESSURE_DELAY_VARIATION", pressure_delay_variation_proxy_s),
             (
                 "TIME_PRESSURE_DELAY_VARIATION",
@@ -287,6 +367,7 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
         demand_pressure_proxy=demand_pressure_proxy,
         demand_loss_proxy_rate=demand_loss_proxy_rate,
         throughput_pressure_proxy=throughput_pressure_proxy,
+        active_flow_pressure_proxy=active_flow_pressure_proxy,
         temporal_pressure=temporal_pressure,
         time_pressure_factor=time_pressure_factor,
         time_pressure_loss_proxy_rate=time_pressure_loss_proxy_rate,
@@ -303,6 +384,9 @@ def estimate_network_quality(inputs: NetworkQualityInputs) -> NetworkQualityEsti
         effective_available_throughput_mbps=effective_available_throughput_mbps,
         time_adjusted_completed_throughput_mbps=(
             time_adjusted_completed_throughput_mbps
+        ),
+        time_adjusted_active_throughput_mbps=(
+            time_adjusted_active_throughput_mbps
         ),
         effective_throughput_mbps=effective_throughput_mbps,
         throughput_source=throughput_source,

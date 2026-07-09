@@ -22018,3 +22018,61 @@ change.
     does not make the network model more realistic. Follow-up backend work
     should improve demand-driven network load, route contention, service
     lifecycle coupling, and benchmark-calibrated KPI formulas.
+
+
+## 2026-07-09 - T433 network KPI active demand drive v1
+
+- Branch: `feature/T433-network-kpi-active-demand-drive-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add active in-flight flow inputs to the backend flow-level network KPI
+  proxy. `NetworkQualityInputs` now accepts active-flow demand/capacity,
+  latency, latency variation, and blocking-ratio inputs. `MetricsCollector`
+  derives those inputs from active routes whose runtime observation time has
+  advanced beyond the route event time, then exposes the values through
+  `metrics_summary` and `kpi_time_series_v1`. The network model contract and
+  KPI provenance selection rules now document completed-flow, active-flow, and
+  available-route fallback sources. This is a backend KPI model/provenance task
+  only. No Event Kernel behavior, routing engine scheduling, packet-level
+  simulation, frontend rendering, external simulator integration, or runtime
+  generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/models/network/quality.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `src/leo_twin/services/network_kpi_provenance.py`
+  - `src/leo_twin/schema/network_model_contract.py`
+  - `tests/unit/test_network_quality_model_v2.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_network_model_contract_v2.py`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/models/network/quality.py src/leo_twin/services/metrics/collector.py src/leo_twin/services/network_kpi_provenance.py src/leo_twin/schema/network_model_contract.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_network_quality_model_v2.py`
+    - Result: 5 passed.
+  - `python -m pytest tests/unit/test_metrics_module.py`
+    - Result: 28 passed.
+  - `python -m pytest tests/unit/test_network_quality_model_v2.py tests/unit/test_network_model_contract_v2.py tests/unit/test_network_kpi_provenance_v2.py tests/unit/test_network_kpi_calibration_v1.py tests/unit/test_network_kpi_dynamic_status.py tests/unit/test_runtime_kpi_movement.py`
+    - Result: 21 passed.
+  - `python -m pytest tests/unit/test_metrics_module.py tests/unit/test_network_quality_model_v2.py tests/unit/test_network_model_contract_v2.py tests/unit/test_network_kpi_provenance_v2.py tests/unit/test_network_kpi_calibration_v1.py tests/unit/test_network_kpi_dynamic_status.py tests/unit/test_runtime_kpi_movement.py`
+    - Result: 49 passed.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py`
+    - Result: 14 passed.
+- Problems encountered:
+  - A broad initial patch was rejected due to imprecise context, so the change
+    was split into smaller patches.
+  - The first implementation briefly treated demand-less route samples as
+    active business flows. That was corrected: active-flow KPI inputs now only
+    use active routes with positive `demand_capacity` and an observation time
+    later than the route event time.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - Active-flow KPI support improves live current values during in-flight
+    service windows, but it is still a deterministic flow-level proxy. It does
+    not add packet-level queues, RF propagation, or external network simulator
+    fidelity. Follow-up work should connect richer service lifecycle timing and
+    route contention evidence into the same KPI path.

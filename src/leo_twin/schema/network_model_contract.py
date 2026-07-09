@@ -372,13 +372,14 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
             source_fields=(
                 "network_quality_delay_variation_proxy_s",
                 "network_quality_flow_latency_variation_proxy_s",
+                "network_quality_active_flow_latency_variation_proxy_s",
                 "network_quality_pressure_delay_variation_proxy_s",
                 "network_quality_time_pressure_delay_variation_proxy_s",
             ),
             formula_summary=(
-                "Maximum of route latency spread, recent flow latency variation, "
-                "pressure-driven delay variation proxy, and deterministic time-window "
-                "pressure variation."
+                "Maximum of route latency spread, completed-flow variation, "
+                "active-flow variation, pressure-driven delay variation proxy, "
+                "and deterministic time-window pressure variation."
             ),
             interpretation=(
                 "Represents flow-level delay variation for dashboard trend analysis, "
@@ -399,10 +400,11 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
                 "Route.latency",
                 "network_quality_route_latency_avg_s",
                 "network_quality_flow_latency_avg_s",
+                "network_quality_active_flow_latency_avg_s",
             ),
             formula_summary=(
-                "Prefer recent completed-flow latency when available; otherwise use "
-                "current available-route average latency."
+                "Prefer completed-flow latency when available; otherwise use active "
+                "in-flight flow latency before current available-route average latency."
             ),
             interpretation="Average flow-level latency available to dashboard users.",
             zero_value_semantics="No available route or completed-flow latency sample.",
@@ -420,14 +422,15 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
                 "network_quality_pressure_admission_rejection_ratio",
                 "network_quality_topology_blocked_route_count",
                 "network_quality_failed_flow_ratio",
+                "network_quality_active_flow_blocking_ratio",
                 "network_quality_congestion_loss_proxy_rate",
                 "network_quality_demand_loss_proxy_rate",
                 "network_quality_time_pressure_loss_proxy_rate",
             ),
             formula_summary=(
                 "Maximum of configured transport loss proxy, route blocking, failed "
-                "flow ratio, congestion pressure loss, demand pressure loss, and "
-                "deterministic time-window pressure loss."
+                "flow ratio, active-flow blocking, congestion pressure loss, demand "
+                "pressure loss, and deterministic time-window pressure loss."
             ),
             interpretation=(
                 "Flow-level loss/quality degradation proxy. It must not be read as "
@@ -447,12 +450,15 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
             source_fields=(
                 "network_quality_estimated_delivered_throughput_mbps",
                 "network_quality_time_adjusted_delivered_throughput_mbps",
+                "network_quality_active_flow_capacity_mbps",
+                "network_quality_time_adjusted_active_throughput_mbps",
                 "network_quality_estimated_available_throughput_mbps",
                 "network_quality_available_route_demand_mbps",
             ),
             formula_summary=(
                 "Prefer completed-flow throughput adjusted by deterministic time-window "
-                "pressure; fall back to loss-adjusted available route demand/capacity."
+                "pressure; fall back to active in-flight flow throughput before "
+                "loss-adjusted available route demand/capacity."
             ),
             interpretation=(
                 "Flow-level carried or currently supportable throughput estimate for "

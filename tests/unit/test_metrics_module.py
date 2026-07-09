@@ -740,8 +740,8 @@ def test_metrics_collector_reports_effective_flow_level_network_quality() -> Non
         == "当前代理指标为正值"
     )
     assert summary["network_quality_provenance_note"] == (
-        "Flow-level KPI provenance from route, link, and completed-flow state; "
-        "no packet-level samples are used."
+        "Flow-level KPI provenance from route, link, active-flow, and "
+        "completed-flow state; no packet-level samples are used."
     )
     assert _last_record(
         last_records,
@@ -904,6 +904,51 @@ def test_metrics_collector_uses_route_demand_for_network_pressure_proxy() -> Non
     assert summary["network_quality_effective_throughput_mbps"] == pytest.approx(95.0)
 
 
+def test_metrics_summary_uses_active_inflight_flow_after_runtime_target_advances() -> None:
+    collector = MetricsCollector(metric_sample_interval=100)
+    collector.observe(
+        _event(
+            "route-active",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-active",
+                flow_id="flow-active",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.05,
+                capacity=100.0,
+                available=True,
+                demand_capacity=70.0,
+            ),
+            "network",
+        )
+    )
+
+    event_time_summary = collector.summary()
+    runtime_summary = collector.summary(sim_time=10.0)
+    runtime_tail = collector.kpi_time_series(sim_time=10.0)["samples"][-1]
+
+    assert event_time_summary["network_quality_active_flow_count"] == 0
+    assert event_time_summary["network_quality_throughput_source"] == (
+        "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS"
+    )
+    assert runtime_summary["network_quality_active_flow_count"] == 1
+    assert runtime_summary["network_quality_active_available_flow_count"] == 1
+    assert runtime_summary["network_quality_active_flow_demand_mbps"] == 70.0
+    assert runtime_summary["network_quality_active_flow_capacity_mbps"] == 70.0
+    assert runtime_summary["network_quality_active_flow_latency_avg_s"] == 0.05
+    assert runtime_summary["network_quality_active_flow_pressure_proxy"] == 0.7
+    assert runtime_summary["network_quality_effective_throughput_mbps"] == 70.0
+    assert runtime_summary["network_quality_throughput_source"] == (
+        "ACTIVE_FLOW_CAPACITY"
+    )
+    assert runtime_summary["network_quality_latency_source"] == "ACTIVE_FLOW_LATENCY"
+    assert runtime_tail["network_effective_throughput_source"] == "ACTIVE_FLOW_WINDOW"
+    assert runtime_tail["network_active_flow_count"] == 1.0
+    assert runtime_tail["network_active_flow_demand_mbps"] == 70.0
+    assert runtime_tail["network_effective_throughput_mbps"] == 70.0
+
+
 def test_metrics_collector_uses_route_loss_rate_for_network_loss_proxy() -> None:
     collector = MetricsCollector()
     collector.observe(
@@ -1011,6 +1056,16 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
         "network_effective_available_throughput_mbps": 100.0,
         "network_flow_delivered_capacity_mbps": 0.0,
         "network_time_adjusted_delivered_throughput_mbps": 0.0,
+        "network_active_flow_count": 0.0,
+        "network_active_available_flow_count": 0.0,
+        "network_active_blocked_flow_count": 0.0,
+        "network_active_flow_demand_mbps": 0.0,
+        "network_active_flow_capacity_mbps": 0.0,
+        "network_active_flow_latency_s": 0.0,
+        "network_active_flow_latency_variation_s": 0.0,
+        "network_active_flow_blocking_ratio": 0.0,
+        "network_active_flow_pressure_proxy": 0.0,
+        "network_time_adjusted_active_throughput_mbps": 0.0,
         "network_time_pressure_period_s": 120.0,
         "network_time_pressure_phase": pytest.approx(1 / 60),
         "network_time_pressure_load_proxy": 0.0,

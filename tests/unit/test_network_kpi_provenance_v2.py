@@ -35,15 +35,20 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "network_quality_time_adjusted_delivered_throughput_mbps": 171.0,
         "network_quality_estimated_available_throughput_mbps": 171.0,
         "network_quality_available_route_demand_mbps": 200.0,
+        "network_quality_active_flow_capacity_mbps": 0.0,
+        "network_quality_time_adjusted_active_throughput_mbps": 0.0,
+        "network_quality_active_flow_pressure_proxy": 0.0,
         "network_quality_throughput_source": "COMPLETED_FLOW_CAPACITY",
         "network_quality_throughput_source_label": "completed flow capacity",
         "network_quality_effective_latency_avg_s": 0.045,
         "network_quality_route_latency_avg_s": 0.05,
         "network_quality_flow_latency_avg_s": 0.045,
+        "network_quality_active_flow_latency_avg_s": 0.0,
         "network_quality_latency_source": "COMPLETED_FLOW_LATENCY",
         "network_quality_latency_source_label": "completed flow latency",
         "network_quality_effective_loss_proxy_rate": 0.05,
         "network_quality_failed_flow_ratio": 0.0,
+        "network_quality_active_flow_blocking_ratio": 0.0,
         "network_quality_congestion_loss_proxy_rate": 0.03,
         "network_quality_demand_loss_proxy_rate": 0.05,
         "network_quality_time_pressure_period_s": 120.0,
@@ -67,6 +72,7 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "network_quality_effective_delay_variation_proxy_s": 0.006,
         "network_quality_delay_variation_proxy_s": 0.004,
         "network_quality_flow_latency_variation_proxy_s": 0.006,
+        "network_quality_active_flow_latency_variation_proxy_s": 0.0,
         "network_quality_pressure_delay_variation_proxy_s": 0.001,
         "network_quality_time_pressure_delay_variation_proxy_s": 0.002,
         "network_quality_delay_variation_source": "FLOW_LATENCY_VARIATION",
@@ -156,15 +162,16 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
     assert throughput["formula_trace"] == {
         "selection_policy": (
             "Prefer completed-flow throughput with deterministic pressure context; "
-            "otherwise use loss-adjusted available route demand/capacity."
+            "otherwise use active in-flight flow throughput before loss-adjusted "
+            "available route demand/capacity."
         ),
         "runtime_summary_key": "network_quality_effective_throughput_mbps",
         "runtime_value_observed": True,
         "current_value": 180.0,
         "observed_source": "COMPLETED_FLOW_CAPACITY",
         "observed_source_label": "completed flow capacity",
-        "declared_input_count": 4,
-        "observed_input_count": 4,
+        "declared_input_count": 6,
+        "observed_input_count": 6,
         "selected_input_count": 2,
         "selected_observed_input_count": 2,
         "missing_input_count": 0,

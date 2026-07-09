@@ -875,6 +875,40 @@ class MetricsCollector:
                     "network_quality_time_adjusted_delivered_throughput_mbps"
                 ]
             ),
+            "network_active_flow_count": float(
+                network_summary["network_quality_active_flow_count"]
+            ),
+            "network_active_available_flow_count": float(
+                network_summary["network_quality_active_available_flow_count"]
+            ),
+            "network_active_blocked_flow_count": float(
+                network_summary["network_quality_active_blocked_flow_count"]
+            ),
+            "network_active_flow_demand_mbps": float(
+                network_summary["network_quality_active_flow_demand_mbps"]
+            ),
+            "network_active_flow_capacity_mbps": float(
+                network_summary["network_quality_active_flow_capacity_mbps"]
+            ),
+            "network_active_flow_latency_s": float(
+                network_summary["network_quality_active_flow_latency_avg_s"]
+            ),
+            "network_active_flow_latency_variation_s": float(
+                network_summary[
+                    "network_quality_active_flow_latency_variation_proxy_s"
+                ]
+            ),
+            "network_active_flow_blocking_ratio": float(
+                network_summary["network_quality_active_flow_blocking_ratio"]
+            ),
+            "network_active_flow_pressure_proxy": float(
+                network_summary["network_quality_active_flow_pressure_proxy"]
+            ),
+            "network_time_adjusted_active_throughput_mbps": float(
+                network_summary[
+                    "network_quality_time_adjusted_active_throughput_mbps"
+                ]
+            ),
             "network_time_pressure_period_s": float(
                 network_summary["network_quality_time_pressure_period_s"]
             ),
@@ -1503,6 +1537,7 @@ class MetricsCollector:
             sum(_route_demand_capacity(route) for route in available_routes)
         )
         flow_quality = self._completed_flow_quality()
+        active_flow_quality = self._active_flow_quality(summary_time)
         completed_route_capacity = flow_quality["capacity_sum"]
         flow_latency_avg = _average(flow_quality["latencies"])
         flow_latency_variation_proxy = _standard_deviation(flow_quality["latencies"])
@@ -1521,6 +1556,21 @@ class MetricsCollector:
                 successful_flow_count=int(flow_quality["successful_count"]),
                 flow_latency_avg_s=flow_latency_avg,
                 flow_latency_variation_proxy_s=flow_latency_variation_proxy,
+                active_flow_count=int(active_flow_quality["active_count"]),
+                active_available_flow_count=int(
+                    active_flow_quality["available_count"]
+                ),
+                active_flow_demand_mbps=float(active_flow_quality["demand_sum"]),
+                active_flow_capacity_mbps=float(active_flow_quality["capacity_sum"]),
+                active_flow_latency_avg_s=_average(
+                    active_flow_quality["latencies"]
+                ),
+                active_flow_latency_variation_proxy_s=_standard_deviation(
+                    active_flow_quality["latencies"]
+                ),
+                active_flow_blocking_ratio=float(
+                    active_flow_quality["blocking_ratio"]
+                ),
                 time_pressure_period_s=self._time_pressure_period_s,
                 time_pressure_burst_center_phase=(
                     self._time_pressure_burst_center_phase
@@ -1535,6 +1585,7 @@ class MetricsCollector:
         loss_proxy_rate = quality_estimate.base_loss_proxy_rate
         demand_pressure_proxy = quality_estimate.demand_pressure_proxy
         demand_loss_proxy_rate = quality_estimate.demand_loss_proxy_rate
+        active_flow_pressure_proxy = quality_estimate.active_flow_pressure_proxy
         queue_pressure_routes = tuple(
             route
             for route in available_routes
@@ -1568,6 +1619,9 @@ class MetricsCollector:
         )
         time_adjusted_completed_throughput = (
             quality_estimate.time_adjusted_completed_throughput_mbps
+        )
+        time_adjusted_active_throughput = (
+            quality_estimate.time_adjusted_active_throughput_mbps
         )
         effective_throughput = quality_estimate.effective_throughput_mbps
         throughput_source = quality_estimate.throughput_source
@@ -1649,6 +1703,36 @@ class MetricsCollector:
             "network_quality_time_adjusted_delivered_throughput_mbps": float(
                 time_adjusted_completed_throughput
             ),
+            "network_quality_active_flow_count": int(
+                active_flow_quality["active_count"]
+            ),
+            "network_quality_active_available_flow_count": int(
+                active_flow_quality["available_count"]
+            ),
+            "network_quality_active_blocked_flow_count": int(
+                active_flow_quality["blocked_count"]
+            ),
+            "network_quality_active_flow_demand_mbps": float(
+                active_flow_quality["demand_sum"]
+            ),
+            "network_quality_active_flow_capacity_mbps": float(
+                active_flow_quality["capacity_sum"]
+            ),
+            "network_quality_active_flow_latency_avg_s": _average(
+                active_flow_quality["latencies"]
+            ),
+            "network_quality_active_flow_latency_variation_proxy_s": (
+                _standard_deviation(active_flow_quality["latencies"])
+            ),
+            "network_quality_active_flow_blocking_ratio": float(
+                active_flow_quality["blocking_ratio"]
+            ),
+            "network_quality_active_flow_pressure_proxy": float(
+                active_flow_pressure_proxy
+            ),
+            "network_quality_time_adjusted_active_throughput_mbps": float(
+                time_adjusted_active_throughput
+            ),
             "network_quality_throughput_pressure_proxy": float(
                 throughput_pressure_proxy
             ),
@@ -1705,8 +1789,8 @@ class MetricsCollector:
                 "Flow-level proxy only; no packet-level simulation is performed."
             ),
             "network_quality_provenance_note": (
-                "Flow-level KPI provenance from route, link, and completed-flow state; "
-                "no packet-level samples are used."
+                "Flow-level KPI provenance from route, link, active-flow, and "
+                "completed-flow state; no packet-level samples are used."
             ),
             "network_quality_throughput_source": throughput_source,
             "network_quality_throughput_source_label": _network_quality_source_label(
@@ -1879,6 +1963,43 @@ class MetricsCollector:
             "success_ratio": float(success_ratio),
             "latencies": tuple(latencies),
             "capacity_sum": float(capacity_sum),
+        }
+
+    def _active_flow_quality(
+        self,
+        sim_time: float,
+    ) -> dict[str, float | int | tuple[float, ...]]:
+        active_count = 0
+        available_count = 0
+        blocked_count = 0
+        demand_sum = 0.0
+        capacity_sum = 0.0
+        latencies: list[float] = []
+        for flow_id in sorted(self._active_flow_routes):
+            route = self._active_flow_routes[flow_id]
+            start_time = self._flow_route_start_times.get(flow_id)
+            if start_time is None or float(sim_time) <= start_time:
+                continue
+            demand = _route_demand_capacity(route)
+            if demand <= 0.0:
+                continue
+            active_count += 1
+            demand_sum += demand
+            if not route.available:
+                blocked_count += 1
+                continue
+            available_count += 1
+            latencies.append(float(route.latency))
+            capacity_sum += min(demand, max(0.0, float(route.capacity)))
+        blocking_ratio = 0.0 if active_count == 0 else blocked_count / active_count
+        return {
+            "active_count": active_count,
+            "available_count": available_count,
+            "blocked_count": blocked_count,
+            "demand_sum": float(demand_sum),
+            "capacity_sum": float(capacity_sum),
+            "latencies": tuple(latencies),
+            "blocking_ratio": float(blocking_ratio),
         }
 
     def _recent_flow_quality(
@@ -2200,6 +2321,19 @@ def _runtime_window_effective_throughput(
             max(0.0, float(recent_delivered_capacity) * (1.0 - time_loss)),
             "RECENT_FLOW_WINDOW",
         )
+    active_flow_count = int(float(network_summary["network_quality_active_flow_count"]))
+    if active_flow_count > 0:
+        return (
+            max(
+                0.0,
+                float(
+                    network_summary[
+                        "network_quality_time_adjusted_active_throughput_mbps"
+                    ]
+                ),
+            ),
+            "ACTIVE_FLOW_WINDOW",
+        )
     if lifetime_flow_count > 0:
         return 0.0, "NO_RECENT_FLOW_IN_WINDOW"
     return (
@@ -2211,6 +2345,7 @@ def _runtime_window_effective_throughput(
 def _runtime_window_throughput_source_label(source: str) -> str:
     labels = {
         "RECENT_FLOW_WINDOW": "recent completed flow window",
+        "ACTIVE_FLOW_WINDOW": "active in-flight flow window",
         "NO_RECENT_FLOW_IN_WINDOW": "no completed flow in recent window",
         "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS": "available route capacity estimate",
     }
@@ -2261,6 +2396,16 @@ def _baseline_kpi_sample(
         "network_effective_available_throughput_mbps": 0.0,
         "network_flow_delivered_capacity_mbps": 0.0,
         "network_time_adjusted_delivered_throughput_mbps": 0.0,
+        "network_active_flow_count": 0.0,
+        "network_active_available_flow_count": 0.0,
+        "network_active_blocked_flow_count": 0.0,
+        "network_active_flow_demand_mbps": 0.0,
+        "network_active_flow_capacity_mbps": 0.0,
+        "network_active_flow_latency_s": 0.0,
+        "network_active_flow_latency_variation_s": 0.0,
+        "network_active_flow_blocking_ratio": 0.0,
+        "network_active_flow_pressure_proxy": 0.0,
+        "network_time_adjusted_active_throughput_mbps": 0.0,
         "network_time_pressure_period_s": float(temporal_pressure.period_s),
         "network_time_pressure_phase": float(temporal_pressure.phase),
         "network_time_pressure_load_proxy": float(temporal_pressure.load_pressure),
@@ -2859,8 +3004,10 @@ def _standard_deviation(values: tuple[float, ...]) -> float:
 def _network_quality_source_label(source: str) -> str:
     labels = {
         "COMPLETED_FLOW_CAPACITY": "已完成流容量",
+        "ACTIVE_FLOW_CAPACITY": "活跃流容量",
         "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS": "可用路由容量扣除损耗代理",
         "COMPLETED_FLOW_LATENCY": "已完成流时延",
+        "ACTIVE_FLOW_LATENCY": "活跃流时延",
         "AVAILABLE_ROUTE_LATENCY": "可用路由平均时延",
         "ROUTE_BLOCKING_RATIO": "路由阻塞比例",
         "FAILED_FLOW_RATIO": "失败流比例",
@@ -2868,8 +3015,10 @@ def _network_quality_source_label(source: str) -> str:
         "CONGESTION_LOSS_PROXY": "链路拥塞损耗代理",
         "PRESSURE_LOSS_PROXY": "业务压力损耗代理",
         "TIME_PRESSURE_LOSS_PROXY": "时间窗口压力损耗代理",
+        "ACTIVE_FLOW_BLOCKING_RATIO": "活跃流阻塞比例",
         "ROUTE_LATENCY_VARIATION": "路由时延离散度",
         "FLOW_LATENCY_VARIATION": "流完成时延离散度",
+        "ACTIVE_FLOW_LATENCY_VARIATION": "活跃流时延离散度",
         "PRESSURE_DELAY_VARIATION": "业务压力时延扰动",
         "TIME_PRESSURE_DELAY_VARIATION": "时间窗口压力时延扰动",
     }

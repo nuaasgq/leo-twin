@@ -70,11 +70,17 @@ def test_network_model_contract_v2_defines_kpi_provenance_sources() -> None:
     assert "network_quality_time_adjusted_delivered_throughput_mbps" in throughput[
         "source_fields"
     ]
+    assert "network_quality_active_flow_capacity_mbps" in throughput["source_fields"]
+    assert (
+        "network_quality_time_adjusted_active_throughput_mbps"
+        in throughput["source_fields"]
+    )
     assert throughput["packet_level_metric"] is False
 
     loss = _kpi(contract, "EFFECTIVE_LOSS_PROXY")
     assert loss["runtime_summary_key"] == "network_quality_effective_loss_proxy_rate"
     assert "network.transport_loss_rate" in loss["source_fields"]
+    assert "network_quality_active_flow_blocking_ratio" in loss["source_fields"]
     assert "network_quality_time_pressure_loss_proxy_rate" in loss["source_fields"]
     assert "packet loss" in loss["interpretation"]
 
@@ -84,6 +90,10 @@ def test_network_model_contract_v2_defines_kpi_provenance_sources() -> None:
     )
     assert (
         "network_quality_time_pressure_delay_variation_proxy_s"
+        in delay_variation["source_fields"]
+    )
+    assert (
+        "network_quality_active_flow_latency_variation_proxy_s"
         in delay_variation["source_fields"]
     )
     assert "not packet inter-arrival jitter" in delay_variation["interpretation"]

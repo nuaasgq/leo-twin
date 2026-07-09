@@ -1471,6 +1471,14 @@ Current Phase 3 progress:
   dashboard current KPI values can advance during sparse-event live gaps
   without frontend inference or pretending that the kernel observed new events.
 
+- T433 adds active in-flight flow inputs to the backend flow-level network KPI
+  proxy. `NetworkQualityInputs`, `metrics_summary`, `kpi_time_series_v1`, the
+  network model contract, and KPI provenance now distinguish completed-flow
+  values, active-flow values, and available-route fallback values. This lets
+  current throughput/latency/loss/jitter proxies react to runtime business
+  demand while a flow is still active, without packet-level simulation or
+  frontend-side semantic inference.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

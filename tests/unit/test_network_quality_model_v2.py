@@ -80,6 +80,40 @@ def test_network_quality_proxy_model_varies_with_simulation_time() -> None:
     assert peak.delay_variation_source == "PRESSURE_DELAY_VARIATION"
 
 
+def test_network_quality_proxy_model_uses_active_inflight_flow_before_available_capacity() -> None:
+    estimate = estimate_network_quality(
+        NetworkQualityInputs(
+            sim_time=10.0,
+            route_latency_avg_s=0.08,
+            route_delay_variation_proxy_s=0.0,
+            route_blocking_ratio=0.0,
+            failed_flow_ratio=0.0,
+            route_loss_proxy_rate=0.0,
+            congestion_proxy=0.0,
+            offered_route_capacity_mbps=100.0,
+            requested_route_demand_mbps=70.0,
+            completed_flow_capacity_mbps=0.0,
+            successful_flow_count=0,
+            flow_latency_avg_s=0.0,
+            flow_latency_variation_proxy_s=0.0,
+            active_flow_count=1,
+            active_available_flow_count=1,
+            active_flow_demand_mbps=70.0,
+            active_flow_capacity_mbps=70.0,
+            active_flow_latency_avg_s=0.05,
+            active_flow_latency_variation_proxy_s=0.0,
+            active_flow_blocking_ratio=0.0,
+        )
+    )
+
+    assert estimate.throughput_source == "ACTIVE_FLOW_CAPACITY"
+    assert estimate.latency_source == "ACTIVE_FLOW_LATENCY"
+    assert estimate.effective_throughput_mbps == 70.0
+    assert estimate.effective_latency_avg_s == 0.05
+    assert estimate.active_flow_pressure_proxy == 0.7
+    assert estimate.to_dict()["time_adjusted_active_throughput_mbps"] == 70.0
+
+
 def test_network_quality_proxy_model_accounts_for_demand_without_routes() -> None:
     estimate = estimate_network_quality(
         NetworkQualityInputs(

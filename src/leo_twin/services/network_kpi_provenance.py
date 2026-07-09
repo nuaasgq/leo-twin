@@ -58,19 +58,21 @@ _FORMULA_SELECTION_POLICY_BY_METRIC = {
     ),
     "EFFECTIVE_DELAY_VARIATION_PROXY": (
         "Use the largest available route-spread, completed-flow variation, "
-        "pressure variation, or time-window pressure variation proxy."
+        "active-flow variation, pressure variation, or time-window pressure "
+        "variation proxy."
     ),
     "EFFECTIVE_LATENCY": (
-        "Prefer completed-flow latency when present; otherwise use current "
-        "available-route latency."
+        "Prefer completed-flow latency when present; otherwise use active "
+        "in-flight flow latency before current available-route latency."
     ),
     "EFFECTIVE_LOSS_PROXY": (
         "Use the maximum available configured, route, failed-flow, congestion, "
-        "demand, and time-window pressure loss proxy."
+        "active-flow blocking, demand, and time-window pressure loss proxy."
     ),
     "EFFECTIVE_THROUGHPUT": (
         "Prefer completed-flow throughput with deterministic pressure context; "
-        "otherwise use loss-adjusted available route demand/capacity."
+        "otherwise use active in-flight flow throughput before loss-adjusted "
+        "available route demand/capacity."
     ),
     "ROUTE_BLOCKING_RATIO": (
         "Report blocked route decisions divided by recent route decisions."
@@ -90,14 +92,18 @@ _TEMPORAL_PRESSURE_FIELDS = (
     "network_quality_time_pressure_loss_proxy_rate",
     "network_quality_time_pressure_delay_variation_proxy_s",
     "network_quality_demand_pressure_proxy",
+    "network_quality_active_flow_pressure_proxy",
     "network_quality_throughput_pressure_proxy",
     "network_quality_congestion_proxy",
     "network_quality_flow_delivered_capacity_mbps",
     "network_quality_time_adjusted_delivered_throughput_mbps",
+    "network_quality_active_flow_capacity_mbps",
+    "network_quality_time_adjusted_active_throughput_mbps",
 )
 
 _TEMPORAL_LOAD_FIELDS = (
     ("demand_pressure", "network_quality_demand_pressure_proxy"),
+    ("active_flow_pressure", "network_quality_active_flow_pressure_proxy"),
     ("throughput_pressure", "network_quality_throughput_pressure_proxy"),
     ("link_congestion", "network_quality_congestion_proxy"),
 )
@@ -108,12 +114,19 @@ _SELECTED_FIELDS_BY_SOURCE = {
         "network_quality_estimated_delivered_throughput_mbps",
         "network_quality_time_adjusted_delivered_throughput_mbps",
     ),
+    ("EFFECTIVE_THROUGHPUT", "ACTIVE_FLOW_CAPACITY"): (
+        "network_quality_active_flow_capacity_mbps",
+        "network_quality_time_adjusted_active_throughput_mbps",
+    ),
     ("EFFECTIVE_THROUGHPUT", "AVAILABLE_ROUTE_CAPACITY"): (
         "network_quality_estimated_available_throughput_mbps",
         "network_quality_available_route_demand_mbps",
     ),
     ("EFFECTIVE_LATENCY", "COMPLETED_FLOW_LATENCY"): (
         "network_quality_flow_latency_avg_s",
+    ),
+    ("EFFECTIVE_LATENCY", "ACTIVE_FLOW_LATENCY"): (
+        "network_quality_active_flow_latency_avg_s",
     ),
     ("EFFECTIVE_LATENCY", "AVAILABLE_ROUTE_LATENCY"): (
         "network_quality_route_latency_avg_s",
@@ -132,8 +145,14 @@ _SELECTED_FIELDS_BY_SOURCE = {
     ("EFFECTIVE_LOSS_PROXY", "FAILED_FLOW_RATIO"): (
         "network_quality_failed_flow_ratio",
     ),
+    ("EFFECTIVE_LOSS_PROXY", "ACTIVE_FLOW_BLOCKING_RATIO"): (
+        "network_quality_active_flow_blocking_ratio",
+    ),
     ("EFFECTIVE_DELAY_VARIATION_PROXY", "FLOW_LATENCY_VARIATION"): (
         "network_quality_flow_latency_variation_proxy_s",
+    ),
+    ("EFFECTIVE_DELAY_VARIATION_PROXY", "ACTIVE_FLOW_LATENCY_VARIATION"): (
+        "network_quality_active_flow_latency_variation_proxy_s",
     ),
     ("EFFECTIVE_DELAY_VARIATION_PROXY", "ROUTE_LATENCY_SPREAD"): (
         "network_quality_delay_variation_proxy_s",
