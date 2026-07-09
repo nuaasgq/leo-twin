@@ -21570,3 +21570,50 @@ change.
     request arrival records and the configured arrival interval. It is not a
     packet-level completion model. Actual network queue and compute execution
     state still come from runtime observability summaries and lifecycle traces.
+
+
+## 2026-07-09 - T423 executable readiness v1
+
+- Branch: `feature/T423-executable-readiness-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `v2_executable_readiness_v1` evidence to runtime
+  status. The summary checks configuration contract, runtime control, traffic
+  business state, network KPI evidence, compute resource pool, user/satellite
+  node details, scale fidelity, and reproducibility/export surfaces before
+  declaring the current run `READY` for the industrial v2 executable demo loop.
+  This is a read-only readiness layer over existing runtime status fields. No
+  Event Kernel behavior, model formulas, frontend rendering, result export file
+  generation, runtime progression, external simulator integration, packet-level
+  simulation, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/executable_readiness.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_executable_readiness_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/executable_readiness_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct targeted test runner with `PYTHONPATH=src` and a minimal pytest shim
+    for the bundled Python environment.
+    - Result: `tests.unit.test_executable_readiness_v1` 4 direct tests passed.
+    - Result: `tests.integration.test_runtime_session_control::test_demo_server_adapter_uses_runtime_status_and_control_layer` passed with a temporary directory argument.
+- Problems encountered:
+  - Creating the new task branch required elevated Git ref write access because
+    the sandbox initially denied `.git/refs` writes.
+  - `apply_patch` remains unavailable in this Windows sandbox, so exact UTF-8
+    replacement/write scripts were used and diffs were reviewed.
+  - The first network KPI readiness gate used `network_effective_*` KPI time
+    series names against `metrics_summary`; the real backend status source is
+    `network_quality_*`. The integration test caught the gate as NOT_READY, and
+    the required paths were corrected to the actual backend fields.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - Readiness v1 proves that the current runtime status has the required v2 demo
+    evidence. It does not yet persist the readiness object into result packages
+    or render it as an operator checklist in the frontend.

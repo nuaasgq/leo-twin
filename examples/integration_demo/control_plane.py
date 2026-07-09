@@ -49,6 +49,7 @@ from leo_twin.services.configuration_view import (
     load_user_configuration_template,
 )
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
+from leo_twin.services.executable_readiness import build_v2_executable_readiness_v1
 from leo_twin.services.network_kpi_benchmark_validation import (
     build_network_kpi_benchmark_validation_v1,
 )
@@ -2597,6 +2598,9 @@ class DemoControlPlane:
             )
         )
         status["runtime_export_history_v1"] = self._runtime_export_history_json()
+        status["v2_executable_readiness_v1"] = build_v2_executable_readiness_v1(
+            status
+        )
         return status
 
     def _runtime_export_status_json(self, status: dict[str, Any]) -> dict[str, Any]:

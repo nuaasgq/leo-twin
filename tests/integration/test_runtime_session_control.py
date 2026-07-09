@@ -340,6 +340,16 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert business_window["item_count"] <= business_window["item_limit"]
     assert "ACTIVE_BUSINESS" in business_window["state_counts"]
     assert str(business_window["summary_hash"]).startswith("sha256:")
+    readiness = status_after_tick["v2_executable_readiness_v1"]
+    assert readiness["version"] == "v1"
+    assert readiness["readiness_id"] == "leo_twin.v2_executable_readiness.v1"
+    assert readiness["source"] == "BACKEND_RUNTIME_STATUS"
+    assert readiness["target"] == "INDUSTRIAL_V2_EXECUTABLE_DEMO_LOOP"
+    assert readiness["readiness_status"] == "READY"
+    assert readiness["executable_ready"] is True
+    assert readiness["failed_gate_count"] == 0
+    assert readiness["passed_gate_count"] == readiness["gate_count"]
+    assert str(readiness["readiness_hash"]).startswith("sha256:")
     lifecycle = status_after_tick["network_flow_lifecycle_summary_v1"]
     assert lifecycle["version"] == "v1"
     assert lifecycle["source"] == "METRICS_SUMMARY_NETWORK_FLOW_LIFECYCLE_FIELDS"

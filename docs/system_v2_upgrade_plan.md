@@ -1413,6 +1413,11 @@ Current Phase 3 progress:
   current simulation time, including primary request, flow, target, selected
   satellite, and next-arrival fields for dashboard tables.
 
+- T423 adds `v2_executable_readiness_v1` to runtime status. The backend now
+  checks configuration, runtime control, traffic business, network KPI, compute
+  resource, node detail, scale-fidelity, and reproducibility/export gates before
+  declaring the current run an industrial v2 executable demo loop.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The
