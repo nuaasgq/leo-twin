@@ -456,6 +456,25 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert readiness["failed_gate_count"] == 0
     assert readiness["passed_gate_count"] == readiness["gate_count"]
     assert str(readiness["readiness_hash"]).startswith("sha256:")
+    closure_evidence = status_after_tick["system_v2_closure_evidence_v1"]
+    assert closure_evidence["version"] == "v1"
+    assert closure_evidence["closure_id"] == (
+        "leo_twin.system_v2_closure_evidence.v1"
+    )
+    assert closure_evidence["source"] == "BACKEND_RUNTIME_STATUS"
+    assert closure_evidence["target"] == "INDUSTRIAL_V2_DEMO_CLOSURE_HANDOFF"
+    assert closure_evidence["closure_status"] in {
+        "COLLECTING_EVIDENCE",
+        "NOT_SEALED",
+        "SEALED_WITH_WARNINGS",
+        "SEALED",
+    }
+    assert closure_evidence["packet_level_simulation"] is False
+    assert closure_evidence["frontend_inference_required"] is False
+    assert "runtime_result_closure" in {
+        gate["gate_id"] for gate in closure_evidence["gates"]
+    }
+    assert str(closure_evidence["closure_hash"]).startswith("sha256:")
     lifecycle = status_after_tick["network_flow_lifecycle_summary_v1"]
     assert lifecycle["version"] == "v1"
     assert lifecycle["source"] == "METRICS_SUMMARY_NETWORK_FLOW_LIFECYCLE_FIELDS"

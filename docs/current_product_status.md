@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Branch: `feature/T451-runtime-observation-consistency-v1`
+Branch: `feature/T452-v2-demo-closure-evidence-v1`
 
 ## Local Entry Points
 
@@ -80,6 +80,14 @@ checks can verify that metrics, KPI time series, traffic timeline, business
 activity window, and closure readiness are aligned to the same observation
 time. Targeted runtime/session, export-package, and live-completion tests
 passed.
+The latest T452 validation adds backend-owned
+`system_v2_closure_evidence_v1` to runtime status and exports
+`system_v2_closure_evidence_v1.json` in result packages. The new evidence
+object aggregates configuration closure, executable readiness, observation
+consistency, runtime result closure, standard scenario acceptance,
+semantic evidence surfaces, and reproducibility/package contract checks into a
+single final demo handoff gate. Targeted backend contract, runtime-session,
+result-package, and disposable-acceptance tests passed.
 The latest T370 validation added result-package export checks for network KPI
 formula evidence, passed 35 targeted backend tests, passed 26 frontend test
 files / 456 tests, and completed a production build. Vite reported the
@@ -154,6 +162,11 @@ report artifact in the browser.
   time-series tail, traffic request timeline, business activity window, and
   closure readiness. The dashboard no longer needs to infer whether those
   views describe the same simulation observation point.
+- Runtime status now also includes backend-owned
+  `system_v2_closure_evidence_v1`, a final v2 demo handoff summary that
+  reports whether the run is sealed, still collecting evidence, sealed with
+  warnings, or not sealed. Result packages now include the matching
+  `system_v2_closure_evidence_v1.json` evidence snapshot.
 - Dashboard service latency now uses backend-provided component summary,
   per-service trace rows, and visible `component_timeline` stage chips.
 - Runtime health smoke reports endpoint timings, orbit/protocol fields,

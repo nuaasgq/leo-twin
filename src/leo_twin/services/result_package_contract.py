@@ -155,6 +155,9 @@ RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID = (
 RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1_ID = (
     "leo_twin.runtime_export_standard_scenario_acceptance.v1"
 )
+RUNTIME_EXPORT_SYSTEM_V2_CLOSURE_EVIDENCE_V1_ID = (
+    "leo_twin.runtime_export_system_v2_closure_evidence.v1"
+)
 USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
     "leo_twin.user_configuration_audit_binding.v1"
 )
@@ -206,6 +209,7 @@ COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME = (
 )
 USER_CONFIGURATION_CLOSURE_FILENAME = "user_configuration_closure_v2.json"
 STANDARD_SCENARIO_ACCEPTANCE_FILENAME = "standard_scenario_acceptance_v2.json"
+SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME = "system_v2_closure_evidence_v1.json"
 SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md"
 ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = "route_comparison_review_report_v1.json"
@@ -544,6 +548,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "backend-owned 72/300/1200 standard scenario acceptance "
                     "evidence exported for offline demo closure review"
+                ),
+            },
+            {
+                "logical_name": "system_v2_closure_evidence_v1",
+                "filename": SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME,
+                "format": "json",
+                "content": (
+                    "backend-owned final v2 demo closure evidence exported "
+                    "for offline handoff review"
                 ),
             },
             {
@@ -1273,6 +1286,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "runtime_kpi_movement_summary_v1.json",
             "runtime_closure_readiness_v1.json",
             "standard_scenario_acceptance_v2.json",
+            "system_v2_closure_evidence_v1.json",
             "runtime_dashboard_kpi_v1.json",
             "network_flow_lifecycle_summary_v1.json",
             "service_lifecycle_stage_summary_v1.json",
@@ -3297,6 +3311,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "runtime_kpi_movement_summary_v1.json",
                 "runtime_closure_readiness_v1.json",
                 "standard_scenario_acceptance_v2.json",
+                "system_v2_closure_evidence_v1.json",
                 "runtime_dashboard_kpi_v1.json",
                 "network_flow_lifecycle_summary_v1.json",
                 "service_lifecycle_stage_summary_v1.json",
@@ -3342,6 +3357,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "runtime_kpi_movement_summary_v1.json",
             "runtime_closure_readiness_v1.json",
             "standard_scenario_acceptance_v2.json",
+            "system_v2_closure_evidence_v1.json",
             "runtime_dashboard_kpi_v1.json",
             "network_flow_lifecycle_summary_v1.json",
             "service_lifecycle_stage_summary_v1.json",
@@ -7842,6 +7858,7 @@ def _runtime_export_scenario_review_step_label(
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "runtime_closure_readiness_v1.json": "runtime closure readiness",
         "standard_scenario_acceptance_v2.json": "standard scenario acceptance",
+        "system_v2_closure_evidence_v1.json": "system v2 closure evidence",
         "runtime_dashboard_kpi_v1.json": "runtime dashboard KPI",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "traffic_business_activity_window_v1.json": "business activity",

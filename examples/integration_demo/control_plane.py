@@ -101,6 +101,9 @@ from leo_twin.services.runtime_kpi_movement import (
 from leo_twin.services.runtime_observation_consistency import (
     build_runtime_observation_consistency_v1,
 )
+from leo_twin.services.system_v2_closure_evidence import (
+    build_system_v2_closure_evidence_v1,
+)
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -134,6 +137,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID,
     RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1_ID,
+    RUNTIME_EXPORT_SYSTEM_V2_CLOSURE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
@@ -294,6 +298,9 @@ _RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_FILENAME = (
 )
 _RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_FILENAME = (
     "standard_scenario_acceptance_v2.json"
+)
+_RUNTIME_EXPORT_SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME = (
+    "system_v2_closure_evidence_v1.json"
 )
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
@@ -1335,6 +1342,23 @@ class DemoControlPlane:
         )
         written_files["standard_scenario_acceptance_v2"] = (
             standard_scenario_acceptance_path
+        )
+        system_v2_closure_evidence_path = (
+            package_dir / _RUNTIME_EXPORT_SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME
+        )
+        system_v2_closure_evidence = _runtime_status_evidence_snapshot_export(
+            export_status,
+            runtime_status_field="system_v2_closure_evidence_v1",
+            artifact_type="RUNTIME_EXPORT_SYSTEM_V2_CLOSURE_EVIDENCE_V1",
+            artifact_id=RUNTIME_EXPORT_SYSTEM_V2_CLOSURE_EVIDENCE_V1_ID,
+            evidence_label="system v2 demo closure evidence",
+        )
+        system_v2_closure_evidence_path.write_text(
+            stable_json_pretty(system_v2_closure_evidence),
+            encoding="utf-8",
+        )
+        written_files["system_v2_closure_evidence_v1"] = (
+            system_v2_closure_evidence_path
         )
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path
@@ -2953,6 +2977,9 @@ class DemoControlPlane:
                 status,
                 generated_config=effective_generated_config,
             )
+        )
+        status["system_v2_closure_evidence_v1"] = (
+            build_system_v2_closure_evidence_v1(status)
         )
         return status
 

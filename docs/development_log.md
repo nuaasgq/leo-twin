@@ -5,6 +5,61 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-09 - System V2 Demo Closure Evidence v1
+
+- Branch: `feature/T452-v2-demo-closure-evidence-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned final closure evidence for the industrial v2
+  executable demo loop. Runtime status now exposes
+  `system_v2_closure_evidence_v1`, which aggregates user-configuration
+  closure, executable readiness, observation consistency, runtime result
+  closure, standard-scenario acceptance, semantic evidence surfaces, and
+  reproducibility/package contract checks. Runtime export packages now write
+  `system_v2_closure_evidence_v1.json` as a deterministic runtime-status
+  evidence snapshot. No Event Kernel behavior, packet-level simulation,
+  frontend architecture, or external simulator integration was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/system_v2_closure_evidence.py`
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `src/leo_twin/services/standard_scenario_acceptance.py`
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `tests/unit/test_system_v2_closure_evidence.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/unit/test_standard_scenario_acceptance_v2.py`
+  - `tests/unit/test_benchmark_scenario_matrix_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\system_v2_closure_evidence.py src\leo_twin\services\result_package_contract.py src\leo_twin\services\standard_scenario_acceptance.py examples\integration_demo\control_plane.py tests\unit\test_system_v2_closure_evidence.py tests\unit\test_result_package_contract_v1.py tests\unit\test_standard_scenario_acceptance_v2.py tests\unit\test_benchmark_scenario_matrix_v1.py tests\integration\test_runtime_session_control.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_system_v2_closure_evidence.py tests\unit\test_standard_scenario_acceptance_v2.py tests\unit\test_benchmark_scenario_matrix_v1.py::test_benchmark_scenario_matrix_requires_system_v2_closure_evidence tests\unit\test_result_package_contract_v1.py -q`
+    - Result: passed, 57 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package -q`
+    - Result: passed, 2 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests\unit\test_disposable_acceptance_harness_docs.py -q`
+    - Result: passed, 5 passed.
+- Problems encountered and handling:
+  - Adding `system_v2_closure_evidence_v1` as a required field inside
+    `standard_scenario_acceptance_v2` would create a circular dependency,
+    because the closure summary depends on standard acceptance. The final
+    implementation keeps the field out of standard acceptance prerequisites
+    while still adding `system_v2_closure_evidence_v1.json` to the standard
+    result-package evidence filename contract.
+  - The full result-package contract test initially failed because expected
+    recommended artifact lists did not include the new closure evidence file.
+    The test fixtures were updated to reflect the new deterministic package
+    contract.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - `system_v2_closure_evidence_v1` seals the current demo loop at the product
+    evidence level. It does not improve orbit, RF/channel, routing, or compute
+    fidelity. Future work should move from demo closure into model-validation
+    upgrades with explicit benchmark scenarios and error bounds.
+
 ## 2026-07-09 - Runtime Observation Consistency v1
 
 - Branch: `feature/T451-runtime-observation-consistency-v1`

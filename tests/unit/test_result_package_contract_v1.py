@@ -127,6 +127,7 @@ _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME = (
 )
 _USER_CONFIGURATION_CLOSURE_FILENAME = "user_configuration_closure_v2.json"
 _STANDARD_SCENARIO_ACCEPTANCE_FILENAME = "standard_scenario_acceptance_v2.json"
+_SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME = "system_v2_closure_evidence_v1.json"
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -179,6 +180,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
         _USER_CONFIGURATION_CLOSURE_FILENAME,
         _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
+        _SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -342,6 +344,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
         _USER_CONFIGURATION_CLOSURE_FILENAME,
         _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
+        _SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -454,6 +457,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
         _USER_CONFIGURATION_CLOSURE_FILENAME,
         _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
+        _SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
@@ -1517,6 +1521,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
         _USER_CONFIGURATION_CLOSURE_FILENAME,
         _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
+        _SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
@@ -1843,6 +1848,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
         _USER_CONFIGURATION_CLOSURE_FILENAME,
         _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
+        _SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
@@ -4035,6 +4041,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
         _USER_CONFIGURATION_CLOSURE_FILENAME,
         _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
+        _SYSTEM_V2_CLOSURE_EVIDENCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,

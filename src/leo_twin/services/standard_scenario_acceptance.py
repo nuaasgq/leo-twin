@@ -35,6 +35,7 @@ RESULT_PACKAGE_EVIDENCE_FILENAMES: tuple[str, ...] = (
     "network_kpi_assurance_v2.json",
     "compute_service_resource_evidence_v1.json",
     "user_configuration_closure_v2.json",
+    "system_v2_closure_evidence_v1.json",
     "scenario_review_bundle_v1.json",
     "export_package_audit_index_v1.json",
     "package_handoff_report_v1.md",

@@ -206,3 +206,11 @@ def test_benchmark_scenario_matrix_requires_runtime_observation_consistency() ->
         expectation = scenario["runtime_status_expectation"]  # type: ignore[index]
 
         assert "runtime_observation_consistency_v1" in expectation["required_fields"]
+
+
+def test_benchmark_scenario_matrix_requires_system_v2_closure_evidence() -> None:
+    for scenario_id in benchmark_scenario_ids():
+        scenario = benchmark_scenario_by_id(scenario_id, PROJECT_ROOT)
+        expectation = scenario["runtime_status_expectation"]  # type: ignore[index]
+
+        assert "system_v2_closure_evidence_v1" in expectation["required_fields"]

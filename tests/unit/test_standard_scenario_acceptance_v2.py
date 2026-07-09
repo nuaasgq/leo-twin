@@ -54,6 +54,9 @@ def test_standard_scenario_acceptance_v2_matches_shipped_scenarios(
     assert "standard_scenario_acceptance_v2.json" in (
         first["result_package_evidence_filenames"]
     )
+    assert "system_v2_closure_evidence_v1.json" in (
+        first["result_package_evidence_filenames"]
+    )
     assert first["result_package_evidence_filenames"] == (
         RESULT_PACKAGE_EVIDENCE_FILENAMES
     )
