@@ -3120,6 +3120,7 @@ export interface RuntimeStatusPayload {
   user_request_summary_v1?: RuntimeUserRequestSummaryV1;
   user_service_request_summary_v2?: RuntimeUserServiceRequestSummaryV2;
   user_request_history_v1?: RuntimeUserRequestHistoryV1;
+  traffic_business_activity_window_v1?: RuntimeTrafficBusinessActivityWindowV1;
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
   route_explanation_summary_v1?: RuntimeRouteExplanationSummaryV1;
   route_provenance_trust_summary_v1?: RuntimeRouteProvenanceTrustSummaryV1;
@@ -3127,6 +3128,7 @@ export interface RuntimeStatusPayload {
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   reproducibility_manifest_v1?: RuntimeReproducibilityManifestV1;
   runtime_export_history_v1?: RuntimeExportHistoryV1;
+  v2_executable_readiness_v1?: RuntimeV2ExecutableReadinessV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
 }
@@ -3672,6 +3674,75 @@ export interface RuntimeUserRequestItemV1 {
   request_state?: string;
   request_state_label?: string;
   path: readonly string[];
+}
+
+export interface RuntimeTrafficBusinessActivityWindowV1 {
+  version: "v1" | string;
+  summary_id: string;
+  source: string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  current_sim_time: number;
+  request_count: number;
+  user_count: number;
+  active_user_count: number;
+  recent_user_count: number;
+  pending_user_count: number;
+  idle_user_count: number;
+  window_user_count: number;
+  window_active_user_count: number;
+  window_recent_user_count: number;
+  window_pending_user_count: number;
+  window_idle_user_count: number;
+  window: {
+    lookback_window_s: number;
+    lookahead_window_s: number;
+    window_start_s: number;
+    window_end_s: number;
+    assumed_service_duration_s: number;
+  };
+  item_limit: number;
+  item_count: number;
+  hidden_window_user_count: number;
+  state_counts: Readonly<Record<string, number>>;
+  window_state_counts: Readonly<Record<string, number>>;
+  items: readonly RuntimeTrafficBusinessActivityItemV1[];
+  model_assumptions?: readonly string[];
+  summary_hash?: string;
+}
+
+export interface RuntimeTrafficBusinessActivityItemV1 {
+  user_id: string;
+  platform_type: string;
+  business_state: string;
+  request_count: number;
+  active_request_count: number;
+  recent_request_count: number;
+  pending_request_count: number;
+  past_request_count: number;
+  window_request_count: number;
+  communication_request_count: number;
+  compute_request_count: number;
+  service_classes: readonly string[];
+  active_business_types: readonly string[];
+  window_business_types: readonly string[];
+  current_or_next_business_type: string;
+  primary_request_id: string;
+  primary_flow_id: string;
+  primary_target_id: string;
+  selected_satellite_id: string;
+  current_or_next_arrival_time: number | null;
+  last_arrival_time: number | null;
+  next_arrival_time: number | null;
+  time_to_next_request_s: number | null;
+  active_flow_ids: readonly string[];
+  recent_flow_ids: readonly string[];
+  pending_flow_ids: readonly string[];
+  total_input_data_mb: number;
+  total_output_data_mb: number;
+  network_queue_model: string;
+  compute_execution_model: string;
 }
 
 export interface RuntimeUserServiceRequestSummaryV2 extends RuntimeUserRequestSummaryV1 {
@@ -4294,6 +4365,47 @@ export interface RuntimeStreamBufferDiagnosticsV1 {
   max_items: number;
   max_batch_size: number;
   overflow_risk: boolean;
+}
+
+export interface RuntimeV2ExecutableReadinessV1 {
+  version: "v1" | string;
+  readiness_id: string;
+  source: string;
+  target: string;
+  readiness_status: string;
+  executable_ready: boolean;
+  gate_count: number;
+  passed_gate_count: number;
+  failed_gate_count: number;
+  gates: readonly RuntimeV2ExecutableReadinessGateV1[];
+  missing_required_gate_ids: readonly string[];
+  frontend_inference_required: boolean;
+  packet_level_simulation: boolean;
+  model_boundaries?: {
+    event_kernel_policy?: string;
+    packet_level_simulation?: boolean;
+    external_simulators?: boolean;
+    forbidden_integrations?: readonly string[];
+  };
+  operator_next_action: string;
+  readiness_hash?: string;
+}
+
+export interface RuntimeV2ExecutableReadinessGateV1 {
+  gate_id: string;
+  label: string;
+  status: string;
+  required_paths: readonly string[];
+  missing_paths: readonly string[];
+  issue_count: number;
+  issues: readonly string[];
+  evidence: readonly RuntimeV2ExecutableReadinessEvidenceV1[];
+}
+
+export interface RuntimeV2ExecutableReadinessEvidenceV1 {
+  path: string;
+  present: boolean;
+  value_summary: unknown;
 }
 
 export interface GeneratedScenarioConfig {

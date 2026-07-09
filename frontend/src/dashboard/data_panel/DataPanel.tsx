@@ -89,10 +89,12 @@ import {
   RuntimeServiceLifecycleTraceV2,
   RuntimeServiceTraceDetailV2,
   RuntimeStatusPayload,
+  RuntimeTrafficBusinessActivityWindowV1,
   RuntimeUserRequestHistoryV1,
   RuntimeUserRequestItemV1,
   RuntimeUserRequestSummaryV1,
   RuntimeUserServiceRequestSummaryV2,
+  RuntimeV2ExecutableReadinessV1,
   UserConfigurationExportV1,
   UserConfigurationReferenceFieldV1,
   UserConfigurationReferenceV1,
@@ -850,6 +852,12 @@ export const DataPanel = memo(function DataPanel({
   );
   const exportHistoryDisplay = buildDataPanelExportHistoryDisplay(
     runtimeStatus.runtime_export_history_v1
+  );
+  const executableReadinessDisplay = buildDataPanelExecutableReadinessDisplay(
+    runtimeStatus.v2_executable_readiness_v1
+  );
+  const trafficBusinessActivityDisplay = buildDataPanelTrafficBusinessActivityDisplay(
+    runtimeStatus.traffic_business_activity_window_v1
   );
   const userConfigurationContractDisplay = buildDataPanelUserConfigurationContractDisplay(
     userConfigurationSchema,
@@ -2146,6 +2154,15 @@ export const DataPanel = memo(function DataPanel({
               </small>
             </div>
           ) : null}
+          {executableReadinessDisplay ? (
+            <div className="data-panel-runtime-wide">
+              <span>v2 可执行闭环</span>
+              <strong>{executableReadinessDisplay.statusLabel}</strong>
+              <small className="data-panel-runtime-note">
+                {executableReadinessDisplay.summaryLabel}
+              </small>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -2162,6 +2179,38 @@ export const DataPanel = memo(function DataPanel({
           <span>{summary.eventCount} 个离散事件</span>
         </div>
       </div>
+
+      {executableReadinessDisplay ? (
+        <section
+          className="dashboard-section data-panel-config-contract"
+          aria-label="v2 可执行闭环 readiness"
+        >
+          <div className="section-title">v2 可执行闭环</div>
+          <div className="data-panel-source-note">
+            <span>{executableReadinessDisplay.sourceLabel}</span>
+            <small>{executableReadinessDisplay.detailLabel}</small>
+          </div>
+          <div className={`data-panel-export-compare ${executableReadinessDisplay.tone}`}>
+            <div>
+              <span>后端 readiness</span>
+              <strong>{executableReadinessDisplay.statusLabel}</strong>
+              <small>{executableReadinessDisplay.summaryLabel}</small>
+            </div>
+            <div className="data-panel-export-compare-meta">
+              {executableReadinessDisplay.metaLabels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            {executableReadinessDisplay.issueLabels.length > 0 ? (
+              <div className="data-panel-export-compare-diffs">
+                {executableReadinessDisplay.issueLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       {userConfigurationContractDisplay ? (
         <section
@@ -4840,6 +4889,41 @@ export const DataPanel = memo(function DataPanel({
 
       <div className="data-panel-section-title">动态态势曲线</div>
       <div className="data-panel-chart-grid">
+        {trafficBusinessActivityDisplay ? (
+          <section className="dashboard-section data-panel-chart" aria-label="用户业务活动窗口">
+            <div className="section-title">用户业务活动窗口</div>
+            <div className="data-panel-source-note">
+              <span>{trafficBusinessActivityDisplay.sourceLabel}</span>
+              <small>{trafficBusinessActivityDisplay.summaryLabel}</small>
+            </div>
+            <div className="data-panel-chart-kpis compact">
+              <KpiPanel
+                label="活跃用户"
+                value={trafficBusinessActivityDisplay.activeUserLabel}
+              />
+              <KpiPanel
+                label="待到达"
+                value={trafficBusinessActivityDisplay.pendingUserLabel}
+              />
+            </div>
+            <div className="data-panel-resource-vector">
+              {trafficBusinessActivityDisplay.metaLabels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            {trafficBusinessActivityDisplay.rows.length > 0 ? (
+              <div className="data-panel-formula-inputs" aria-label="业务活动窗口用户样例">
+                {trafficBusinessActivityDisplay.rows.map((row) => (
+                  <span key={row.userId} title={row.title}>
+                    {row.userId} <strong>{row.stateLabel}</strong> {row.detailLabel}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="data-panel-empty-chart">等待后端业务活动窗口</div>
+            )}
+          </section>
+        ) : null}
         <section
           className="dashboard-section data-panel-chart wide"
           aria-label="全网平均吞吐量时延丢包率抖动"
@@ -14154,6 +14238,144 @@ export function buildDataPanelExportHistoryDisplay(
       latest.current_sim_time
     )}s / events=${formatCount(latest.processed_event_count)} / ${shortRuntimeHash(exportHash)}`
   };
+}
+
+export interface DataPanelExecutableReadinessDisplay {
+  tone: "match" | "pending" | "error";
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  detailLabel: string;
+  metaLabels: readonly string[];
+  issueLabels: readonly string[];
+}
+
+export function buildDataPanelExecutableReadinessDisplay(
+  readiness: RuntimeV2ExecutableReadinessV1 | null | undefined
+): DataPanelExecutableReadinessDisplay | null {
+  if (readiness === null || readiness === undefined) {
+    return null;
+  }
+  const failedGates = readiness.gates.filter((gate) => gate.status !== "PASS");
+  const issueLabels = failedGates.flatMap((gate) => {
+    const missing = gate.missing_paths.slice(0, 3).join(", ");
+    const issues = gate.issues.slice(0, 3).join(", ");
+    const detail = [missing ? `missing ${missing}` : "", issues].filter(Boolean).join(" / ");
+    return [`${gate.label}: ${detail || gate.status}`];
+  });
+  return {
+    tone: readiness.executable_ready ? "match" : "error",
+    sourceLabel: readiness.source,
+    statusLabel: readiness.executable_ready ? "已就绪" : "未就绪",
+    summaryLabel: `${formatCount(readiness.passed_gate_count)} / ${formatCount(
+      readiness.gate_count
+    )} gates passed`,
+    detailLabel: readiness.operator_next_action,
+    metaLabels: [
+      readiness.target,
+      `failed ${formatCount(readiness.failed_gate_count)}`,
+      `frontend inference ${readiness.frontend_inference_required ? "required" : "not required"}`,
+      `packet level ${readiness.packet_level_simulation ? "yes" : "no"}`,
+      readiness.executable_ready
+        ? "配置、运行时、业务、网络、算力、节点详情、fidelity、复现导出 gate 均通过"
+        : "",
+      readiness.readiness_hash ? shortRuntimeHash(readiness.readiness_hash) : ""
+    ].filter((label) => label.length > 0),
+    issueLabels
+  };
+}
+
+export interface DataPanelTrafficBusinessActivityDisplay {
+  sourceLabel: string;
+  summaryLabel: string;
+  activeUserLabel: string;
+  pendingUserLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelTrafficBusinessActivityRowDisplay[];
+}
+
+export interface DataPanelTrafficBusinessActivityRowDisplay {
+  userId: string;
+  stateLabel: string;
+  detailLabel: string;
+  title: string;
+}
+
+export function buildDataPanelTrafficBusinessActivityDisplay(
+  activity: RuntimeTrafficBusinessActivityWindowV1 | null | undefined,
+  rowLimit = 6
+): DataPanelTrafficBusinessActivityDisplay | null {
+  if (activity === null || activity === undefined) {
+    return null;
+  }
+  const normalizedLimit = Math.max(0, Math.floor(rowLimit));
+  const rows = activity.items.slice(0, normalizedLimit).map((item) => {
+    const businessType = item.current_or_next_business_type || item.window_business_types[0] || "";
+    const target = item.primary_target_id || item.selected_satellite_id || "none";
+    const nextLabel =
+      item.time_to_next_request_s === null || item.time_to_next_request_s === undefined
+        ? "no next request"
+        : `next ${formatPreciseMetricValue(item.time_to_next_request_s)}s`;
+    return {
+      userId: item.user_id,
+      stateLabel: trafficBusinessStateLabel(item.business_state),
+      detailLabel: [
+        businessType ? trafficClassLabel(businessType) : "无业务类型",
+        `target ${target}`,
+        nextLabel,
+        `${formatCount(item.active_request_count)} active`,
+        `${formatCount(item.pending_request_count)} pending`
+      ].join(" / "),
+      title: [
+        item.primary_request_id ? `request ${item.primary_request_id}` : "",
+        item.primary_flow_id ? `flow ${item.primary_flow_id}` : "",
+        item.selected_satellite_id ? `satellite ${item.selected_satellite_id}` : "",
+        item.network_queue_model,
+        item.compute_execution_model
+      ]
+        .filter((part) => part.length > 0)
+        .join(" / ")
+    };
+  });
+  return {
+    sourceLabel: activity.source,
+    summaryLabel: `t=${formatPreciseMetricValue(activity.current_sim_time)}s / users ${formatCount(
+      activity.user_count
+    )} / requests ${formatCount(activity.request_count)} / window ${formatCount(
+      activity.window_user_count
+    )}`,
+    activeUserLabel: `${formatCount(activity.active_user_count)} total / ${formatCount(
+      activity.window_active_user_count
+    )} window`,
+    pendingUserLabel: `${formatCount(activity.pending_user_count)} total / ${formatCount(
+      activity.window_pending_user_count
+    )} window`,
+    metaLabels: [
+      `recent ${formatCount(activity.recent_user_count)}`,
+      `idle ${formatCount(activity.idle_user_count)}`,
+      `hidden ${formatCount(activity.hidden_window_user_count)}`,
+      `lookback ${formatPreciseMetricValue(activity.window.lookback_window_s)}s`,
+      `lookahead ${formatPreciseMetricValue(activity.window.lookahead_window_s)}s`,
+      activity.summary_hash ? shortRuntimeHash(activity.summary_hash) : ""
+    ].filter((label) => label.length > 0),
+    rows
+  };
+}
+
+function trafficBusinessStateLabel(state: string): string {
+  if (state === "ACTIVE_BUSINESS") {
+    return "活跃";
+  }
+  if (state === "RECENT_BUSINESS") {
+    return "近期";
+  }
+  if (state === "PENDING_BUSINESS") {
+    return "待到达";
+  }
+  if (state === "IDLE") {
+    return "空闲";
+  }
+  return state;
 }
 
 export interface DataPanelExportCatalogDisplay {

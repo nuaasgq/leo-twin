@@ -1418,6 +1418,12 @@ Current Phase 3 progress:
   resource, node detail, scale-fidelity, and reproducibility/export gates before
   declaring the current run an industrial v2 executable demo loop.
 
+- T424 binds the frontend data dashboard to backend-owned
+  `v2_executable_readiness_v1` and `traffic_business_activity_window_v1`.
+  The dashboard now shows v2 executable readiness, failed gate details, and
+  bounded user business activity samples from runtime status instead of
+  deriving those product semantics locally.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

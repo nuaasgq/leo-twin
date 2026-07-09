@@ -21617,3 +21617,46 @@ change.
   - Readiness v1 proves that the current runtime status has the required v2 demo
     evidence. It does not yet persist the readiness object into result packages
     or render it as an operator checklist in the frontend.
+
+
+## 2026-07-09 - T424 frontend readiness binding v1
+
+- Branch: `feature/T424-frontend-readiness-binding-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: bind the standalone data dashboard to backend-owned
+  `v2_executable_readiness_v1` and `traffic_business_activity_window_v1` runtime
+  status fields. The frontend now renders v2 executable readiness, failed gate
+  details, backend source labels, and bounded user business activity samples
+  without locally inferring product semantics. This is an additive frontend
+  compatibility task. No Event Kernel behavior, backend model formula, runtime
+  progression, result export behavior, external simulator integration,
+  packet-level simulation, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanelReadiness.test.ts`
+  - `docs/frontend_readiness_binding_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test`
+    - Result: 27 test files passed, 477 tests passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing data-panel chunk-size warning.
+- Problems encountered:
+  - The initial `pnpm` invocation used the ambient shell PATH and failed because
+    `node` was not available there. The validation commands were rerun with the
+    Codex bundled Node.js and pnpm paths prepended to PATH.
+  - A temporary PowerShell here-string insertion corrupted newly added Chinese
+    JSX labels into question marks. The affected labels were repaired with
+    explicit patch edits, and `rg` confirmed no question-mark placeholders
+    remain in the touched frontend files.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The frontend now displays readiness and business activity from runtime
+    status, but readiness is not yet persisted into every result-package audit
+    surface. Standard 72/300/1200 acceptance scenarios still need a final
+    executable-loop verification pass.
