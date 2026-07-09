@@ -1,8 +1,8 @@
 # Current Product Status
 
-Date: 2026-07-08
+Date: 2026-07-09
 
-Branch: `feature/T399-route-review-report-cursor-page-v1`
+Branch: `feature/T448-executable-standard-acceptance-gate-v1`
 
 ## Local Entry Points
 
@@ -52,7 +52,13 @@ Disposable acceptance harness for the shipped 72 / 300 / 1200 benchmark YAMLs:
 The plan-only JSON now exposes benchmark matrix and acceptance-gate evidence
 for every selected scenario, including `benchmark_scenario_gate`, expected
 range source paths such as `network.time_pressure_period_s`, required runtime
-status fields, and the result-package files that carry acceptance evidence.
+status fields, `standard_scenario_acceptance_v2`, and the result-package files
+that carry acceptance evidence.
+
+For shipped 72 / 300 / 1200 benchmark YAMLs, `verify_product_acceptance.ps1`
+now derives the expected standard scenario id and requires
+`/runtime/status.status.standard_scenario_acceptance_v2.acceptance_status` to
+be `PASS`.
 
 The latest full local run passed:
 

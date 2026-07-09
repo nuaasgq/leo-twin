@@ -23,6 +23,9 @@ from leo_twin.services.result_package_contract import (  # noqa: E402
     RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
 )
+from leo_twin.services.standard_scenario_acceptance import (  # noqa: E402
+    STANDARD_SCENARIO_ACCEPTANCE_V2_ID,
+)
 
 
 STANDARD_ACCEPTANCE_CONFIGS = (
@@ -108,6 +111,13 @@ def benchmark_acceptance_plan_for_config(
             "matrix_id": matrix["matrix_id"],
             "scenario_id": scenario["scenario_id"],
             "binding_id": RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+            "standard_acceptance_id": STANDARD_SCENARIO_ACCEPTANCE_V2_ID,
+            "standard_acceptance_runtime_status_field": (
+                "standard_scenario_acceptance_v2"
+            ),
+            "standard_acceptance_result_package_file": (
+                "standard_scenario_acceptance_v2.json"
+            ),
             "acceptance_report_id": RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
             "acceptance_gate_check_id": "benchmark_scenario_gate",
             "expected_range_count": len(expected_ranges),
@@ -124,6 +134,7 @@ def benchmark_acceptance_plan_for_config(
             "result_package_evidence_files": (
                 "config_snapshot.json",
                 "export_package_audit_index_v1.json",
+                "standard_scenario_acceptance_v2.json",
             ),
             "boundary_conditions": (
                 "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
@@ -135,6 +146,11 @@ def benchmark_acceptance_plan_for_config(
         "matrix_id": matrix["matrix_id"],
         "scenario_id": config_path.stem,
         "binding_id": RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+        "standard_acceptance_id": STANDARD_SCENARIO_ACCEPTANCE_V2_ID,
+        "standard_acceptance_runtime_status_field": "standard_scenario_acceptance_v2",
+        "standard_acceptance_result_package_file": (
+            "standard_scenario_acceptance_v2.json"
+        ),
         "acceptance_report_id": RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
         "acceptance_gate_check_id": "benchmark_scenario_gate",
         "expected_range_count": 0,
@@ -211,6 +227,9 @@ def build_standard_plan(repo_root: str | Path) -> dict[str, Any]:
             RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID
         ),
         "package_acceptance_report_id": RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
+        "standard_scenario_acceptance_id": STANDARD_SCENARIO_ACCEPTANCE_V2_ID,
+        "standard_scenario_acceptance_field": "standard_scenario_acceptance_v2",
+        "standard_scenario_acceptance_file": "standard_scenario_acceptance_v2.json",
         "acceptance_gate_check_id": "benchmark_scenario_gate",
         "scenario_count": len(STANDARD_ACCEPTANCE_CONFIGS),
         "scenarios": [

@@ -43,6 +43,15 @@ def test_disposable_acceptance_helper_builds_control_safe_payload() -> None:
     assert benchmark["binding_id"] == (
         "leo_twin.runtime_export_benchmark_acceptance_binding.v1"
     )
+    assert benchmark["standard_acceptance_id"] == (
+        "leo_twin.standard_scenario_acceptance.v2"
+    )
+    assert benchmark["standard_acceptance_runtime_status_field"] == (
+        "standard_scenario_acceptance_v2"
+    )
+    assert benchmark["standard_acceptance_result_package_file"] == (
+        "standard_scenario_acceptance_v2.json"
+    )
     assert benchmark["acceptance_gate_check_id"] == "benchmark_scenario_gate"
     assert "time_pressure_period_s" in benchmark["expected_range_metrics"]
     assert "network.time_pressure_period_s" in benchmark["expected_range_sources"]
@@ -50,6 +59,10 @@ def test_disposable_acceptance_helper_builds_control_safe_payload() -> None:
         "runtime_status_required_fields"
     ]
     assert "config_snapshot.json" in benchmark["result_package_evidence_files"]
+    assert (
+        "standard_scenario_acceptance_v2.json"
+        in benchmark["result_package_evidence_files"]
+    )
     payload = plan["initialize_payload"]
     assert payload["satellite_count"] == 72
     assert payload["application_protocol"] == "TASK_OFFLOAD_FLOW"
@@ -70,6 +83,15 @@ def test_disposable_acceptance_standard_plan_covers_72_300_1200() -> None:
     )
     assert plan["package_acceptance_report_id"] == (
         "leo_twin.runtime_export_package_acceptance_report.v1"
+    )
+    assert plan["standard_scenario_acceptance_id"] == (
+        "leo_twin.standard_scenario_acceptance.v2"
+    )
+    assert plan["standard_scenario_acceptance_field"] == (
+        "standard_scenario_acceptance_v2"
+    )
+    assert plan["standard_scenario_acceptance_file"] == (
+        "standard_scenario_acceptance_v2.json"
     )
     assert plan["acceptance_gate_check_id"] == "benchmark_scenario_gate"
     assert [scenario["scenario_id"] for scenario in plan["scenarios"]] == [
@@ -128,6 +150,12 @@ def test_disposable_acceptance_scripts_are_documented_and_guard_runtime_configs(
     assert "$PlanOnly" in script_text
     assert "benchmark_acceptance" in script_text
     assert "benchmark_matrix_id" in script_text
+    assert "standard_scenario_acceptance_id" in script_text
+    assert "standard_scenario_acceptance_file" in script_text
+    assert "ExpectedStandardScenarioId" in (
+        PROJECT_ROOT / "scripts" / "verify_product_acceptance.ps1"
+    ).read_text(encoding="utf-8")
+    assert "ExpectedStandardScenarioId" in health_script.read_text(encoding="utf-8")
 
     health_text = health_script.read_text(encoding="utf-8")
     assert "Get-ForbiddenRuntimeMarkerFindings" in health_text
@@ -169,6 +197,8 @@ def test_disposable_acceptance_planonly_command_outputs_json() -> None:
         completed.stdout
     )
     assert "benchmark_scenario_gate" in completed.stdout
+    assert "leo_twin.standard_scenario_acceptance.v2" in completed.stdout
+    assert "standard_scenario_acceptance_v2.json" in completed.stdout
     assert "network.time_pressure_period_s" in completed.stdout
     assert "small_demo_72sat" in completed.stdout
     assert "scale_demo_1200sat_short" in completed.stdout

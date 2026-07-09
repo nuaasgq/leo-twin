@@ -5,6 +5,66 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-09 - Executable Standard Acceptance Gate v1
+
+- Branch: `feature/T448-executable-standard-acceptance-gate-v1`
+- Commit: pending in this commit
+- Scope: wire the backend-owned `standard_scenario_acceptance_v2` evidence into
+  executable product acceptance entry points. `smoke_runtime_health.ps1` can now
+  require an expected standard scenario id and validates
+  `status.standard_scenario_acceptance_v2` for exact match, `PASS` status, empty
+  missing runtime fields, and the expected result-package evidence filename.
+  `verify_product_acceptance.ps1` derives the standard scenario id from
+  `-AcceptanceConfig` when the config is one of the shipped 72/300/1200
+  benchmark YAMLs. The disposable acceptance plan now exposes the standard
+  acceptance id, runtime status field, and result-package artifact alongside
+  benchmark acceptance metadata. No Event Kernel behavior, simulation model,
+  frontend architecture, packet-level simulation, or external simulator
+  integration was changed.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `scripts/verify_product_acceptance.ps1`
+  - `scripts/run_disposable_acceptance.ps1`
+  - `scripts/disposable_acceptance_payload.py`
+  - `tests/unit/test_disposable_acceptance_harness_docs.py`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/user_guide_v2.md`
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile scripts\disposable_acceptance_payload.py tests\unit\test_disposable_acceptance_harness_docs.py`
+    - Result: passed.
+  - `powershell -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw 'scripts\smoke_runtime_health.ps1')) | Out-Null; [scriptblock]::Create((Get-Content -Raw 'scripts\verify_product_acceptance.ps1')) | Out-Null; [scriptblock]::Create((Get-Content -Raw 'scripts\run_disposable_acceptance.ps1')) | Out-Null"`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_disposable_acceptance_harness_docs.py tests\unit\test_browser_acceptance_smoke_docs.py -q`
+    - Result: passed, 5 passed.
+  - `$env:PYTHON=$((Get-Command python).Source); powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_disposable_acceptance.ps1 -PlanOnly -JsonSummary`
+    - Result: passed; output includes `leo_twin.standard_scenario_acceptance.v2`,
+      `standard_scenario_acceptance_v2`, and
+      `standard_scenario_acceptance_v2.json`.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipRuntimeSmoke -SkipBuild -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml`
+    - Result: passed. The command also ran existing targeted backend checks,
+      frontend visual verification, and 27 frontend test files / 478 tests.
+- Problems encountered and handling:
+  - `run_disposable_acceptance.ps1` plan summary initially exposed only the
+    benchmark gate metadata. It now includes the standard acceptance id, field,
+    and artifact filename so PlanOnly output is a complete executable-version
+    contract.
+  - A broad docs check
+    `$env:PYTHONPATH='src;.'; pytest tests\unit\test_user_guide_v2_docs.py tests\unit\test_system_v2_upgrade_plan_docs.py -q`
+    failed because `docs/system_v2_upgrade_plan.md` currently contains 44 V2
+    workstream task blocks while the existing test expects 38. This file was
+    not changed by T448, so the drift is recorded rather than mixed into this
+    acceptance-gate task.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - A full live disposable 72/300/1200 acceptance run remains an operator-level
+    validation because it restarts local services and is intentionally heavier
+    than this script-contract task.
+
 ## 2026-07-09 - Standard Scenario Acceptance v2
 
 - Branch: `feature/T447-standard-scenario-acceptance-v2`

@@ -52,7 +52,12 @@ Read-only runtime smoke:
 ```powershell
 .\smoke_leo_twin.bat
 .\scripts\smoke_runtime_health.ps1 -JsonSummary
+.\scripts\smoke_runtime_health.ps1 -ExpectedStandardScenarioId small_demo_72sat
 ```
+
+For shipped 72 / 300 / 1200 acceptance configs, product acceptance derives the
+standard scenario id from the backend benchmark matrix and requires
+`standard_scenario_acceptance_v2` to pass in `/runtime/status`.
 
 Control-path smoke, which mutates and resets the active session:
 

@@ -8,6 +8,7 @@ param(
     [int]$ExpectedComputeNodeCount = -1,
     [string]$ExpectedConstellationProfile = "",
     [string]$ExpectedTrafficClass = "",
+    [string]$ExpectedStandardScenarioId = "",
     [switch]$RunControlCycleSmoke,
     [int]$ControlSmokeSatelliteCount = 1200,
     [int]$ControlSmokeUserCount = 20,
@@ -58,6 +59,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from leo_twin.services.benchmark_scenarios import benchmark_scenario_matrix_v1_to_dict
 
 path = Path(sys.argv[1])
 data = yaml.safe_load(path.read_text(encoding='utf-8'))
@@ -65,12 +67,23 @@ scenario = data.get('scenario', {})
 network = data.get('network', {})
 application_protocol = str(network.get('application_protocol', ''))
 traffic_class = 'COMPUTE_SERVICE' if application_protocol == 'TASK_OFFLOAD_FLOW' else ''
+matrix = benchmark_scenario_matrix_v1_to_dict(Path.cwd())
+try:
+    normalized = path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+except ValueError:
+    normalized = path.resolve().as_posix()
+standard_scenario_id = ''
+for item in matrix.get('scenarios', ()):
+    if str(item.get('config_path', '')).replace('\\', '/') == normalized:
+        standard_scenario_id = str(item.get('scenario_id', ''))
+        break
 print(json.dumps({
     'satellite_count': int(scenario.get('satellite_count', -1)),
     'user_count': int(scenario.get('user_count', -1)),
     'compute_node_count': int(scenario.get('compute_nodes', -1)),
     'constellation_profile': str(scenario.get('constellation_profile', '')),
     'traffic_class': traffic_class,
+    'standard_scenario_id': standard_scenario_id,
 }, sort_keys=True))
 '@
     $output = & $Python -c $script $ConfigPath
@@ -120,6 +133,9 @@ try {
         if (-not $ExpectedTrafficClass -and $expectations.traffic_class) {
             $ExpectedTrafficClass = [string]$expectations.traffic_class
         }
+        if (-not $ExpectedStandardScenarioId -and $expectations.standard_scenario_id) {
+            $ExpectedStandardScenarioId = [string]$expectations.standard_scenario_id
+        }
     }
     Invoke-CheckedCommand $python @(
         "-m",
@@ -165,6 +181,9 @@ try {
         }
         if ($ExpectedTrafficClass) {
             $smokeArgs += @("-ExpectedTrafficClass", $ExpectedTrafficClass)
+        }
+        if ($ExpectedStandardScenarioId) {
+            $smokeArgs += @("-ExpectedStandardScenarioId", $ExpectedStandardScenarioId)
         }
         Invoke-CheckedCommand "powershell" $smokeArgs
     }

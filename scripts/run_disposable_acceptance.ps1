@@ -402,6 +402,9 @@ try {
             benchmark_matrix_id = $benchmark.matrix_id
             benchmark_acceptance_binding_id = $benchmark.binding_id
             package_acceptance_report_id = $benchmark.acceptance_report_id
+            standard_scenario_acceptance_id = $benchmark.standard_acceptance_id
+            standard_scenario_acceptance_field = $benchmark.standard_acceptance_runtime_status_field
+            standard_scenario_acceptance_file = $benchmark.standard_acceptance_result_package_file
             acceptance_gate_check_id = $benchmark.acceptance_gate_check_id
             scenario_count = $plans.Count
             scenarios = $plans
@@ -453,6 +456,9 @@ try {
         scenarios = $results
         benchmark_matrix_id = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.matrix_id } else { $null })
         acceptance_gate_check_id = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.acceptance_gate_check_id } else { $null })
+        standard_scenario_acceptance_id = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.standard_acceptance_id } else { $null })
+        standard_scenario_acceptance_field = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.standard_acceptance_runtime_status_field } else { $null })
+        standard_scenario_acceptance_file = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.standard_acceptance_result_package_file } else { $null })
         runtime_config_restored = $true
         services_left_running = [bool]$KeepServices
     }

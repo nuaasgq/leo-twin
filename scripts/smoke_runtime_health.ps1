@@ -7,7 +7,8 @@ param(
     [int]$ExpectedUserCount = -1,
     [int]$ExpectedComputeNodeCount = -1,
     [string]$ExpectedConstellationProfile = "",
-    [string]$ExpectedTrafficClass = ""
+    [string]$ExpectedTrafficClass = "",
+    [string]$ExpectedStandardScenarioId = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -213,6 +214,35 @@ if ($ExpectedTrafficClass -and $trafficClass -ne $ExpectedTrafficClass) {
     throw "Expected traffic_class=$ExpectedTrafficClass, got $trafficClass."
 }
 
+$standardScenarioAcceptance = $runtimeStatus.status.standard_scenario_acceptance_v2
+if ($ExpectedStandardScenarioId) {
+    if ($null -eq $standardScenarioAcceptance) {
+        throw "Backend runtime status is missing status.standard_scenario_acceptance_v2."
+    }
+    if ([string]$standardScenarioAcceptance.current_scenario_id -ne $ExpectedStandardScenarioId) {
+        throw "Expected standard_scenario_acceptance_v2.current_scenario_id=$ExpectedStandardScenarioId, got $($standardScenarioAcceptance.current_scenario_id)."
+    }
+    if ($standardScenarioAcceptance.matched_standard_scenario -ne $true) {
+        throw "Expected standard_scenario_acceptance_v2.matched_standard_scenario=true."
+    }
+    if ([string]$standardScenarioAcceptance.acceptance_status -ne "PASS") {
+        throw "Expected standard_scenario_acceptance_v2.acceptance_status=PASS, got $($standardScenarioAcceptance.acceptance_status)."
+    }
+    if (@($standardScenarioAcceptance.missing_runtime_status_fields).Count -ne 0) {
+        throw "Expected standard_scenario_acceptance_v2.missing_runtime_status_fields to be empty."
+    }
+    if (-not (@($standardScenarioAcceptance.result_package_evidence_filenames) -contains "standard_scenario_acceptance_v2.json")) {
+        throw "Expected standard_scenario_acceptance_v2 result package evidence to include standard_scenario_acceptance_v2.json."
+    }
+}
+
+$standardScenarioId = ""
+$standardScenarioStatus = ""
+if ($null -ne $standardScenarioAcceptance) {
+    $standardScenarioId = [string]$standardScenarioAcceptance.current_scenario_id
+    $standardScenarioStatus = [string]$standardScenarioAcceptance.acceptance_status
+}
+
 $summary = [ordered]@{
     ok = $true
     runtime_status_url = $RuntimeStatusUrl
@@ -224,6 +254,8 @@ $summary = [ordered]@{
     user_count = $userCount
     constellation_profile = $constellationProfile
     traffic_class = $trafficClass
+    standard_scenario_id = $standardScenarioId
+    standard_scenario_acceptance_status = $standardScenarioStatus
     orbit_model = $runtimeStatus.generated_config.orbit_propagation_model
     application_protocol = $runtimeStatus.generated_config.application_protocol
     transport_protocol = $runtimeStatus.generated_config.transport_protocol
@@ -245,6 +277,9 @@ else {
     Write-Host "  simulation status: $($summary.simulation_status)"
     Write-Host "  constellation: $($summary.satellite_count) satellites / $($summary.user_count) users / $($summary.constellation_profile)"
     Write-Host "  traffic class: $($summary.traffic_class)"
+    if ($summary.standard_scenario_id) {
+        Write-Host "  standard scenario: $($summary.standard_scenario_id) / $($summary.standard_scenario_acceptance_status)"
+    }
     Write-Host "  protocols: $($summary.application_protocol) / $($summary.transport_protocol) / $($summary.routing_protocol)"
     Write-Host "  orbit model: $($summary.orbit_model)"
     Write-Host "  compute nodes: $($summary.compute_node_count) / $($summary.compute_resource_model)"

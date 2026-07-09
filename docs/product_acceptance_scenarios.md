@@ -41,6 +41,9 @@ The integration acceptance test verifies:
 - Runtime `INITIALIZE` succeeds.
 - Runtime can start and advance a short live tick.
 - Runtime status and generated backend summary exist.
+- Runtime status exposes backend-owned `standard_scenario_acceptance_v2`.
+- Standard 72/300/1200 configs must report
+  `standard_scenario_acceptance_v2.acceptance_status = PASS`.
 - Runtime health smoke can read backend `/runtime/status`, frontend console,
   and frontend dashboard without mutating configuration.
 - State stream contains satellites.
@@ -59,6 +62,7 @@ Local read-only health smoke:
 .\scripts\smoke_runtime_health.ps1
 .\scripts\smoke_runtime_health.ps1 -JsonSummary
 .\scripts\smoke_runtime_health.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE
+.\scripts\smoke_runtime_health.ps1 -ExpectedStandardScenarioId small_demo_72sat
 ```
 
 Frontend visual/dashboard verification:
@@ -74,6 +78,11 @@ Aggregate product acceptance verification:
 .\scripts\verify_product_acceptance.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE
 .\scripts\verify_product_acceptance.ps1 -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml
 ```
+
+When `-AcceptanceConfig` points to one of the shipped standard configs,
+`verify_product_acceptance.ps1` derives the standard scenario id from the
+backend benchmark matrix and requires runtime health smoke to pass
+`standard_scenario_acceptance_v2`.
 
 ## Limitations
 
