@@ -22169,3 +22169,83 @@ change.
     compact summary available in offline export and audit surfaces. A follow-up
     frontend binding task can consume the backend field without recomputing
     service stage semantics locally.
+
+
+## 2026-07-09 - T436 traffic demand temporal profile summary v1
+
+- Branch: `feature/T436-traffic-demand-temporal-profile-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-owned `traffic_temporal_profile_summary_v1` to runtime
+  status and tighten traffic demand data-size semantics. `TrafficDemandRecord`
+  now carries explicit `input_data_mb` / `output_data_mb` fields, generated
+  traffic records preserve those fields from `TrafficDemandProfile`, and
+  product-facing traffic summaries prefer explicit MB fields before falling
+  back to legacy `input_data_size` / `output_data_size`. The new temporal
+  profile summary reports deterministic request arrival windows,
+  inter-arrival statistics, bucket rows, peak bucket, traffic-class rows, and a
+  temporal profile label. This is a flow-level backend observability task only.
+  No Event Kernel behavior, packet-level simulation, frontend rendering,
+  routing, compute scheduling, external simulator integration, or runtime
+  generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/scenario.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\models\traffic\demand.py examples\integration_demo\scenario.py examples\integration_demo\control_plane.py tests\unit\test_traffic_demand_model.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_traffic_demand_model.py`
+    - Result: 19 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer`
+    - Result: 1 passed.
+  - `python -m py_compile src\leo_twin\services\metrics\collector.py examples\integration_demo\control_plane.py tests\unit\test_metrics_module.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_metrics_module.py`
+    - Result: 29 passed.
+  - `python -m py_compile src\leo_twin\models\traffic\demand.py src\leo_twin\services\metrics\collector.py examples\integration_demo\scenario.py examples\integration_demo\control_plane.py tests\unit\test_traffic_demand_model.py tests\unit\test_metrics_module.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_traffic_demand_model.py tests\unit\test_metrics_module.py`
+    - Result: 48 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py`
+    - Result: 24 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py`
+    - Result: 14 passed, with one existing `PytestUnhandledThreadExceptionWarning`
+      from the large-batch runtime test where the background advance loop
+      reports `NO_CAPABLE_NODE` after the test has already satisfied its
+      responsiveness assertions.
+- Problems encountered:
+  - A read-only parallel agent found that configured `input_data_mb` /
+    `output_data_mb` fields were already present in traffic profiles and task
+    requests, but `TrafficDemandRecord` summaries still used legacy
+    capacity-like fields. The task therefore preserved compatibility fields and
+    added explicit MB fields to records instead of changing flow demand
+    capacity semantics.
+  - A combined PowerShell validation command using `&&` failed because this
+    shell version does not support that statement separator. The validation was
+    rerun as separate commands.
+  - The full `test_runtime_session_control.py` run initially exposed two
+    stale runtime-status test issues outside the traffic summary path: KPI time
+    series in runtime status could begin at `0.15` without an explicit `0.0`
+    baseline, and the detail filter parser test omitted the existing
+    `entity_type=ALL` default. The fix keeps `MetricsCollector.kpi_time_series`
+    default behavior unchanged, adds an opt-in `include_initial_baseline`
+    switch used by the control plane, and updates the parser test expectation.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The frontend/dashboard does not yet render
+    `traffic_temporal_profile_summary_v1` directly. A follow-up frontend task
+    should bind this backend field to business-demand charts instead of
+    deriving request-arrival semantics locally.
+  - `flow_interval_seconds` still affects configuration and summary bucket
+    width, but the safest event-scheduling convergence for legacy demo traffic
+    remains a later backend task because changing it would alter event volume
+    and timing baselines.

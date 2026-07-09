@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from math import cos, isfinite, pi
+from math import cos, floor, isfinite, pi, sqrt
 from random import Random
 from typing import Any
 
@@ -209,6 +209,8 @@ class TrafficDemandRecord:
     input_flow: FlowRequest
     task: TaskRequest | None = None
     output_flow: ComputeOutputFlowMetadata | None = None
+    input_data_mb: float = 0.0
+    output_data_mb: float = 0.0
 
     def __post_init__(self) -> None:
         _require_non_negative_number(self.arrival_time, "arrival_time")
@@ -231,6 +233,8 @@ class TrafficDemandRecord:
             ComputeOutputFlowMetadata,
         ):
             raise TypeError("output_flow must be ComputeOutputFlowMetadata or None")
+        _require_non_negative_number(self.input_data_mb, "input_data_mb")
+        _require_non_negative_number(self.output_data_mb, "output_data_mb")
 
 
 @dataclass(frozen=True)
@@ -361,8 +365,12 @@ class TrafficDemandBatch:
             for record in self.records
             if record.traffic_class == TrafficClass.COMPUTE_SERVICE
         )
-        total_input_data_mb = sum(record.input_data_size for record in self.records)
-        total_output_data_mb = sum(record.output_data_size for record in self.records)
+        total_input_data_mb = sum(
+            _record_input_data_mb(record) for record in self.records
+        )
+        total_output_data_mb = sum(
+            _record_output_data_mb(record) for record in self.records
+        )
         return {
             "version": "v1",
             "explanation_id": "leo_twin.traffic_demand_explanation.v1",
@@ -423,6 +431,90 @@ class TrafficDemandBatch:
                     "Packet-level traffic, stochastic retries, and external "
                     "simulators are outside this model."
                 ),
+            ),
+        }
+
+    def traffic_temporal_profile_summary(
+        self,
+        *,
+        bucket_width_s: float = 60.0,
+        bucket_limit: int = 32,
+    ) -> dict[str, object]:
+        """Return backend-owned temporal demand shape for product review."""
+
+        _require_positive_number(bucket_width_s, "bucket_width_s")
+        _require_positive_int(bucket_limit, "bucket_limit")
+        ordered_records = tuple(sorted(self.records, key=_traffic_record_sort_key))
+        arrival_times = tuple(float(record.arrival_time) for record in ordered_records)
+        bucket_rows = _traffic_temporal_bucket_rows(
+            ordered_records,
+            bucket_width_s=float(bucket_width_s),
+        )
+        limited_bucket_rows = bucket_rows[: int(bucket_limit)]
+        traffic_class_rows = tuple(
+            _traffic_temporal_class_row(
+                traffic_class,
+                ordered_records,
+                bucket_width_s=float(bucket_width_s),
+            )
+            for traffic_class in TrafficClass
+        )
+        active_class_rows = tuple(
+            row for row in traffic_class_rows if int(row["request_count"]) > 0
+        )
+        inter_arrival = _traffic_inter_arrival_summary(arrival_times)
+        peak_bucket = _traffic_peak_bucket(bucket_rows)
+        span_s = (
+            max(arrival_times) - min(arrival_times)
+            if len(arrival_times) >= 2
+            else 0.0
+        )
+        average_request_rate_per_s = (
+            len(ordered_records) / span_s
+            if span_s > 0.0
+            else float(len(ordered_records))
+            if ordered_records
+            else 0.0
+        )
+        return {
+            "version": "v1",
+            "summary_id": "leo_twin.traffic_temporal_profile_summary.v1",
+            "source": "TrafficDemandBatch.records",
+            "metric_model": "FLOW_LEVEL_TEMPORAL_DEMAND_PROFILE",
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "request_count": len(ordered_records),
+            "active_traffic_class_count": len(active_class_rows),
+            "active_traffic_classes": tuple(
+                row["traffic_class"] for row in active_class_rows
+            ),
+            "arrival_window": {
+                "first_arrival_time": min(arrival_times) if arrival_times else None,
+                "last_arrival_time": max(arrival_times) if arrival_times else None,
+                "duration_seconds": span_s,
+                "average_request_rate_per_s": average_request_rate_per_s,
+            },
+            "inter_arrival_summary": inter_arrival,
+            "bucket_width_s": float(bucket_width_s),
+            "bucket_count": len(bucket_rows),
+            "bucket_limit": int(bucket_limit),
+            "bucket_item_count": len(limited_bucket_rows),
+            "hidden_bucket_count": max(0, len(bucket_rows) - len(limited_bucket_rows)),
+            "peak_bucket": peak_bucket,
+            "peak_to_average_bucket_ratio": _traffic_peak_to_average_bucket_ratio(
+                bucket_rows
+            ),
+            "temporal_profile": _traffic_temporal_profile_label(
+                request_count=len(ordered_records),
+                bucket_rows=bucket_rows,
+                inter_arrival_summary=inter_arrival,
+            ),
+            "traffic_class_rows": traffic_class_rows,
+            "bucket_rows": limited_bucket_rows,
+            "model_assumptions": (
+                "Temporal demand profile is derived from configured flow-level arrival records.",
+                "Bucket counts summarize request arrivals, not packet queues or packet captures.",
+                "The summary is deterministic for identical traffic demand inputs.",
             ),
         }
 
@@ -907,6 +999,22 @@ def _traffic_record_sort_key(
     )
 
 
+def _record_input_data_mb(record: TrafficDemandRecord) -> float:
+    return (
+        float(record.input_data_mb)
+        if float(record.input_data_mb) > 0.0
+        else float(record.input_data_size)
+    )
+
+
+def _record_output_data_mb(record: TrafficDemandRecord) -> float:
+    return (
+        float(record.output_data_mb)
+        if float(record.output_data_mb) > 0.0
+        else float(record.output_data_size)
+    )
+
+
 def _generate_profile_records(
     profile_index: int,
     profile: TrafficDemandProfile,
@@ -969,6 +1077,8 @@ def _generate_profile_records(
                     input_data_size=profile.input_data_size,
                     output_data_size=profile.output_data_size,
                     input_flow=input_flow,
+                    input_data_mb=profile.input_data_mb,
+                    output_data_mb=profile.output_data_mb,
                 )
             )
     return tuple(records)
@@ -1092,6 +1202,8 @@ def _compute_service_record(
         input_flow=input_flow,
         task=task,
         output_flow=output_flow,
+        input_data_mb=profile.input_data_mb,
+        output_data_mb=profile.output_data_mb,
     )
 
 
@@ -1144,9 +1256,217 @@ def _per_user_active_service_state(
         "flow_ids": tuple(record.input_flow.flow_id for record in ordered_records),
         "task_ids": task_ids,
         "output_flow_ids": output_flow_ids,
-        "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
-        "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
+        "total_input_data_mb": sum(
+            _record_input_data_mb(record) for record in ordered_records
+        ),
+        "total_output_data_mb": sum(
+            _record_output_data_mb(record) for record in ordered_records
+        ),
     }
+
+
+def _traffic_inter_arrival_summary(
+    arrival_times: tuple[float, ...],
+) -> dict[str, object]:
+    if len(arrival_times) < 2:
+        return {
+            "sample_count": max(0, len(arrival_times) - 1),
+            "min_inter_arrival_s": None,
+            "max_inter_arrival_s": None,
+            "avg_inter_arrival_s": None,
+            "stddev_inter_arrival_s": None,
+            "coefficient_of_variation": None,
+        }
+    ordered = tuple(sorted(float(value) for value in arrival_times))
+    intervals = tuple(
+        max(0.0, ordered[index] - ordered[index - 1])
+        for index in range(1, len(ordered))
+    )
+    average = sum(intervals) / len(intervals)
+    variance = (
+        sum((interval - average) ** 2 for interval in intervals) / len(intervals)
+    )
+    stddev = sqrt(variance)
+    return {
+        "sample_count": len(intervals),
+        "min_inter_arrival_s": min(intervals),
+        "max_inter_arrival_s": max(intervals),
+        "avg_inter_arrival_s": average,
+        "stddev_inter_arrival_s": stddev,
+        "coefficient_of_variation": (
+            stddev / average if average > 0.0 else 0.0 if stddev == 0.0 else None
+        ),
+    }
+
+
+def _traffic_temporal_bucket_rows(
+    records: tuple[TrafficDemandRecord, ...],
+    *,
+    bucket_width_s: float,
+) -> tuple[dict[str, object], ...]:
+    buckets: dict[int, list[TrafficDemandRecord]] = {}
+    for record in records:
+        bucket_index = int(floor(float(record.arrival_time) / bucket_width_s))
+        buckets.setdefault(bucket_index, []).append(record)
+    rows = tuple(
+        _traffic_temporal_bucket_row(
+            bucket_index,
+            tuple(sorted(buckets[bucket_index], key=_traffic_record_sort_key)),
+            bucket_width_s=bucket_width_s,
+        )
+        for bucket_index in sorted(buckets)
+    )
+    return rows
+
+
+def _traffic_temporal_bucket_row(
+    bucket_index: int,
+    records: tuple[TrafficDemandRecord, ...],
+    *,
+    bucket_width_s: float,
+) -> dict[str, object]:
+    bucket_start = float(bucket_index * bucket_width_s)
+    bucket_end = float(bucket_start + bucket_width_s)
+    return {
+        "bucket_index": int(bucket_index),
+        "bucket_start_s": bucket_start,
+        "bucket_end_s": bucket_end,
+        "request_count": len(records),
+        "communication_request_count": sum(
+            1 for record in records if record.traffic_class != TrafficClass.COMPUTE_SERVICE
+        ),
+        "compute_service_request_count": sum(
+            1 for record in records if record.traffic_class == TrafficClass.COMPUTE_SERVICE
+        ),
+        "input_flow_count": len(records),
+        "task_request_count": sum(1 for record in records if record.task is not None),
+        "output_flow_count": sum(
+            1 for record in records if record.output_flow is not None
+        ),
+        "total_input_data_mb": sum(_record_input_data_mb(record) for record in records),
+        "total_output_data_mb": sum(
+            _record_output_data_mb(record) for record in records
+        ),
+        "highest_priority": (
+            max(record.input_flow.priority for record in records) if records else None
+        ),
+        "traffic_classes": _traffic_class_values(records),
+        "source_count": len(
+            tuple(sorted({record.input_flow.source_id for record in records}))
+        ),
+        "destination_count": len(
+            tuple(sorted({record.input_flow.target_id for record in records}))
+        ),
+        "first_arrival_time": records[0].arrival_time if records else None,
+        "last_arrival_time": records[-1].arrival_time if records else None,
+    }
+
+
+def _traffic_temporal_class_row(
+    traffic_class: TrafficClass,
+    records: tuple[TrafficDemandRecord, ...],
+    *,
+    bucket_width_s: float,
+) -> dict[str, object]:
+    class_records = tuple(
+        record for record in records if record.traffic_class == traffic_class
+    )
+    arrival_times = tuple(float(record.arrival_time) for record in class_records)
+    bucket_rows = _traffic_temporal_bucket_rows(
+        class_records,
+        bucket_width_s=bucket_width_s,
+    )
+    peak_bucket = _traffic_peak_bucket(bucket_rows)
+    return {
+        "traffic_class": traffic_class.value,
+        "request_count": len(class_records),
+        "first_arrival_time": min(arrival_times) if arrival_times else None,
+        "last_arrival_time": max(arrival_times) if arrival_times else None,
+        "duration_seconds": (
+            max(arrival_times) - min(arrival_times)
+            if len(arrival_times) >= 2
+            else 0.0
+        ),
+        "bucket_count": len(bucket_rows),
+        "peak_bucket_request_count": int(peak_bucket["request_count"]),
+        "total_input_data_mb": sum(
+            _record_input_data_mb(record) for record in class_records
+        ),
+        "total_output_data_mb": sum(
+            _record_output_data_mb(record) for record in class_records
+        ),
+        "min_priority": (
+            min(record.input_flow.priority for record in class_records)
+            if class_records
+            else None
+        ),
+        "max_priority": (
+            max(record.input_flow.priority for record in class_records)
+            if class_records
+            else None
+        ),
+        "destination_types": tuple(
+            destination_type.value
+            for destination_type in TrafficDestinationType
+            if any(
+                record.destination_type == destination_type
+                for record in class_records
+            )
+        ),
+    }
+
+
+def _traffic_peak_bucket(
+    bucket_rows: tuple[dict[str, object], ...],
+) -> dict[str, object]:
+    if not bucket_rows:
+        return {
+            "bucket_index": None,
+            "bucket_start_s": None,
+            "bucket_end_s": None,
+            "request_count": 0,
+            "traffic_classes": (),
+        }
+    return dict(
+        max(
+            bucket_rows,
+            key=lambda row: (
+                int(row["request_count"]),
+                float(row["total_input_data_mb"]),
+                -int(row["bucket_index"]),
+            ),
+        )
+    )
+
+
+def _traffic_peak_to_average_bucket_ratio(
+    bucket_rows: tuple[dict[str, object], ...],
+) -> float:
+    if not bucket_rows:
+        return 0.0
+    counts = tuple(int(row["request_count"]) for row in bucket_rows)
+    average = sum(counts) / len(counts)
+    return max(counts) / average if average > 0.0 else 0.0
+
+
+def _traffic_temporal_profile_label(
+    *,
+    request_count: int,
+    bucket_rows: tuple[dict[str, object], ...],
+    inter_arrival_summary: dict[str, object],
+) -> str:
+    if request_count == 0:
+        return "EMPTY"
+    if len(bucket_rows) == 1 and request_count > 1:
+        return "SINGLE_BUCKET_BURST"
+    min_interval = inter_arrival_summary.get("min_inter_arrival_s")
+    max_interval = inter_arrival_summary.get("max_inter_arrival_s")
+    if min_interval is not None and max_interval is not None:
+        if abs(float(max_interval) - float(min_interval)) <= 1e-9:
+            return "PERIODIC"
+    if _traffic_peak_to_average_bucket_ratio(bucket_rows) >= 2.0:
+        return "BURSTY"
+    return "TIME_VARYING"
 
 
 _BUSINESS_ACTIVITY_STATES = (
@@ -1289,8 +1609,12 @@ def _business_activity_user_row(
             0,
             len(window_records) - len(limited_window_records),
         ),
-        "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
-        "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
+        "total_input_data_mb": sum(
+            _record_input_data_mb(record) for record in ordered_records
+        ),
+        "total_output_data_mb": sum(
+            _record_output_data_mb(record) for record in ordered_records
+        ),
         "network_queue_model": "JOIN_RUNTIME_USER_REQUEST_SUMMARY_FOR_QUEUE_STATE",
         "compute_execution_model": "JOIN_SERVICE_LIFECYCLE_TRACE_FOR_EXECUTION_STATE",
     }
@@ -1337,8 +1661,8 @@ def _business_activity_request_item(
         ),
         "has_compute_task": record.task is not None,
         "has_output_flow": record.output_flow is not None,
-        "input_data_mb": float(record.input_data_size),
-        "output_data_mb": float(record.output_data_size),
+        "input_data_mb": _record_input_data_mb(record),
+        "output_data_mb": _record_output_data_mb(record),
         "estimated_service_end_time": (
             service_end_time if request_state == "ACTIVE_BUSINESS" else None
         ),
@@ -1559,6 +1883,8 @@ def _traffic_request_timeline_item(
         "priority": int(record.input_flow.priority),
         "input_data_size": float(record.input_data_size),
         "output_data_size": float(record.output_data_size),
+        "input_data_mb": _record_input_data_mb(record),
+        "output_data_mb": _record_output_data_mb(record),
         "has_compute_task": record.task is not None,
         "has_output_flow": record.output_flow is not None,
         "service_state": _request_service_state(state),
@@ -1590,8 +1916,12 @@ def _traffic_class_explanation_row(
         "output_flow_count": sum(
             1 for record in class_records if record.output_flow is not None
         ),
-        "total_input_data_mb": sum(record.input_data_size for record in class_records),
-        "total_output_data_mb": sum(record.output_data_size for record in class_records),
+        "total_input_data_mb": sum(
+            _record_input_data_mb(record) for record in class_records
+        ),
+        "total_output_data_mb": sum(
+            _record_output_data_mb(record) for record in class_records
+        ),
         "destination_types": tuple(
             destination_type.value
             for destination_type in TrafficDestinationType

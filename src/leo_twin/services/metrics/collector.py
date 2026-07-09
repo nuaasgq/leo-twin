@@ -354,13 +354,20 @@ class MetricsCollector:
     def kpi_time_series(
         self,
         sim_time: float | None = None,
+        *,
+        include_initial_baseline: bool = False,
     ) -> dict[str, str | int | list[KpiSample]]:
         with self._lock:
-            return self._kpi_time_series_unlocked(sim_time)
+            return self._kpi_time_series_unlocked(
+                sim_time,
+                include_initial_baseline=include_initial_baseline,
+            )
 
     def _kpi_time_series_unlocked(
         self,
         sim_time: float | None = None,
+        *,
+        include_initial_baseline: bool = False,
     ) -> dict[str, str | int | list[KpiSample]]:
         samples = [dict(sample) for sample in self._kpi_samples]
         current_sample_time = (
@@ -383,11 +390,14 @@ class MetricsCollector:
         else:
             samples = [current_sample]
         if (
-            len(samples) == 1
+            samples
+            and (include_initial_baseline or len(samples) == 1)
             and samples[0]["sim_time"] > 0.0
             and self._kpi_sample_limit > 1
         ):
-            samples = [self._baseline_kpi_sample(0.0), samples[0]]
+            samples = [self._baseline_kpi_sample(0.0), *samples]
+            if len(samples) > self._kpi_sample_limit:
+                samples = [samples[0], *samples[-(self._kpi_sample_limit - 1) :]]
         return {
             "version": "v1",
             "sample_count": len(samples),

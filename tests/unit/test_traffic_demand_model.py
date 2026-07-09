@@ -492,6 +492,158 @@ def test_traffic_demand_explanation_reports_business_semantics() -> None:
     )
 
 
+def test_traffic_demand_summaries_prefer_explicit_data_mb_fields() -> None:
+    profile = TrafficDemandProfile(
+        traffic_class=TrafficClass.COMPUTE_SERVICE,
+        source_ids=("user-a",),
+        destination_ids=("sat-compute-a",),
+        request_count=1,
+        arrival_interval=10.0,
+        input_data_size=8.0,
+        output_data_size=3.0,
+        input_data_mb=512.0,
+        output_data_mb=128.0,
+        priority=5,
+        destination_type=TrafficDestinationType.COMPUTE_NODE,
+        output_destination_ids=("user-a",),
+        id_prefix="explicit",
+    )
+    batch = generate_traffic_demand((profile,))
+
+    explanation = batch.traffic_demand_explanation()
+    timeline = batch.runtime_request_timeline(
+        sim_time=0.0,
+        lookback_window_s=1.0,
+        lookahead_window_s=1.0,
+    )
+    activity = batch.runtime_business_activity_window(
+        sim_time=0.0,
+        lookback_window_s=1.0,
+        lookahead_window_s=1.0,
+        assumed_service_duration_s=10.0,
+    )
+    user_state = {
+        row["user_id"]: row
+        for row in batch.service_mix_summary()["per_user_active_service_state"]
+    }
+
+    assert batch.records[0].input_data_size == 8.0
+    assert batch.records[0].input_data_mb == 512.0
+    assert batch.flow_requests[0].demand_capacity == 8.0
+    assert batch.task_requests[0].data_size == 8.0
+    assert batch.task_requests[0].input_data_mb == 512.0
+    assert explanation["data_volume"] == {
+        "total_input_data_mb": 512.0,
+        "total_output_data_mb": 128.0,
+        "total_data_mb": 640.0,
+    }
+    compute_row = {
+        row["traffic_class"]: row for row in explanation["traffic_class_rows"]
+    }["COMPUTE_SERVICE"]
+    assert compute_row["total_input_data_mb"] == 512.0
+    assert compute_row["total_output_data_mb"] == 128.0
+    assert user_state["user-a"]["total_input_data_mb"] == 512.0
+    assert user_state["user-a"]["total_output_data_mb"] == 128.0
+    assert timeline["items"][0]["input_data_size"] == 8.0
+    assert timeline["items"][0]["input_data_mb"] == 512.0
+    assert activity["items"][0]["total_input_data_mb"] == 512.0
+    assert activity["items"][0]["window_requests"][0]["input_data_mb"] == 512.0
+
+
+def test_traffic_temporal_profile_summary_reports_backend_arrival_shape() -> None:
+    config = TrafficServiceMixConfig(
+        total_request_count=7,
+        arrival_interval=4.0,
+        id_prefix="portfolio",
+        items=(
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.EMERGENCY,
+                weight=2.0,
+                source_ids=("user-a", "user-b"),
+                destination_ids=("ops-center",),
+                input_data_size=0.5,
+                priority=10,
+                arrival_profile=TrafficArrivalProfile.BURST,
+                burst_size=2,
+                burst_spacing=0.25,
+            ),
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.COMPUTE_SERVICE,
+                weight=1.0,
+                source_ids=("user-a",),
+                destination_ids=("sat-compute-a",),
+                input_data_size=6.0,
+                output_data_size=2.0,
+                priority=5,
+                output_destination_ids=("user-a",),
+            ),
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.BULK_DOWNLINK,
+                weight=1.0,
+                source_ids=("sat-a",),
+                destination_ids=("ground-a",),
+                input_data_size=10.0,
+                priority=1,
+            ),
+        ),
+    )
+
+    first = generate_traffic_service_mix(config).traffic_temporal_profile_summary(
+        bucket_width_s=4.0,
+        bucket_limit=1,
+    )
+    second = generate_traffic_service_mix(config).traffic_temporal_profile_summary(
+        bucket_width_s=4.0,
+        bucket_limit=1,
+    )
+
+    assert first == second
+    assert first["summary_id"] == "leo_twin.traffic_temporal_profile_summary.v1"
+    assert first["metric_model"] == "FLOW_LEVEL_TEMPORAL_DEMAND_PROFILE"
+    assert first["packet_level_simulation"] is False
+    assert first["frontend_inference_required"] is False
+    assert first["request_count"] == 7
+    assert first["active_traffic_classes"] == (
+        "BULK_DOWNLINK",
+        "COMPUTE_SERVICE",
+        "EMERGENCY",
+    )
+    assert first["arrival_window"] == {
+        "first_arrival_time": 0.0,
+        "last_arrival_time": 4.0,
+        "duration_seconds": 4.0,
+        "average_request_rate_per_s": 1.75,
+    }
+    assert first["inter_arrival_summary"]["sample_count"] == 6
+    assert first["inter_arrival_summary"]["min_inter_arrival_s"] == 0.0
+    assert first["inter_arrival_summary"]["max_inter_arrival_s"] == 3.75
+    assert first["bucket_width_s"] == 4.0
+    assert first["bucket_count"] == 2
+    assert first["bucket_item_count"] == 1
+    assert first["hidden_bucket_count"] == 1
+    assert first["peak_bucket"]["bucket_index"] == 0
+    assert first["peak_bucket"]["request_count"] == 4
+    assert first["peak_to_average_bucket_ratio"] == pytest.approx(4.0 / 3.5)
+    assert first["temporal_profile"] == "TIME_VARYING"
+    bucket = first["bucket_rows"][0]
+    assert bucket["request_count"] == 4
+    assert bucket["compute_service_request_count"] == 1
+    assert bucket["traffic_classes"] == (
+        "BULK_DOWNLINK",
+        "COMPUTE_SERVICE",
+        "EMERGENCY",
+    )
+    assert bucket["total_input_data_mb"] == 17.0
+    assert bucket["total_output_data_mb"] == 2.0
+    rows = {row["traffic_class"]: row for row in first["traffic_class_rows"]}
+    assert rows["COMPUTE_SERVICE"]["request_count"] == 2
+    assert rows["COMPUTE_SERVICE"]["peak_bucket_request_count"] == 1
+    assert rows["EMERGENCY"]["peak_bucket_request_count"] == 2
+    assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
+        "leo_twin.traffic_temporal_profile_summary.v1"
+    )
+
+
 def test_runtime_request_timeline_reports_time_relative_business_state() -> None:
     profile = TrafficDemandProfile(
         traffic_class=TrafficClass.COMPUTE_SERVICE,

@@ -1188,6 +1188,38 @@ def test_metrics_collector_kpi_time_series_accepts_runtime_sim_time_tail() -> No
     assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
 
 
+def test_metrics_collector_can_include_initial_kpi_baseline_on_request() -> None:
+    collector = MetricsCollector(metric_sample_interval=100)
+    collector.observe(
+        _event(
+            "route-loss",
+            0.15,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-loss",
+                flow_id="flow-loss",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+                loss_rate=0.12,
+            ),
+            "network",
+        )
+    )
+
+    default_series = collector.kpi_time_series(sim_time=1.0)
+    baseline_series = collector.kpi_time_series(
+        sim_time=1.0,
+        include_initial_baseline=True,
+    )
+
+    assert default_series["samples"][0]["sim_time"] == 0.15
+    assert baseline_series["samples"][0]["sim_time"] == 0.0
+    assert baseline_series["samples"][0]["network_requested_route_demand_mbps"] == 0.0
+    assert baseline_series["samples"][-1]["sim_time"] == 1.0
+
+
 def test_metrics_collector_uses_runtime_sim_time_for_time_varying_pressure() -> None:
     collector = MetricsCollector(metric_sample_interval=100)
     for route_id, flow_id, sim_time, latency in (

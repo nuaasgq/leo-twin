@@ -2676,6 +2676,9 @@ class DemoControlPlane:
             lifecycle_summaries["user_request_summary_v1"],
             float(status["current_sim_time"]),
         )
+        status["traffic_temporal_profile_summary_v1"] = (
+            self._traffic_temporal_profile_summary_json()
+        )
         status["traffic_request_timeline_v1"] = (
             self._traffic_request_timeline_json(float(status["current_sim_time"]))
         )
@@ -2837,7 +2840,12 @@ class DemoControlPlane:
                 "samples": (),
             }
         sample_time = self._runtime_observation_sim_time()
-        return dict(self._runtime_context.metrics.kpi_time_series(sim_time=sample_time))
+        return dict(
+            self._runtime_context.metrics.kpi_time_series(
+                sim_time=sample_time,
+                include_initial_baseline=True,
+            )
+        )
 
     def _runtime_observation_sim_time(self) -> float:
         runtime_status = self._require_session().get_status()
@@ -3001,6 +3009,74 @@ class DemoControlPlane:
             else:
                 history.append(sample)
             del history[: max(0, len(history) - self._user_request_history_limit)]
+
+    def _traffic_temporal_profile_summary_json(self) -> dict[str, Any]:
+        context = self._runtime_context
+        bucket_width_s = 60.0
+        try:
+            bucket_width_s = max(
+                1.0,
+                float(
+                    self._controller.config.scenario.traffic_model.flow_interval_seconds
+                ),
+            )
+        except Exception:
+            bucket_width_s = 60.0
+        if context is None:
+            summary: dict[str, Any] = {
+                "version": "v1",
+                "summary_id": "leo_twin.traffic_temporal_profile_summary.v1",
+                "source": "TrafficDemandBatch.records",
+                "metric_model": "FLOW_LEVEL_TEMPORAL_DEMAND_PROFILE",
+                "packet_level_simulation": False,
+                "frontend_inference_required": False,
+                "request_count": 0,
+                "active_traffic_class_count": 0,
+                "active_traffic_classes": (),
+                "arrival_window": {
+                    "first_arrival_time": None,
+                    "last_arrival_time": None,
+                    "duration_seconds": 0.0,
+                    "average_request_rate_per_s": 0.0,
+                },
+                "inter_arrival_summary": {
+                    "sample_count": 0,
+                    "min_inter_arrival_s": None,
+                    "max_inter_arrival_s": None,
+                    "avg_inter_arrival_s": None,
+                    "stddev_inter_arrival_s": None,
+                    "coefficient_of_variation": None,
+                },
+                "bucket_width_s": bucket_width_s,
+                "bucket_count": 0,
+                "bucket_limit": 32,
+                "bucket_item_count": 0,
+                "hidden_bucket_count": 0,
+                "peak_bucket": {
+                    "bucket_index": None,
+                    "bucket_start_s": None,
+                    "bucket_end_s": None,
+                    "request_count": 0,
+                    "traffic_classes": (),
+                },
+                "peak_to_average_bucket_ratio": 0.0,
+                "temporal_profile": "EMPTY",
+                "traffic_class_rows": (),
+                "bucket_rows": (),
+                "model_assumptions": (
+                    "Temporal demand profile is derived from configured flow-level arrival records.",
+                    "No runtime scenario context is attached yet.",
+                ),
+            }
+        else:
+            summary = dict(
+                context.scenario.traffic_demand.traffic_temporal_profile_summary(
+                    bucket_width_s=bucket_width_s,
+                    bucket_limit=32,
+                )
+            )
+        summary["summary_hash"] = stable_hash_payload(summary)
+        return summary
 
     def _traffic_request_timeline_json(self, sim_time: float) -> dict[str, Any]:
         context = self._runtime_context

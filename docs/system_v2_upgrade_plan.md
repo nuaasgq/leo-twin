@@ -1495,6 +1495,15 @@ Current Phase 3 progress:
   checklist evidence mapping, package completion, and long-term audit indexes
   without service lifecycle recomputation or frontend inference.
 
+- T436 adds `traffic_temporal_profile_summary_v1` to runtime status and extends
+  `TrafficDemandRecord` with explicit `input_data_mb` / `output_data_mb`
+  fields. Traffic summaries now prefer configured MB data-size semantics for
+  product-facing explanations, while preserving existing flow capacity and task
+  data-size compatibility fields. The new temporal summary reports deterministic
+  request arrival windows, inter-arrival statistics, bucket rows, peak buckets,
+  traffic-class rows, and a profile label without packet-level simulation or
+  frontend inference.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

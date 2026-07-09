@@ -305,6 +305,18 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert temporal_profile["packet_level_simulation"] is False
     assert temporal_profile["frontend_inference_required"] is False
     assert str(temporal_profile["profile_hash"]).startswith("sha256:")
+    traffic_temporal = status_after_tick["traffic_temporal_profile_summary_v1"]
+    assert traffic_temporal["version"] == "v1"
+    assert traffic_temporal["summary_id"] == (
+        "leo_twin.traffic_temporal_profile_summary.v1"
+    )
+    assert traffic_temporal["source"] == "TrafficDemandBatch.records"
+    assert traffic_temporal["metric_model"] == "FLOW_LEVEL_TEMPORAL_DEMAND_PROFILE"
+    assert traffic_temporal["packet_level_simulation"] is False
+    assert traffic_temporal["frontend_inference_required"] is False
+    assert traffic_temporal["request_count"] > 0
+    assert traffic_temporal["bucket_item_count"] <= traffic_temporal["bucket_limit"]
+    assert str(traffic_temporal["summary_hash"]).startswith("sha256:")
     traffic_timeline = status_after_tick["traffic_request_timeline_v1"]
     assert traffic_timeline["version"] == "v1"
     assert traffic_timeline["source"] == "TrafficDemandBatch.records"
@@ -2422,12 +2434,14 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         "availability": "BLOCKED",
         "business_type": "DATA_TRANSFER",
         "bottleneck_component": "AVAILABILITY",
+        "entity_type": "ALL",
     }
     assert _detail_filter_query({}) == {
         "query": "",
         "availability": "ALL",
         "business_type": "ALL",
         "bottleneck_component": "ALL",
+        "entity_type": "ALL",
     }
     assert _service_trace_filter_query(
         {

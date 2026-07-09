@@ -525,6 +525,7 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
             flow_id = f"task-{flow_index:05d}"
             source_id = _traffic_source_id(config, traffic_class, flow_index)
             submit_time = float(tick) + 0.2 + offset * spacing_s
+            input_data_mb = config.task_data_size + float(flow_index % 3)
             deadline = (
                 submit_time + 20.0
                 if _workload_smoothing_active(config)
@@ -542,8 +543,10 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                     source_id=source_id,
                     submit_time=submit_time,
                     compute_demand=config.task_compute_demand + float(flow_index % 5),
-                    data_size=config.task_data_size + float(flow_index % 3),
+                    data_size=input_data_mb,
                     deadline=deadline,
+                    input_data_mb=input_data_mb,
+                    output_data_mb=config.traffic_output_data_size,
                 )
                 if traffic_class == TrafficClass.COMPUTE_SERVICE
                 else None
@@ -557,6 +560,8 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                     output_data_size=config.traffic_output_data_size,
                     input_flow=input_flow,
                     task=task,
+                    input_data_mb=input_data_mb,
+                    output_data_mb=config.traffic_output_data_size,
                 )
             )
             flow_index += 1
