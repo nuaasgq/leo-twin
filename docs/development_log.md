@@ -21379,3 +21379,55 @@ change.
     shipped 72/300/1200 scenarios end-to-end and archives the resulting package
     evidence.
 
+## 2026-07-09 - T419 disposable acceptance benchmark gate plan v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: enrich the disposable 72/300/1200 acceptance plan with backend-owned
+  benchmark gate evidence. Each scenario plan now includes the benchmark matrix
+  id, benchmark acceptance binding id, package acceptance report id,
+  `benchmark_scenario_gate`, expected range metrics/source paths, required
+  runtime status fields, fidelity expectations, result-package evidence files,
+  and explicit no-kernel/no-packet/no-external-simulator boundaries. The
+  PowerShell plan/result summaries surface the same gate identifiers, and both
+  acceptance scripts can use the `PYTHON` environment variable when Python is
+  not on PATH. No Event Kernel, simulation model, frontend rendering, packet
+  level, or external simulator behavior was changed.
+- Changed files/modules:
+  - `scripts/disposable_acceptance_payload.py`
+  - `scripts/run_disposable_acceptance.ps1`
+  - `scripts/verify_product_acceptance.ps1`
+  - `tests/unit/test_disposable_acceptance_harness_docs.py`
+  - `docs/benchmark_scenario_matrix_v1.md`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched Python script/test files.
+    - Result: passed.
+  - `git diff --check`.
+    - Result: passed; Git reported existing CRLF normalization warnings only.
+  - Direct targeted test runner with `PYTHONPATH=src` for
+    `tests.unit.test_disposable_acceptance_harness_docs`.
+    - Result: 4 direct test functions passed, including PowerShell
+      `run_disposable_acceptance.ps1 -PlanOnly -JsonSummary` with `PYTHON`
+      pinned to the bundled interpreter.
+- Problems encountered:
+  - `apply_patch` failed in the Windows sandbox with
+    `orchestrator_helper_launch_canceled`; exact UTF-8 replacement scripts were
+    used and the resulting diff was reviewed.
+  - The first replacement emitted an invalid Python backslash literal in
+    `disposable_acceptance_payload.py`; `py_compile` caught it before tests and
+    the literal was corrected.
+  - `run_disposable_acceptance.ps1 -PlanOnly -JsonSummary` initially failed
+    because Python was not on PATH in this environment. The harness now honors
+    `PYTHON`, and the test passes that interpreter explicitly.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The plan now proves which benchmark evidence must be produced, but a full
+    disposable run with live services and `-ExportPackage` is still a heavier
+    operator gate and was not executed in this task.
+

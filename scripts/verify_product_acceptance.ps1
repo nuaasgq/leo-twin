@@ -32,6 +32,9 @@ function Invoke-CheckedCommand {
 }
 
 function Get-PythonCommand {
+    if ($env:PYTHON) {
+        return $env:PYTHON
+    }
     $python = Get-Command "python.exe" -ErrorAction SilentlyContinue
     if ($null -ne $python) {
         return $python.Source

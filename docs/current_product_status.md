@@ -49,6 +49,11 @@ Disposable acceptance harness for the shipped 72 / 300 / 1200 benchmark YAMLs:
 .\scripts\run_disposable_acceptance.ps1 -SkipBuild
 ```
 
+The plan-only JSON now exposes benchmark matrix and acceptance-gate evidence
+for every selected scenario, including `benchmark_scenario_gate`, expected
+range source paths such as `network.time_pressure_period_s`, required runtime
+status fields, and the result-package files that carry acceptance evidence.
+
 The latest full local run passed:
 
 - runtime config staging guard;

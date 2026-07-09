@@ -19,6 +19,10 @@ from leo_twin.schema.config_loader import load_config, merge_config_update  # no
 from leo_twin.services.benchmark_scenarios import (  # noqa: E402
     benchmark_scenario_matrix_v1_to_dict,
 )
+from leo_twin.services.result_package_contract import (  # noqa: E402
+    RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+    RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
+)
 
 
 STANDARD_ACCEPTANCE_CONFIGS = (
@@ -80,12 +84,71 @@ def scenario_id_for_config(config_path: Path, repo_root: Path) -> str:
     """Resolve the benchmark id for a config path when it is in the matrix."""
 
     normalized = _repo_relative_path(config_path, repo_root)
-    matrix = benchmark_scenario_matrix_v1_to_dict()
+    matrix = benchmark_scenario_matrix_v1_to_dict(repo_root)
     for scenario in matrix["scenarios"]:
         if scenario["config_path"].replace("\\", "/") == normalized:
             return str(scenario["scenario_id"])
     return config_path.stem
 
+
+def benchmark_acceptance_plan_for_config(
+    config_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Return matrix-owned benchmark evidence expected for one config."""
+
+    normalized = _repo_relative_path(config_path, repo_root)
+    matrix = benchmark_scenario_matrix_v1_to_dict(repo_root)
+    for scenario in matrix["scenarios"]:
+        if scenario["config_path"].replace("\\", "/") != normalized:
+            continue
+        expected_ranges = tuple(scenario["expected_ranges"])
+        runtime_expectation = dict(scenario["runtime_status_expectation"])
+        return {
+            "matrix_id": matrix["matrix_id"],
+            "scenario_id": scenario["scenario_id"],
+            "binding_id": RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+            "acceptance_report_id": RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
+            "acceptance_gate_check_id": "benchmark_scenario_gate",
+            "expected_range_count": len(expected_ranges),
+            "expected_range_metrics": tuple(
+                str(item["metric"]) for item in expected_ranges
+            ),
+            "expected_range_sources": tuple(
+                str(item["source"]) for item in expected_ranges
+            ),
+            "runtime_status_required_fields": tuple(
+                runtime_expectation["required_fields"]
+            ),
+            "fidelity_expectation": dict(scenario["fidelity_expectation"]),
+            "result_package_evidence_files": (
+                "config_snapshot.json",
+                "export_package_audit_index_v1.json",
+            ),
+            "boundary_conditions": (
+                "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+                "NO_PACKET_LEVEL_SIMULATION",
+                "NO_EXTERNAL_SIMULATOR_ARTIFACTS",
+            ),
+        }
+    return {
+        "matrix_id": matrix["matrix_id"],
+        "scenario_id": config_path.stem,
+        "binding_id": RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+        "acceptance_report_id": RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
+        "acceptance_gate_check_id": "benchmark_scenario_gate",
+        "expected_range_count": 0,
+        "expected_range_metrics": (),
+        "expected_range_sources": (),
+        "runtime_status_required_fields": (),
+        "fidelity_expectation": {},
+        "result_package_evidence_files": (),
+        "boundary_conditions": (
+            "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACTS",
+        ),
+    }
 
 def build_scenario_plan(config_path: str | Path, repo_root: str | Path) -> dict[str, Any]:
     """Build a deterministic disposable-run plan for one acceptance config."""
@@ -97,6 +160,10 @@ def build_scenario_plan(config_path: str | Path, repo_root: str | Path) -> dict[
     data = config_to_dict(config)
     scenario_id = scenario_id_for_config(resolved_config, root)
     config_rel = _repo_relative_path(resolved_config, root)
+    benchmark_acceptance = benchmark_acceptance_plan_for_config(
+        resolved_config,
+        root,
+    )
     return {
         "scenario_id": scenario_id,
         "config_path": config_rel,
@@ -112,6 +179,7 @@ def build_scenario_plan(config_path: str | Path, repo_root: str | Path) -> dict[
             "application_protocol": data["network"]["application_protocol"],
             "transport_protocol": data["network"]["transport_protocol"],
         },
+        "benchmark_acceptance": benchmark_acceptance,
         "control_sequence": ("RESET", "INITIALIZE", "START", "STOP"),
         "acceptance_command": (
             "scripts/verify_product_acceptance.ps1",
@@ -134,9 +202,16 @@ def build_standard_plan(repo_root: str | Path) -> dict[str, Any]:
     """Build the three-scenario disposable acceptance plan."""
 
     root = Path(repo_root).resolve()
+    matrix = benchmark_scenario_matrix_v1_to_dict(root)
     return {
         "type": "DISPOSABLE_ACCEPTANCE_PLAN",
         "version": "v1",
+        "benchmark_matrix_id": matrix["matrix_id"],
+        "benchmark_acceptance_binding_id": (
+            RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID
+        ),
+        "package_acceptance_report_id": RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
+        "acceptance_gate_check_id": "benchmark_scenario_gate",
         "scenario_count": len(STANDARD_ACCEPTANCE_CONFIGS),
         "scenarios": [
             build_scenario_plan(config_path, root)

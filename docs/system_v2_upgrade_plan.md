@@ -1445,6 +1445,12 @@ Current Phase 3 progress:
   so the shipped 72/300/1200 scenarios can prove their deterministic temporal
   pressure guardrails instead of reporting missing metrics.
 
+- T419 enriches disposable acceptance plan output with the same benchmark gate
+  evidence expected by result-package review. The 72/300/1200 plan now exposes
+  `benchmark_scenario_gate`, benchmark binding/report ids, expected range
+  metrics and source paths, required runtime status fields, fidelity
+  expectations, and result-package evidence filenames before services start.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

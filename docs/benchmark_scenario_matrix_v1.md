@@ -114,7 +114,11 @@ drift, use:
 
 The harness delegates the actual product checks back to
 `scripts\verify_product_acceptance.ps1`; it does not define a second acceptance
-standard.
+standard. Its plan-only JSON carries the same benchmark matrix id, benchmark
+acceptance binding id, package acceptance report id, `benchmark_scenario_gate`,
+expected range source paths, required runtime status fields, and result-package
+evidence filenames so operators can audit which backend evidence each scenario
+will need before services are started.
 
 ## Scope Boundaries
 

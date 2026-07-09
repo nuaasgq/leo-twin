@@ -37,6 +37,9 @@ function Write-Status {
 }
 
 function Get-PythonCommand {
+    if ($env:PYTHON) {
+        return $env:PYTHON
+    }
     $python = Get-Command "python.exe" -ErrorAction SilentlyContinue
     if ($null -ne $python) {
         return $python.Source
@@ -362,6 +365,7 @@ function Invoke-DisposableScenario {
         running_lifecycle = $runningStatus.status.lifecycle_state
         stopped_lifecycle = $stoppedStatus.status.lifecycle_state
         processed_event_count = $stoppedStatus.status.processed_event_count
+        benchmark_acceptance = $Plan.benchmark_acceptance
         export_result = $exportResult
     }
 }
@@ -386,11 +390,19 @@ try {
     }
 
     if ($PlanOnly) {
+        $benchmark = $null
+        if ($plans.Count -gt 0) {
+            $benchmark = $plans[0].benchmark_acceptance
+        }
         $summary = [ordered]@{
             type = "DISPOSABLE_ACCEPTANCE_PLAN"
             version = "v1"
             backend_url = $BackendUrl
             frontend_url = "http://127.0.0.1:$FrontendPort"
+            benchmark_matrix_id = $benchmark.matrix_id
+            benchmark_acceptance_binding_id = $benchmark.binding_id
+            package_acceptance_report_id = $benchmark.acceptance_report_id
+            acceptance_gate_check_id = $benchmark.acceptance_gate_check_id
             scenario_count = $plans.Count
             scenarios = $plans
             runtime_config_drift_paths = $RuntimeConfigPaths
@@ -439,6 +451,8 @@ try {
         frontend_url = "http://127.0.0.1:$FrontendPort"
         scenario_count = $results.Count
         scenarios = $results
+        benchmark_matrix_id = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.matrix_id } else { $null })
+        acceptance_gate_check_id = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.acceptance_gate_check_id } else { $null })
         runtime_config_restored = $true
         services_left_running = [bool]$KeepServices
     }

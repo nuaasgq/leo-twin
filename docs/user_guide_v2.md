@@ -567,7 +567,10 @@ through backend `/control`, starts and stops the runtime, reuses
 `configs\generated_full_system_demo.json` so local run state is not delivered as
 product source. Add `-KeepServices` when you want to inspect the final scenario
 after the run, or `-ExportPackage` when you want the backend to create a result
-package during the same acceptance pass.
+package during the same acceptance pass. `-PlanOnly -JsonSummary` also includes
+the benchmark matrix id, benchmark acceptance binding id, package acceptance
+report id, `benchmark_scenario_gate`, expected range source paths, runtime
+status fields, and result-package evidence files for each selected scenario.
 
 Benchmark contracts:
 
