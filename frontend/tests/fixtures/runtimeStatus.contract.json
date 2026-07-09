@@ -483,6 +483,89 @@
         "Network KPIs remain flow-level proxies, not packet-level measurements."
       ]
     },
+    "network_kpi_dynamic_status_v1": {
+      "version": "v1",
+      "status_id": "leo_twin.network_kpi_dynamic_status.v1",
+      "source": "NETWORK_KPI_CALIBRATION_V1",
+      "calibration_id": "leo_twin.network_kpi_calibration.v1",
+      "metric_model": "FLOW_LEVEL_PROXY",
+      "packet_level_simulation": false,
+      "frontend_inference_required": false,
+      "sample_count": 1,
+      "sim_time_span_s": 0,
+      "activity_active": true,
+      "dynamic_status": "INSUFFICIENT_SERIES",
+      "kpi_count": 2,
+      "time_varying_kpi_count": 0,
+      "flat_kpi_count": 0,
+      "missing_kpi_count": 0,
+      "zero_latest_kpi_count": 0,
+      "dynamic_metric_names": [],
+      "flat_metric_names": [],
+      "zero_latest_metric_names": [],
+      "items": [
+        {
+          "metric": "EFFECTIVE_THROUGHPUT",
+          "display_name": "有效吞吐量",
+          "runtime_summary_key": "network_quality_effective_throughput_mbps",
+          "sample_key": "network_effective_throughput_mbps",
+          "unit": "Mbps",
+          "observed": true,
+          "variation_status": "INSUFFICIENT_SAMPLES",
+          "is_time_varying": false,
+          "is_flat": false,
+          "latest_is_zero": false,
+          "first_value": 180,
+          "latest_value": 180,
+          "minimum_value": 180,
+          "maximum_value": 180,
+          "absolute_delta": 0,
+          "endpoint_delta": 0,
+          "relative_delta": 0,
+          "flat_reason": "fewer than two samples are available",
+          "visibility": "WAIT_FOR_MORE_SAMPLES",
+          "zero_value_note": ""
+        },
+        {
+          "metric": "EFFECTIVE_LATENCY",
+          "display_name": "有效时延",
+          "runtime_summary_key": "network_quality_effective_latency_avg_s",
+          "sample_key": "network_effective_latency_s",
+          "unit": "s",
+          "observed": true,
+          "variation_status": "INSUFFICIENT_SAMPLES",
+          "is_time_varying": false,
+          "is_flat": false,
+          "latest_is_zero": false,
+          "first_value": 0.045,
+          "latest_value": 0.045,
+          "minimum_value": 0.045,
+          "maximum_value": 0.045,
+          "absolute_delta": 0,
+          "endpoint_delta": 0,
+          "relative_delta": 0,
+          "flat_reason": "fewer than two samples are available",
+          "visibility": "WAIT_FOR_MORE_SAMPLES",
+          "zero_value_note": ""
+        }
+      ],
+      "operator_summary": "More runtime samples are required before dynamic behavior can be assessed.",
+      "blocking_reasons": [
+        {
+          "reason_type": "INSUFFICIENT_SERIES",
+          "sample_count": 1,
+          "sim_time_span_s": 0,
+          "message": "At least two samples over positive simulation time are required."
+        }
+      ],
+      "recommended_next_action": "COLLECT_MORE_RUNTIME_SAMPLES",
+      "model_assumptions": [
+        "Dynamic status is derived from backend network_kpi_calibration_v1.",
+        "The summary audits flow-level proxy KPI movement; it does not recompute formulas.",
+        "Loss and delay-variation remain proxy metrics, not packet-level measurements."
+      ],
+      "status_hash": "sha256:dfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdf"
+    },
     "satellite_kpi_slices_v1": {
       "version": "v1",
       "mode": "TOP_ACTIVITY_LIMITED",

@@ -1458,6 +1458,12 @@ Current Phase 3 progress:
   scenario review bundle, checklist evidence mapping, and long-term audit index
   without metric recomputation or frontend inference.
 
+- T431 binds the backend-owned `network_kpi_dynamic_status_v1` semantics into
+  the frontend standalone data panel and result-package review views. The
+  dashboard now shows runtime dynamic status, moving/flat/zero KPI counts,
+  per-KPI visibility hints, and exported dynamic-status audit labels directly
+  from backend fields instead of inferring whether KPI curves are dynamic.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

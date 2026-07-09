@@ -21922,3 +21922,52 @@ change.
     `network_kpi_dynamic_status_v1` from the runtime status or exported package.
     This task intentionally keeps scope to backend result export and audit
     surfaces.
+
+
+## 2026-07-09 - T431 frontend network KPI dynamic binding v1
+
+- Branch: `feature/T431-frontend-network-kpi-dynamic-binding-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: bind backend-owned `network_kpi_dynamic_status_v1` into the frontend
+  standalone data panel, model-trust evidence workspace, runtime status
+  contract fixture, and result-package review surfaces. The dashboard now
+  renders dynamic/partially dynamic/flat/insufficient status, moving/flat/zero
+  KPI counts, per-KPI visibility hints, blocking reasons, and recommended next
+  actions from backend fields. Result-package review summary, diagnostics,
+  scenario review workflow, and audit index labels also expose the exported
+  `network_kpi_dynamic_status_v1.json` evidence. This is a frontend semantic
+  binding task only. No Event Kernel behavior, KPI formula, network routing
+  logic, runtime progression behavior, external simulator integration,
+  packet-level simulation, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `docs/network_kpi_dynamic_status_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts runtimeContractFixture.test.ts`
+    using the bundled Node/Pnpm PATH.
+    - Result: 235 passed.
+  - `pnpm --dir frontend build` using the bundled Node/Pnpm PATH.
+    - Result: passed; Vite reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - The host PATH could run `pnpm` but could not find `node`; reran validation
+    with the Codex bundled Node and Pnpm paths.
+  - Adding one model-trust evidence row changed expected evidence counts from
+    10 to 11. The complete-evidence test now provides dynamic status evidence,
+    while the missing-evidence test explicitly expects a pending backend dynamic
+    status row.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The frontend now surfaces backend dynamic-status evidence, but it still
+    depends on backend model improvements for more realistic time variation.
+    Next backend work should improve business demand, network KPI drivers, and
+    compute-service lifecycle realism rather than adding more frontend-only
+    presentation.

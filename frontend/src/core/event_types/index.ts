@@ -1496,6 +1496,7 @@ export interface RuntimeExportReviewSummaryV1 {
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
   network_kpi_variation_explanation?: RuntimeExportNetworkKpiVariationExplanationV1;
+  network_kpi_dynamic_status?: RuntimeExportNetworkKpiDynamicStatusV1;
   user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
   traffic_demand_explanation?: RuntimeExportTrafficDemandExplanationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
@@ -1613,6 +1614,37 @@ export interface RuntimeExportNetworkKpiVariationExplanationV1 {
   acceptable_for_demo_review: boolean;
   model_assumptions: readonly string[];
   caveats: readonly string[];
+  evidence_hash: string;
+}
+
+export interface RuntimeExportNetworkKpiDynamicStatusV1 {
+  version: "v1" | string;
+  status_id: string;
+  source: string;
+  runtime_status_source?: string;
+  evidence_present: boolean;
+  calibration_id?: string;
+  metric_model: string;
+  dynamic_status: string;
+  sample_count: number;
+  sim_time_span_s: number;
+  activity_active?: boolean;
+  kpi_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  missing_kpi_count?: number;
+  zero_latest_kpi_count: number;
+  dynamic_metric_names?: readonly string[];
+  flat_metric_names?: readonly string[];
+  zero_latest_metric_names?: readonly string[];
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  acceptable_for_demo_review?: boolean;
+  operator_summary?: string;
+  recommended_next_action?: string;
+  status_hash?: string;
+  model_assumptions?: readonly string[];
+  caveats?: readonly string[];
   evidence_hash: string;
 }
 
@@ -2218,6 +2250,12 @@ export interface RuntimeExportPackageAuditIndexV1 {
   network_kpi_variation_explanation_present?: boolean;
   network_kpi_variation_explanation_time_varying_kpi_count?: number;
   network_kpi_variation_explanation_missing_explanation_count?: number;
+  network_kpi_dynamic_status_hash?: string;
+  network_kpi_dynamic_status_status?: string;
+  network_kpi_dynamic_status_present?: boolean;
+  network_kpi_dynamic_status_time_varying_kpi_count?: number;
+  network_kpi_dynamic_status_flat_kpi_count?: number;
+  network_kpi_dynamic_status_zero_latest_kpi_count?: number;
   user_configuration_template_validation_hash?: string;
   user_configuration_template_validation_status?: string;
   user_configuration_template_validation_present?: boolean;
@@ -2449,6 +2487,7 @@ export interface RuntimeExportScenarioReviewBundleV1 {
   network_kpi_benchmark_validation?: RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1;
   network_kpi_formula_evidence?: RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1;
   network_kpi_variation_explanation?: RuntimeExportScenarioReviewNetworkKpiVariationExplanationRefV1;
+  network_kpi_dynamic_status?: RuntimeExportScenarioReviewNetworkKpiDynamicStatusRefV1;
   user_configuration_template_validation?: RuntimeExportScenarioReviewUserConfigurationTemplateValidationRefV1;
   traffic_demand_explanation?: RuntimeExportScenarioReviewTrafficDemandExplanationRefV1;
   user_service_requests?: RuntimeExportScenarioReviewUserServiceRequestRefV2;
@@ -2529,6 +2568,20 @@ export interface RuntimeExportScenarioReviewNetworkKpiVariationExplanationRefV1 
   time_varying_kpi_count: number;
   flat_kpi_count: number;
   missing_explanation_count: number;
+  evidence_hash: string;
+  evidence_present: boolean;
+}
+
+export interface RuntimeExportScenarioReviewNetworkKpiDynamicStatusRefV1 {
+  status_id: string;
+  metric_model: string;
+  dynamic_status: string;
+  sample_count: number;
+  kpi_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  zero_latest_kpi_count: number;
+  recommended_next_action: string;
   evidence_hash: string;
   evidence_present: boolean;
 }
@@ -2673,6 +2726,7 @@ export interface RuntimeExportReviewArtifactsV1 {
   network_kpi_benchmark_validation_exported?: boolean;
   network_kpi_formula_evidence_exported?: boolean;
   network_kpi_variation_explanation_exported?: boolean;
+  network_kpi_dynamic_status_exported?: boolean;
   user_configuration_template_validation_exported?: boolean;
   traffic_demand_explanation_exported?: boolean;
   user_service_request_summary_exported?: boolean;
@@ -2690,6 +2744,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
   network_kpi_variation_explanation?: RuntimeExportNetworkKpiVariationExplanationV1;
+  network_kpi_dynamic_status?: RuntimeExportNetworkKpiDynamicStatusV1;
   user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
   traffic_demand_explanation?: RuntimeExportTrafficDemandExplanationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
@@ -3111,6 +3166,7 @@ export interface RuntimeStatusPayload {
   network_kpi_calibration_v1?: RuntimeNetworkKpiCalibrationV1;
   network_kpi_formula_evidence_v1?: RuntimeNetworkKpiFormulaEvidenceV1;
   network_kpi_variation_explanation_v1?: RuntimeNetworkKpiVariationExplanationV1;
+  network_kpi_dynamic_status_v1?: RuntimeNetworkKpiDynamicStatusV1;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
@@ -3419,6 +3475,66 @@ export interface RuntimeNetworkKpiVariationExplanationItemV1 {
   explanation_status: string;
   trust_label: string;
   user_explanation: string;
+}
+
+export interface RuntimeNetworkKpiDynamicStatusV1 {
+  version: "v1" | string;
+  status_id: string;
+  source: string;
+  calibration_id: string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  sample_count: number;
+  sim_time_span_s: number;
+  activity_active: boolean;
+  dynamic_status: string;
+  kpi_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  missing_kpi_count: number;
+  zero_latest_kpi_count: number;
+  dynamic_metric_names: readonly string[];
+  flat_metric_names: readonly string[];
+  zero_latest_metric_names: readonly string[];
+  items: readonly RuntimeNetworkKpiDynamicStatusItemV1[];
+  operator_summary: string;
+  blocking_reasons: readonly RuntimeNetworkKpiDynamicStatusBlockingReasonV1[];
+  recommended_next_action: string;
+  model_assumptions: readonly string[];
+  status_hash: string;
+}
+
+export interface RuntimeNetworkKpiDynamicStatusItemV1 {
+  metric: string;
+  display_name: string;
+  runtime_summary_key: string;
+  sample_key: string;
+  unit: string;
+  observed: boolean;
+  variation_status: string;
+  is_time_varying: boolean;
+  is_flat: boolean;
+  latest_is_zero: boolean;
+  first_value: number | null;
+  latest_value: number | null;
+  minimum_value: number | null;
+  maximum_value: number | null;
+  absolute_delta: number;
+  endpoint_delta: number;
+  relative_delta: number;
+  flat_reason: string;
+  visibility: string;
+  zero_value_note: string;
+}
+
+export interface RuntimeNetworkKpiDynamicStatusBlockingReasonV1 {
+  reason_type: string;
+  message?: string;
+  sample_count?: number;
+  sim_time_span_s?: number;
+  activity_active?: boolean;
+  flat_metric_names?: readonly string[];
 }
 
 export interface RuntimeNetworkKpiCalibrationActivityContextV1 {

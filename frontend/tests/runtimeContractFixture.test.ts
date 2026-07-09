@@ -88,6 +88,23 @@ describe("runtime status contract fixture", () => {
       runtime_summary_key: "network_quality_effective_throughput_mbps",
       variation_status: "INSUFFICIENT_SAMPLES"
     });
+    expect(status.network_kpi_dynamic_status_v1).toMatchObject({
+      version: "v1",
+      status_id: "leo_twin.network_kpi_dynamic_status.v1",
+      source: "NETWORK_KPI_CALIBRATION_V1",
+      calibration_id: "leo_twin.network_kpi_calibration.v1",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      frontend_inference_required: false,
+      dynamic_status: "INSUFFICIENT_SERIES",
+      sample_count: 1,
+      kpi_count: 2
+    });
+    expect(status.network_kpi_dynamic_status_v1?.items[0]).toMatchObject({
+      metric: "EFFECTIVE_THROUGHPUT",
+      visibility: "WAIT_FOR_MORE_SAMPLES",
+      variation_status: "INSUFFICIENT_SAMPLES"
+    });
     expect(status.network_quality_provenance_v1).toMatchObject({
       version: "v1",
       metric_model: "FLOW_LEVEL_PROXY",

@@ -59,11 +59,13 @@ import {
   RuntimeExportHistoryV1,
   RuntimeMetricsSummary,
   RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1,
+  RuntimeExportNetworkKpiDynamicStatusV1,
   RuntimeExportNetworkKpiFormulaEvidenceV1,
   RuntimeExportNetworkKpiVariationExplanationV1,
   RuntimeNetworkKpiCalibrationV1,
   RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkKpiBenchmarkValidationV1,
+  RuntimeNetworkKpiDynamicStatusV1,
   RuntimeNetworkKpiFormulaEvidenceV1,
   RuntimeNetworkKpiProvenanceV2,
   RuntimeNetworkKpiVariationExplanationV1,
@@ -242,6 +244,7 @@ const NETWORK_KPI_FORMULA_EVIDENCE_FILENAME =
   "network_kpi_formula_evidence_v1.json";
 const NETWORK_KPI_VARIATION_EXPLANATION_FILENAME =
   "network_kpi_variation_explanation_v1.json";
+const NETWORK_KPI_DYNAMIC_STATUS_FILENAME = "network_kpi_dynamic_status_v1.json";
 const USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME =
   "user_configuration_template_validation_v1.json";
 const TRAFFIC_DEMAND_EXPLANATION_FILENAME =
@@ -1274,6 +1277,9 @@ export const DataPanel = memo(function DataPanel({
     buildDataPanelNetworkKpiVariationExplanationDisplay(
       runtimeStatus.network_kpi_variation_explanation_v1
     );
+  const networkKpiDynamicStatusDisplay = buildDataPanelNetworkKpiDynamicStatusDisplay(
+    runtimeStatus.network_kpi_dynamic_status_v1
+  );
   const networkKpiFormulaInspector = buildDataPanelNetworkKpiFormulaInspector(
     runtimeStatus.network_kpi_provenance_v2,
     runtimeStatus.network_kpi_credibility_v1
@@ -1294,6 +1300,7 @@ export const DataPanel = memo(function DataPanel({
     networkKpiBenchmarkValidation: networkKpiBenchmarkValidationDisplay,
     networkKpiCalibration: networkKpiCalibrationDisplay,
     networkKpiFormulaEvidence: networkKpiFormulaEvidenceDisplay,
+    networkKpiDynamicStatus: networkKpiDynamicStatusDisplay,
     networkKpiFormulaInspector,
     routeProvenanceTrust: routeProvenanceTrustDisplay,
     fidelitySummary,
@@ -5095,6 +5102,43 @@ export const DataPanel = memo(function DataPanel({
               {networkKpiVariationExplanationDisplay.caveats.length > 0 ? (
                 <div className="data-panel-kpi-credibility-caveats">
                   {networkKpiVariationExplanationDisplay.caveats.map((caveat) => (
+                    <span key={caveat}>{caveat}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {networkKpiDynamicStatusDisplay ? (
+            <div
+              className={`data-panel-kpi-formula-inspector ${networkKpiDynamicStatusDisplay.tone}`}
+              aria-label="网络KPI动态状态"
+            >
+              <div className="data-panel-kpi-formula-header">
+                <div>
+                  <span>{networkKpiDynamicStatusDisplay.sourceLabel}</span>
+                  <strong>{networkKpiDynamicStatusDisplay.statusLabel}</strong>
+                  <small>{networkKpiDynamicStatusDisplay.summaryLabel}</small>
+                </div>
+              </div>
+              <div className="data-panel-kpi-formula-meta">
+                {networkKpiDynamicStatusDisplay.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-kpi-formula-rows">
+                {networkKpiDynamicStatusDisplay.rows.map((row) => (
+                  <span className={row.tone} key={row.metric} title={row.title}>
+                    <strong>{row.displayName}</strong>
+                    <em>{row.statusLabel}</em>
+                    <small>{row.valueLabel}</small>
+                    <small>{row.deltaLabel}</small>
+                    <small>{row.visibilityLabel}</small>
+                  </span>
+                ))}
+              </div>
+              {networkKpiDynamicStatusDisplay.caveats.length > 0 ? (
+                <div className="data-panel-kpi-credibility-caveats">
+                  {networkKpiDynamicStatusDisplay.caveats.map((caveat) => (
                     <span key={caveat}>{caveat}</span>
                   ))}
                 </div>
@@ -15099,6 +15143,17 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
             )}`
           ]
         : []),
+      ...(bundle.network_kpi_dynamic_status
+        ? [
+            `KPI dynamic ${bundle.network_kpi_dynamic_status.dynamic_status}`,
+            `KPI dynamic moving ${formatCount(
+              bundle.network_kpi_dynamic_status.time_varying_kpi_count
+            )}`,
+            `KPI dynamic ${shortRuntimeHash(
+              bundle.network_kpi_dynamic_status.evidence_hash
+            )}`
+          ]
+        : []),
       ...(bundle.user_configuration_template_validation
         ? [
             `config templates ${bundle.user_configuration_template_validation.validation_status}`,
@@ -15217,6 +15272,7 @@ function buildDataPanelScenarioReviewWorkflowRows(
     SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME,
     NETWORK_KPI_FORMULA_EVIDENCE_FILENAME,
     NETWORK_KPI_VARIATION_EXPLANATION_FILENAME,
+    NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
     USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME,
     TRAFFIC_DEMAND_EXPLANATION_FILENAME,
     USER_SERVICE_REQUEST_SUMMARY_FILENAME
@@ -15277,18 +15333,20 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "10 KPI formula evidence";
     case NETWORK_KPI_VARIATION_EXPLANATION_FILENAME:
       return "11 KPI variation explanation";
+    case NETWORK_KPI_DYNAMIC_STATUS_FILENAME:
+      return "12 KPI dynamic status";
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
-      return "12 config template validation";
+      return "13 config template validation";
     case TRAFFIC_DEMAND_EXPLANATION_FILENAME:
-      return "13 traffic demand";
+      return "14 traffic demand";
     case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
-      return "14 user services";
+      return "15 user services";
     case "events.jsonl":
-      return "15 event evidence";
+      return "16 event evidence";
     case "metrics.csv":
-      return "16 metrics";
+      return "17 metrics";
     case "summary.json":
-      return "17 summary";
+      return "18 summary";
     default:
       return null;
   }
@@ -15591,6 +15649,12 @@ function scenarioReviewWorkflowEvidenceHash(
       return (
         bundle.network_kpi_variation_explanation?.evidence_hash ??
         auditIndex?.network_kpi_variation_explanation_hash ??
+        ""
+      );
+    case NETWORK_KPI_DYNAMIC_STATUS_FILENAME:
+      return (
+        bundle.network_kpi_dynamic_status?.evidence_hash ??
+        auditIndex?.network_kpi_dynamic_status_hash ??
         ""
       );
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
@@ -16148,6 +16212,8 @@ function scenarioReviewWorkflowArtifactPointer(filename: string): string {
       return "/evidence";
     case NETWORK_KPI_VARIATION_EXPLANATION_FILENAME:
       return "/evidence";
+    case NETWORK_KPI_DYNAMIC_STATUS_FILENAME:
+      return "/evidence";
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
       return "/template_validation/templates";
     case TRAFFIC_DEMAND_EXPLANATION_FILENAME:
@@ -16174,6 +16240,8 @@ function scenarioReviewWorkflowArtifactFilter(filename: string): string {
     case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
       return "evidence";
     case NETWORK_KPI_VARIATION_EXPLANATION_FILENAME:
+      return "evidence";
+    case NETWORK_KPI_DYNAMIC_STATUS_FILENAME:
       return "evidence";
     case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
       return "summary items";
@@ -17210,6 +17278,23 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
             )}`,
             `KPI variation ${shortRuntimeHash(
               auditIndex.network_kpi_variation_explanation_hash ?? ""
+            )}`
+          ]
+        : []),
+      ...(auditIndex.network_kpi_dynamic_status_present !== undefined
+        ? [
+            `KPI dynamic ${auditIndex.network_kpi_dynamic_status_status ?? "-"}`,
+            `KPI dynamic moving ${formatCount(
+              auditIndex.network_kpi_dynamic_status_time_varying_kpi_count ?? 0
+            )}`,
+            `KPI dynamic flat ${formatCount(
+              auditIndex.network_kpi_dynamic_status_flat_kpi_count ?? 0
+            )}`,
+            `KPI dynamic zero ${formatCount(
+              auditIndex.network_kpi_dynamic_status_zero_latest_kpi_count ?? 0
+            )}`,
+            `KPI dynamic ${shortRuntimeHash(
+              auditIndex.network_kpi_dynamic_status_hash ?? ""
             )}`
           ]
         : []),
@@ -18618,6 +18703,21 @@ function runtimeExportNetworkKpiVariationExplanationLabels(
   ];
 }
 
+function runtimeExportNetworkKpiDynamicStatusLabels(
+  evidence: RuntimeExportNetworkKpiDynamicStatusV1 | null | undefined
+): readonly string[] {
+  if (evidence === null || evidence === undefined) {
+    return [];
+  }
+  return [
+    `KPI dynamic ${evidence.dynamic_status}`,
+    `KPI dynamic moving ${formatCount(evidence.time_varying_kpi_count)}`,
+    `KPI dynamic flat ${formatCount(evidence.flat_kpi_count)}`,
+    `KPI dynamic zero ${formatCount(evidence.zero_latest_kpi_count)}`,
+    `KPI dynamic ${shortRuntimeHash(evidence.evidence_hash)}`
+  ];
+}
+
 function runtimeExportUserConfigurationTemplateValidationLabels(
   evidence: RuntimeExportUserConfigurationTemplateValidationEvidenceV1 | null | undefined
 ): readonly string[] {
@@ -18706,6 +18806,7 @@ export function buildDataPanelExportReviewSummaryDisplay(
       ...runtimeExportNetworkKpiVariationExplanationLabels(
         summary.network_kpi_variation_explanation
       ),
+      ...runtimeExportNetworkKpiDynamicStatusLabels(summary.network_kpi_dynamic_status),
       ...runtimeExportUserConfigurationTemplateValidationLabels(
         summary.user_configuration_template_validation
       ),
@@ -18736,6 +18837,15 @@ export function buildDataPanelExportReviewSummaryDisplay(
         ? [
             `KPI variation ${
               summary.artifacts.network_kpi_variation_explanation_exported
+                ? "exported"
+                : "missing"
+            }`
+          ]
+        : []),
+      ...(summary.artifacts.network_kpi_dynamic_status_exported !== undefined
+        ? [
+            `KPI dynamic ${
+              summary.artifacts.network_kpi_dynamic_status_exported
                 ? "exported"
                 : "missing"
             }`
@@ -18857,6 +18967,9 @@ export function buildDataPanelExportDiagnosticsDisplay(
       ),
       ...runtimeExportNetworkKpiVariationExplanationLabels(
         diagnostics.network_kpi_variation_explanation
+      ),
+      ...runtimeExportNetworkKpiDynamicStatusLabels(
+        diagnostics.network_kpi_dynamic_status
       ),
       ...runtimeExportUserConfigurationTemplateValidationLabels(
         diagnostics.user_configuration_template_validation
@@ -21482,6 +21595,16 @@ export interface DataPanelNetworkKpiVariationExplanationDisplay {
   caveats: readonly string[];
 }
 
+export interface DataPanelNetworkKpiDynamicStatusDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelNetworkKpiDynamicStatusRow[];
+  caveats: readonly string[];
+}
+
 export interface DataPanelNetworkKpiCalibrationRow {
   metric: string;
   metricLabel: string;
@@ -21511,6 +21634,17 @@ export interface DataPanelNetworkKpiVariationExplanationRow {
   valueLabel: string;
   inputLabel: string;
   explanationLabel: string;
+  tone: "observed" | "missing" | "invalid";
+  title: string;
+}
+
+export interface DataPanelNetworkKpiDynamicStatusRow {
+  metric: string;
+  displayName: string;
+  statusLabel: string;
+  valueLabel: string;
+  deltaLabel: string;
+  visibilityLabel: string;
   tone: "observed" | "missing" | "invalid";
   title: string;
 }
@@ -21561,6 +21695,7 @@ export interface DataPanelModelTrustEvidenceWorkspaceInput {
   networkKpiBenchmarkValidation?: DataPanelNetworkKpiBenchmarkValidationDisplay | null;
   networkKpiCalibration?: DataPanelNetworkKpiCalibrationDisplay | null;
   networkKpiFormulaEvidence?: DataPanelNetworkKpiFormulaEvidenceDisplay | null;
+  networkKpiDynamicStatus?: DataPanelNetworkKpiDynamicStatusDisplay | null;
   networkKpiFormulaInspector?: DataPanelNetworkKpiFormulaInspectorDisplay | null;
   routeProvenanceTrust?: DataPanelRouteProvenanceTrustDisplay | null;
   fidelitySummary?: FidelitySummary | null;
@@ -21590,6 +21725,7 @@ export interface DataPanelModelTrustEvidenceRow {
     | "benchmark"
     | "calibration"
     | "formula"
+    | "dynamic"
     | "route"
     | "replay"
     | "runtime";
@@ -22319,6 +22455,85 @@ export function buildDataPanelNetworkKpiVariationExplanationDisplay(
   };
 }
 
+export function buildDataPanelNetworkKpiDynamicStatusDisplay(
+  status: RuntimeNetworkKpiDynamicStatusV1 | null | undefined,
+  limit = 6
+): DataPanelNetworkKpiDynamicStatusDisplay | null {
+  if (status === null || status === undefined) {
+    return null;
+  }
+  const displayLimit = Math.max(0, Math.floor(limit));
+  const orderedItems = [...status.items].sort((left, right) =>
+    left.metric.localeCompare(right.metric)
+  );
+  const rows = orderedItems.slice(0, displayLimit).map((item) => {
+    const tone: DataPanelNetworkKpiDynamicStatusRow["tone"] =
+      status.packet_level_simulation
+        ? "invalid"
+        : item.observed && item.visibility !== "WAIT_FOR_BACKEND_SAMPLE"
+          ? "observed"
+          : "missing";
+    const latestValue = `${formatNetworkKpiValue(item.latest_value)} ${
+      item.unit
+    }`.trim();
+    const rangeValue =
+      item.minimum_value === null || item.maximum_value === null
+        ? "range -"
+        : `range ${formatNetworkKpiValue(item.minimum_value)}-${formatNetworkKpiValue(
+            item.maximum_value
+          )}`;
+    return {
+      metric: item.metric,
+      displayName: `${item.display_name} / ${item.metric}`,
+      statusLabel: networkKpiDynamicItemStatusLabel(item.variation_status),
+      valueLabel: latestValue,
+      deltaLabel: `delta ${formatNetworkKpiValue(item.endpoint_delta)} / ${rangeValue}`,
+      visibilityLabel: networkKpiDynamicVisibilityLabel(item.visibility),
+      tone,
+      title: [
+        item.runtime_summary_key,
+        item.sample_key,
+        item.flat_reason,
+        item.zero_value_note
+      ]
+        .filter((part) => part.length > 0)
+        .join(" / ")
+    };
+  });
+  const hiddenCount = Math.max(0, orderedItems.length - rows.length);
+  const blockingLabels = status.blocking_reasons
+    .map((reason) => reason.message ?? reason.reason_type)
+    .filter((label) => label.length > 0);
+  return {
+    tone: networkKpiDynamicStatusTone(status.dynamic_status),
+    sourceLabel: `${status.status_id} / ${status.source}`,
+    statusLabel: networkKpiDynamicStatusLabel(status.dynamic_status),
+    summaryLabel: `${networkKpiMetricModelLabel(
+      status.metric_model
+    )} / samples ${formatCount(status.sample_count)} / span ${formatDurationCompact(
+      status.sim_time_span_s
+    )} / moving KPI ${formatCount(status.time_varying_kpi_count)}/${formatCount(
+      status.kpi_count
+    )}${hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : ""}`,
+    metaLabels: [
+      status.packet_level_simulation ? "packet-level declared" : "flow-level proxy",
+      status.frontend_inference_required ? "frontend inference required" : "backend semantic",
+      status.activity_active ? "activity active" : "activity idle",
+      `flat KPI ${formatCount(status.flat_kpi_count)}`,
+      `missing KPI ${formatCount(status.missing_kpi_count)}`,
+      `zero latest ${formatCount(status.zero_latest_kpi_count)}`,
+      `status ${shortRuntimeHash(status.status_hash)}`
+    ],
+    rows,
+    caveats: [
+      status.operator_summary,
+      ...blockingLabels,
+      status.recommended_next_action,
+      ...status.model_assumptions.slice(0, 1)
+    ].filter((label) => label.length > 0)
+  };
+}
+
 export function buildDataPanelNetworkKpiFormulaInspector(
   provenance: RuntimeNetworkKpiProvenanceV2 | null | undefined,
   credibility: RuntimeNetworkKpiCredibilityV1 | null | undefined,
@@ -22584,6 +22799,8 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
       input.networkKpiCalibration === undefined) &&
     (input.networkKpiFormulaEvidence === null ||
       input.networkKpiFormulaEvidence === undefined) &&
+    (input.networkKpiDynamicStatus === null ||
+      input.networkKpiDynamicStatus === undefined) &&
     (input.networkKpiFormulaInspector === null ||
       input.networkKpiFormulaInspector === undefined) &&
     (input.routeProvenanceTrust === null || input.routeProvenanceTrust === undefined) &&
@@ -22606,6 +22823,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     buildModelTrustKpiBenchmarkRow(input.networkKpiBenchmarkValidation),
     buildModelTrustKpiCalibrationRow(input.networkKpiCalibration),
     buildModelTrustKpiFormulaEvidenceRow(input.networkKpiFormulaEvidence),
+    buildModelTrustKpiDynamicStatusRow(input.networkKpiDynamicStatus),
     buildModelTrustFormulaRow(input.networkKpiFormulaInspector),
     buildModelTrustRouteProvenanceRow(input.routeProvenanceTrust),
     buildModelTrustReplayRow(
@@ -22834,6 +23052,36 @@ function buildModelTrustKpiFormulaEvidenceRow(
       ...evidence.metaLabels,
       ...evidence.rows.map((row) => `${row.metric}: ${row.evidenceLabel}`),
       ...evidence.caveats
+    ].join(" / ")
+  };
+}
+
+function buildModelTrustKpiDynamicStatusRow(
+  status: DataPanelNetworkKpiDynamicStatusDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (status === null || status === undefined) {
+    return {
+      kind: "dynamic",
+      label: "KPI dynamic status",
+      statusLabel: "waiting for backend dynamic status",
+      detail: "network_kpi_dynamic_status_v1 is not present in runtime status.",
+      source: "network_kpi_dynamic_status_v1",
+      tone: "pending",
+      title:
+        "The backend must provide KPI dynamic/flat/insufficient-series evidence; the frontend does not infer it locally."
+    };
+  }
+  return {
+    kind: "dynamic",
+    label: "KPI dynamic status",
+    statusLabel: status.statusLabel,
+    detail: status.summaryLabel,
+    source: status.sourceLabel,
+    tone: status.tone,
+    title: [
+      ...status.metaLabels,
+      ...status.rows.map((row) => `${row.metric}: ${row.statusLabel}`),
+      ...status.caveats
     ].join(" / ")
   };
 }
@@ -23241,6 +23489,81 @@ function networkKpiVariationExplanationStatusLabel(status: string): string {
     return "公式证据可用";
   }
   return status || "变化解释未知";
+}
+
+function networkKpiDynamicStatusTone(
+  status: string
+): DataPanelNetworkKpiCredibilityTone {
+  if (status === "DYNAMIC" || status === "PARTIALLY_DYNAMIC") {
+    return "match";
+  }
+  if (status === "FLAT_WITH_ACTIVITY") {
+    return "different";
+  }
+  if (status === "FLAT_NO_ACTIVITY" || status === "INSUFFICIENT_SERIES") {
+    return "pending";
+  }
+  return "error";
+}
+
+function networkKpiDynamicStatusLabel(status: string): string {
+  if (status === "DYNAMIC") {
+    return "KPI samples are dynamic";
+  }
+  if (status === "PARTIALLY_DYNAMIC") {
+    return "KPI samples are partially dynamic";
+  }
+  if (status === "FLAT_WITH_ACTIVITY") {
+    return "KPI samples are flat under activity";
+  }
+  if (status === "FLAT_NO_ACTIVITY") {
+    return "KPI samples are flat without activity";
+  }
+  if (status === "INSUFFICIENT_SERIES") {
+    return "KPI samples are insufficient";
+  }
+  if (status === "NO_KPI_EVIDENCE") {
+    return "No KPI evidence";
+  }
+  return status || "Unknown KPI dynamic status";
+}
+
+function networkKpiDynamicItemStatusLabel(status: string): string {
+  if (status === "TIME_VARYING") {
+    return "time-varying";
+  }
+  if (status === "FLAT_NONZERO") {
+    return "flat non-zero";
+  }
+  if (status === "FLAT_ZERO") {
+    return "flat zero";
+  }
+  if (status === "INSUFFICIENT_SAMPLES") {
+    return "insufficient samples";
+  }
+  if (status === "MISSING_SAMPLE_VALUE") {
+    return "missing sample";
+  }
+  return status || "unknown";
+}
+
+function networkKpiDynamicVisibilityLabel(visibility: string): string {
+  if (visibility === "SHOW_DYNAMIC_CHART") {
+    return "show dynamic chart";
+  }
+  if (visibility === "SHOW_FLAT_REASON") {
+    return "show flat reason";
+  }
+  if (visibility === "SHOW_ZERO_VALUE_REASON") {
+    return "show zero reason";
+  }
+  if (visibility === "WAIT_FOR_BACKEND_SAMPLE") {
+    return "wait for backend sample";
+  }
+  if (visibility === "WAIT_FOR_MORE_SAMPLES") {
+    return "wait for more samples";
+  }
+  return visibility || "no visibility hint";
 }
 
 function networkKpiCalibrationVariationLabel(status: string): string {

@@ -46,6 +46,21 @@ checklist evidence mapping, and long-term audit index. The export reads
 `config_snapshot.status.network_kpi_dynamic_status_v1`; it does not replay
 events, recompute metrics, or ask the frontend to infer KPI semantics.
 
+## Frontend Binding
+
+T431 binds this backend-owned status into the standalone data panel and result
+package review surfaces. The frontend now consumes:
+
+- `runtime/status.network_kpi_dynamic_status_v1`
+- review summary `network_kpi_dynamic_status`
+- diagnostics bundle `network_kpi_dynamic_status`
+- scenario review bundle `network_kpi_dynamic_status`
+- audit index `network_kpi_dynamic_status_*` fields
+
+The panel renders the backend status, sample span, moving/flat/zero KPI counts,
+per-KPI visibility hints, blocking reasons, and recommended next action. It does
+not derive dynamic/flat semantics locally.
+
 ## Status Values
 
 - `DYNAMIC`: at least two network KPIs vary over the observed time series.

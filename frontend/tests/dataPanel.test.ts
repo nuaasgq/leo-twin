@@ -92,6 +92,7 @@ import {
   buildDataPanelNetworkKpiBenchmarkValidationDisplay,
   buildDataPanelNetworkKpiCalibrationDisplay,
   buildDataPanelNetworkKpiCredibilityDisplay,
+  buildDataPanelNetworkKpiDynamicStatusDisplay,
   buildDataPanelNetworkKpiFormulaEvidenceDisplay,
   buildDataPanelNetworkKpiVariationExplanationDisplay,
   buildDataPanelNetworkKpiFormulaInspector,
@@ -3499,6 +3500,13 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       network_kpi_formula_evidence_status: "FORMULA_AND_TIME_EVIDENCE_READY",
       network_kpi_formula_evidence_present: true,
       network_kpi_formula_evidence_missing_selected_input_count: 0,
+      network_kpi_dynamic_status_hash:
+        "sha256:dfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdf",
+      network_kpi_dynamic_status_status: "DYNAMIC",
+      network_kpi_dynamic_status_present: true,
+      network_kpi_dynamic_status_time_varying_kpi_count: 4,
+      network_kpi_dynamic_status_flat_kpi_count: 2,
+      network_kpi_dynamic_status_zero_latest_kpi_count: 1,
       user_configuration_template_validation_hash:
         "sha256:fefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe",
       user_configuration_template_validation_status: "ALL_TEMPLATES_VALID",
@@ -3598,6 +3606,11 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "KPI formula FORMULA_AND_TIME_EVIDENCE_READY",
         "KPI formula missing inputs 0",
         "KPI formula edededededed",
+        "KPI dynamic DYNAMIC",
+        "KPI dynamic moving 4",
+        "KPI dynamic flat 2",
+        "KPI dynamic zero 1",
+        "KPI dynamic dfdfdfdfdfdf",
         "config templates ALL_TEMPLATES_VALID",
         "config template invalid 0",
         "config templates valid",
@@ -3764,6 +3777,20 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
         evidence_present: true
       },
+      network_kpi_dynamic_status: {
+        status_id: "leo_twin.network_kpi_dynamic_status.v1",
+        metric_model: "FLOW_LEVEL_PROXY",
+        dynamic_status: "DYNAMIC",
+        sample_count: 4,
+        kpi_count: 6,
+        time_varying_kpi_count: 4,
+        flat_kpi_count: 2,
+        zero_latest_kpi_count: 1,
+        recommended_next_action: "RENDER_BACKEND_KPI_SERIES_AND_EXPLANATION",
+        evidence_hash:
+          "sha256:dfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdf",
+        evidence_present: true
+      },
       user_configuration_template_validation: {
         evidence_id: "sees.user_configuration_template_validation.v1",
         schema_id: "sees.user_configuration.v2",
@@ -3822,6 +3849,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "service_trace_comparison_review_report_v1.json",
           "network_kpi_formula_evidence_v1.json",
           "network_kpi_variation_explanation_v1.json",
+          "network_kpi_dynamic_status_v1.json",
           "user_configuration_template_validation_v1.json",
           "traffic_demand_explanation_v1.json",
           "user_service_request_summary_v2.json",
@@ -3853,6 +3881,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "service_trace_comparison_review_report_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
+        "network_kpi_dynamic_status_v1.json",
         "user_configuration_template_validation_v1.json",
         "traffic_demand_explanation_v1.json",
         "user_service_request_summary_v2.json",
@@ -3899,6 +3928,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "KPI variation TIME_VARIATION_EXPLAINED",
         "KPI variation moving 4",
         "KPI variation eeeeeeeeeeee",
+        "KPI dynamic DYNAMIC",
+        "KPI dynamic moving 4",
+        "KPI dynamic dfdfdfdfdfdf",
         "config templates ALL_TEMPLATES_VALID",
         "config templates valid 3 / 3",
         "config template fefefefefefe",
@@ -4025,58 +4057,68 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "match"
         },
         {
-          stepLabel: "12 config template validation",
+          stepLabel: "12 KPI dynamic status",
+          statusLabel: "available",
+          detailLabel: "network_kpi_dynamic_status_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/network_kpi_dynamic_status_v1.json",
+          title:
+            "12 KPI dynamic status / network_kpi_dynamic_status_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "13 config template validation",
           statusLabel: "available",
           detailLabel: "user_configuration_template_validation_v1.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_configuration_template_validation_v1.json",
           title:
-            "12 config template validation / user_configuration_template_validation_v1.json / package artifact available",
+            "13 config template validation / user_configuration_template_validation_v1.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "13 traffic demand",
+          stepLabel: "14 traffic demand",
           statusLabel: "available",
           detailLabel: "traffic_demand_explanation_v1.json",
           href:
             "/runtime/export/packages/pkg-review/files/traffic_demand_explanation_v1.json",
           title:
-            "13 traffic demand / traffic_demand_explanation_v1.json / package artifact available",
+            "14 traffic demand / traffic_demand_explanation_v1.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "14 user services",
+          stepLabel: "15 user services",
           statusLabel: "available",
           detailLabel: "user_service_request_summary_v2.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
           title:
-            "14 user services / user_service_request_summary_v2.json / package artifact available",
+            "15 user services / user_service_request_summary_v2.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "15 event evidence",
+          stepLabel: "16 event evidence",
           statusLabel: "available",
           detailLabel: "events.jsonl",
           href: "/runtime/export/packages/pkg-review/files/events.jsonl",
-          title: "15 event evidence / events.jsonl / package artifact available",
+          title: "16 event evidence / events.jsonl / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "16 metrics",
+          stepLabel: "17 metrics",
           statusLabel: "available",
           detailLabel: "metrics.csv",
           href: "/runtime/export/packages/pkg-review/files/metrics.csv",
-          title: "16 metrics / metrics.csv / package artifact available",
+          title: "17 metrics / metrics.csv / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "17 summary",
+          stepLabel: "18 summary",
           statusLabel: "missing",
           detailLabel: "summary.json",
           href: null,
           title:
-            "17 summary / summary.json / not listed in scenario review bundle",
+            "18 summary / summary.json / not listed in scenario review bundle",
           tone: "different"
         }
       ],
@@ -6132,6 +6174,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         evidence_hash:
           "sha256:edededededededededededededededededededededededededededededededed"
       },
+      network_kpi_dynamic_status: _runtimeExportNetworkKpiDynamicStatus(),
       user_configuration_template_validation: {
         version: "v1",
         evidence_id: "sees.user_configuration_template_validation.v1",
@@ -6224,12 +6267,13 @@ describe("buildDataPanelExportCompareDisplay", () => {
         event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
       },
       artifacts: {
-        artifact_count: 10,
+        artifact_count: 11,
         artifact_filenames: [
           "config_snapshot.json",
           "events.jsonl",
           "manifest.json",
           "metrics.csv",
+          "network_kpi_dynamic_status_v1.json",
           "review_summary_v1.json",
           "service_lifecycle_trace_v2.json",
           "summary.json",
@@ -6248,6 +6292,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         service_lifecycle_trace_exported: true,
         review_summary_exported: true,
         network_kpi_formula_evidence_exported: true,
+        network_kpi_dynamic_status_exported: true,
         user_configuration_template_validation_exported: true,
         traffic_demand_explanation_exported: true,
         user_service_request_summary_exported: true
@@ -6261,7 +6306,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageId: "pkg-review",
       tone: "match",
       statusLabel: "可审阅",
-      summaryLabel: "pkg-review / 10 个文件 / 12.5 s / 4,096 事件",
+      summaryLabel: "pkg-review / 11 个文件 / 12.5 s / 4,096 事件",
       metaLabels: [
         "seed 4321",
         "卫星 72",
@@ -6277,6 +6322,11 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "KPI formula missing inputs 0",
         "KPI formula moving 4",
         "KPI formula edededededed",
+        "KPI dynamic DYNAMIC",
+        "KPI dynamic moving 4",
+        "KPI dynamic flat 2",
+        "KPI dynamic zero 1",
+        "KPI dynamic dfdfdfdfdfdf",
         "config templates ALL_TEMPLATES_VALID",
         "config templates valid 3 / 3",
         "config template invalid 0",
@@ -6304,6 +6354,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "service trace 已导出",
         "review summary 已导出",
         "KPI formula exported",
+        "KPI dynamic exported",
         "config templates exported",
         "traffic demand exported",
         "user services exported"
@@ -6572,6 +6623,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         evidence_hash:
           "sha256:edededededededededededededededededededededededededededededededed"
       },
+      network_kpi_dynamic_status: _runtimeExportNetworkKpiDynamicStatus(),
       user_configuration_template_validation: {
         version: "v1",
         evidence_id: "sees.user_configuration_template_validation.v1",
@@ -6862,6 +6914,11 @@ describe("buildDataPanelExportCompareDisplay", () => {
     expect(display?.modelBoundaryLabels).toContain("KPI formula missing inputs 0");
     expect(display?.modelBoundaryLabels).toContain("KPI formula moving 4");
     expect(display?.modelBoundaryLabels).toContain("KPI formula edededededed");
+    expect(display?.modelBoundaryLabels).toContain("KPI dynamic DYNAMIC");
+    expect(display?.modelBoundaryLabels).toContain("KPI dynamic moving 4");
+    expect(display?.modelBoundaryLabels).toContain("KPI dynamic flat 2");
+    expect(display?.modelBoundaryLabels).toContain("KPI dynamic zero 1");
+    expect(display?.modelBoundaryLabels).toContain("KPI dynamic dfdfdfdfdfdf");
     expect(display?.modelBoundaryLabels).toContain(
       "config templates ALL_TEMPLATES_VALID"
     );
@@ -10877,6 +10934,116 @@ describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
     expect(buildDataPanelNetworkKpiVariationExplanationDisplay(undefined)).toBeNull();
   });
 
+  it("formats backend network KPI dynamic status from runtime status", () => {
+    const display = buildDataPanelNetworkKpiDynamicStatusDisplay({
+      version: "v1",
+      status_id: "leo_twin.network_kpi_dynamic_status.v1",
+      source: "NETWORK_KPI_CALIBRATION_V1",
+      calibration_id: "leo_twin.network_kpi_calibration.v1",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      frontend_inference_required: false,
+      sample_count: 4,
+      sim_time_span_s: 120,
+      activity_active: true,
+      dynamic_status: "DYNAMIC",
+      kpi_count: 3,
+      time_varying_kpi_count: 2,
+      flat_kpi_count: 1,
+      missing_kpi_count: 0,
+      zero_latest_kpi_count: 1,
+      dynamic_metric_names: ["EFFECTIVE_THROUGHPUT", "EFFECTIVE_LATENCY"],
+      flat_metric_names: ["EFFECTIVE_LOSS_PROXY"],
+      zero_latest_metric_names: ["EFFECTIVE_LOSS_PROXY"],
+      items: [
+        {
+          metric: "EFFECTIVE_LOSS_PROXY",
+          display_name: "loss proxy",
+          runtime_summary_key: "network_quality_effective_loss_proxy_rate",
+          sample_key: "network_effective_loss_proxy_rate",
+          unit: "ratio",
+          observed: true,
+          variation_status: "FLAT_ZERO",
+          is_time_varying: false,
+          is_flat: true,
+          latest_is_zero: true,
+          first_value: 0,
+          latest_value: 0,
+          minimum_value: 0,
+          maximum_value: 0,
+          absolute_delta: 0,
+          endpoint_delta: 0,
+          relative_delta: 0,
+          flat_reason: "selected loss inputs stayed zero",
+          visibility: "SHOW_ZERO_VALUE_REASON",
+          zero_value_note: "Latest loss proxy is zero by backend policy."
+        },
+        {
+          metric: "EFFECTIVE_THROUGHPUT",
+          display_name: "effective throughput",
+          runtime_summary_key: "network_quality_effective_throughput_mbps",
+          sample_key: "network_effective_throughput_mbps",
+          unit: "Mbps",
+          observed: true,
+          variation_status: "TIME_VARYING",
+          is_time_varying: true,
+          is_flat: false,
+          latest_is_zero: false,
+          first_value: 160,
+          latest_value: 180,
+          minimum_value: 160,
+          maximum_value: 180,
+          absolute_delta: 20,
+          endpoint_delta: 20,
+          relative_delta: 0.125,
+          flat_reason: "",
+          visibility: "SHOW_DYNAMIC_CHART",
+          zero_value_note: ""
+        }
+      ],
+      operator_summary: "Network KPI samples show multi-metric time variation.",
+      blocking_reasons: [],
+      recommended_next_action: "RENDER_BACKEND_KPI_SERIES_AND_EXPLANATION",
+      model_assumptions: [
+        "Dynamic status is derived from backend network_kpi_calibration_v1."
+      ],
+      status_hash:
+        "sha256:dfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdf"
+    });
+
+    expect(display).toMatchObject({
+      tone: "match",
+      sourceLabel:
+        "leo_twin.network_kpi_dynamic_status.v1 / NETWORK_KPI_CALIBRATION_V1",
+      statusLabel: "KPI samples are dynamic",
+      metaLabels: [
+        "flow-level proxy",
+        "backend semantic",
+        "activity active",
+        "flat KPI 1",
+        "missing KPI 0",
+        "zero latest 1",
+        "status dfdfdfdfdfdf"
+      ],
+      caveats: [
+        "Network KPI samples show multi-metric time variation.",
+        "RENDER_BACKEND_KPI_SERIES_AND_EXPLANATION",
+        "Dynamic status is derived from backend network_kpi_calibration_v1."
+      ]
+    });
+    expect(display?.summaryLabel).toContain("moving KPI 2/3");
+    expect(display?.rows[1]).toMatchObject({
+      metric: "EFFECTIVE_THROUGHPUT",
+      displayName: "effective throughput / EFFECTIVE_THROUGHPUT",
+      statusLabel: "time-varying",
+      valueLabel: "180 Mbps",
+      deltaLabel: "delta 20 / range 160-180",
+      visibilityLabel: "show dynamic chart",
+      tone: "observed"
+    });
+    expect(buildDataPanelNetworkKpiDynamicStatusDisplay(undefined)).toBeNull();
+  });
+
   it("surfaces missing runtime KPI values from backend credibility fields", () => {
     const display = buildDataPanelNetworkKpiCredibilityDisplay({
       version: "v1",
@@ -11246,6 +11413,26 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
         ],
         caveats: ["Formula evidence summarizes backend flow-level proxy inputs."]
       },
+      networkKpiDynamicStatus: {
+        tone: "match",
+        sourceLabel: "leo_twin.network_kpi_dynamic_status.v1 / NETWORK_KPI_CALIBRATION_V1",
+        statusLabel: "KPI samples are dynamic",
+        summaryLabel: "流级代理 / samples 4 / span 2分 0秒 / moving KPI 4/6",
+        metaLabels: ["flow-level proxy", "backend semantic", "activity active"],
+        rows: [
+          {
+            metric: "EFFECTIVE_THROUGHPUT",
+            displayName: "effective throughput / EFFECTIVE_THROUGHPUT",
+            statusLabel: "time-varying",
+            valueLabel: "180 Mbps",
+            deltaLabel: "delta 20 / range 160-180",
+            visibilityLabel: "show dynamic chart",
+            tone: "observed",
+            title: "network_quality_effective_throughput_mbps"
+          }
+        ],
+        caveats: ["Network KPI samples show multi-metric time variation."]
+      },
       networkKpiFormulaInspector: {
         tone: "match",
         sourceLabel: "leo_twin.network_kpi_provenance.v2 / leo_twin.network_model_contract.v2",
@@ -11383,8 +11570,8 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       tone: "match",
       sourceLabel: "runtime status + backend summary + export diagnostics",
       statusLabel: "证据链完整",
-      summaryLabel: "10 类证据 / 10 类可用 / 0 类待补齐",
-      scoreLabel: "可用 10/10 / 警告 0 / 错误 0",
+      summaryLabel: "11 类证据 / 11 类可用 / 0 类待补齐",
+      scoreLabel: "可用 11/11 / 警告 0 / 错误 0",
       metaLabels: [
         "配置语义已声明",
         "KPI基准已验证",
@@ -11404,6 +11591,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       "benchmark",
       "calibration",
       "formula",
+      "dynamic",
       "formula",
       "route",
       "replay",
@@ -11421,16 +11609,20 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       tone: "match"
     });
     expect(display?.rows[6]).toMatchObject({
-      label: "KPI公式来源",
+      label: "KPI dynamic status",
       tone: "match"
     });
     expect(display?.rows[7]).toMatchObject({
+      label: "KPI公式来源",
+      tone: "match"
+    });
+    expect(display?.rows[8]).toMatchObject({
       label: "路由解释可信度",
       statusLabel: "完整流级路由代理",
       tone: "match",
       source: "leo_twin.route_provenance_trust.v1 / route_explanation_summary_v1"
     });
-    expect(display?.rows[8]).toMatchObject({
+    expect(display?.rows[9]).toMatchObject({
       label: "复盘证据",
       statusLabel: "REVIEW_READY",
       tone: "match",
@@ -11534,7 +11726,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
 
     expect(display?.tone).toBe("error");
     expect(display?.statusLabel).toBe("证据链存在错误");
-    expect(display?.summaryLabel).toBe("10 类证据 / 1 类可用 / 6 类待补齐");
+    expect(display?.summaryLabel).toBe("11 类证据 / 1 类可用 / 7 类待补齐");
     expect(display?.rows.map((row) => [row.kind, row.tone])).toEqual([
       ["configuration", "pending"],
       ["fidelity", "different"],
@@ -11542,6 +11734,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       ["benchmark", "pending"],
       ["calibration", "pending"],
       ["formula", "pending"],
+      ["dynamic", "pending"],
       ["formula", "pending"],
       ["route", "pending"],
       ["replay", "error"],
@@ -11553,6 +11746,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       "KPI基准验证：等待基准验证",
       "KPI变化校准：等待校准摘要",
       "KPI公式证据：等待公式证据摘要",
+      "KPI dynamic status：waiting for backend dynamic status",
       "KPI公式来源：等待公式证据",
       "路由解释可信度：等待路由证据",
       "复盘证据：INCOMPLETE",
@@ -17170,6 +17364,42 @@ function makeLargeDetailPaginationCollection(overrides: {
     cursor_required_for_hidden_rows: true,
     window_source: "lod_snapshot_policy_v2.detail_windows",
     availability: "HTTP_CURSOR_ENDPOINT_AVAILABLE"
+  };
+}
+
+function _runtimeExportNetworkKpiDynamicStatus() {
+  return {
+    version: "v1",
+    status_id: "leo_twin.network_kpi_dynamic_status.v1",
+    source: "config_snapshot.status.network_kpi_dynamic_status_v1",
+    runtime_status_source: "NETWORK_KPI_CALIBRATION_V1",
+    evidence_present: true,
+    calibration_id: "leo_twin.network_kpi_calibration.v1",
+    metric_model: "FLOW_LEVEL_PROXY",
+    dynamic_status: "DYNAMIC",
+    sample_count: 4,
+    sim_time_span_s: 120,
+    activity_active: true,
+    kpi_count: 6,
+    time_varying_kpi_count: 4,
+    flat_kpi_count: 2,
+    missing_kpi_count: 0,
+    zero_latest_kpi_count: 1,
+    dynamic_metric_names: ["EFFECTIVE_THROUGHPUT", "EFFECTIVE_LATENCY"],
+    flat_metric_names: ["EFFECTIVE_LOSS_PROXY", "EFFECTIVE_DELAY_VARIATION_PROXY"],
+    zero_latest_metric_names: ["EFFECTIVE_LOSS_PROXY"],
+    packet_level_simulation: false,
+    frontend_inference_required: false,
+    acceptable_for_demo_review: true,
+    operator_summary: "Network KPI samples show multi-metric time variation.",
+    recommended_next_action: "RENDER_BACKEND_KPI_SERIES_AND_EXPLANATION",
+    status_hash:
+      "sha256:dfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdf",
+    model_assumptions: [
+      "Dynamic status is derived from backend network_kpi_calibration_v1."
+    ],
+    evidence_hash:
+      "sha256:dfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdf"
   };
 }
 
