@@ -283,6 +283,20 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert control_plane.stream_events()
     assert control_plane.stream_snapshots()
     status_after_tick = control_plane.runtime_status()["status"]
+    config_closure = status_after_tick["user_configuration_closure_v2"]
+    assert config_closure["version"] == "v2"
+    assert config_closure["summary_id"] == "sees.user_configuration_closure.v2"
+    assert config_closure["schema_id"] == "sees.user_configuration.v2"
+    assert config_closure["closure_scope"] == (
+        "FULL_CONFIG_FILE_AND_KEY_FRONTEND_CONTROL_SURFACE"
+    )
+    assert config_closure["closure_status"] == "READY"
+    assert config_closure["configuration_ready"] is True
+    assert config_closure["frontend_inference_required"] is False
+    assert config_closure["packet_level_simulation"] is False
+    assert config_closure["gate_count"] == len(config_closure["gates"])
+    assert config_closure["failed_gate_count"] == 0
+    assert str(config_closure["closure_hash"]).startswith("sha256:")
     assert "network_quality_loss_proxy_rate" in status_after_tick["metrics_summary"]
     assert "compute_resource_used_gflops_fp32" in status_after_tick["metrics_summary"]
     compute_pool = status_after_tick["compute_resource_pool_summary_v1"]

@@ -22628,3 +22628,39 @@ change.
   - `compute_service_resource_evidence_v1` is service-level evidence. It does not add stochastic queues, task migration, cache/offload behavior, hardware telemetry, or packet-level network effects.
   - Result package export does not yet persist this field as a standalone artifact; it is available in live runtime status and config snapshots.
   - Frontend panels still need a binding task to show node-level queue/resource evidence directly.
+
+## 2026-07-09 - T445 user configuration closure v2
+
+- Branch: `feature/T445-user-configuration-closure-v2`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `user_configuration_closure_v2` runtime status evidence. The new summary verifies that schema v2 exists, the current `SEESConfig` validates through the user config loader, control panel key fields are covered, approved templates validate, the frontend key-field/detailed-file split is declared, and generated runtime config carries backend configuration semantics. This task does not change Event Kernel behavior, configuration mutation semantics, orbit/network/compute models, frontend rendering, packet-level boundaries, external simulator policy, or runtime generated config source-control policy.
+- Changed files/modules:
+  - `src/leo_twin/services/user_configuration_closure.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_user_configuration_closure_v2.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/user_configuration_closure_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\user_configuration_closure.py examples\integration_demo\control_plane.py tests\unit\test_user_configuration_closure_v2.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_user_configuration_closure_v2.py -q`
+    - Result: 3 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: 1 passed.
+  - `python -m pytest tests\unit\test_user_configuration_schema_v2.py tests\unit\test_configuration_view.py tests\unit\test_user_configuration_closure_v2.py -q`
+    - Result: 21 passed.
+  - `python -m pytest tests\integration\test_config_control.py::test_control_plane_exposes_user_configuration_contract_api tests\integration\test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests\integration\test_config_control.py::test_control_plane_validates_user_configuration_text_without_applying tests\integration\test_config_control.py::test_control_plane_applies_preflight_normalized_user_configuration -q`
+    - Result: 4 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py -q`
+    - Result: 14 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: 2 passed.
+  - `python -m pytest tests\integration\test_product_acceptance_scenarios.py -q`
+    - Result: 5 passed.
+- Problems encountered:
+  - Existing backend had schema, template validation, control surface evidence, reference, and validation endpoints, but runtime status lacked one compact field that proves the full user configuration loop is internally consistent. T445 adds that read-only closure field without changing apply behavior.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - `user_configuration_closure_v2` is available in live runtime status and config snapshots, but it is not yet persisted as a standalone result-package artifact.
+  - Frontend panels still need a binding task to display the closure gates and operator next action directly.

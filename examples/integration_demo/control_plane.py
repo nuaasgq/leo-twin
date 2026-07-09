@@ -39,6 +39,9 @@ from leo_twin.services.configuration_schema import (
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
 )
+from leo_twin.services.user_configuration_closure import (
+    build_user_configuration_closure_v2,
+)
 from leo_twin.services.compute_resource_pool_summary import (
     build_compute_resource_pool_summary_v1,
 )
@@ -2674,11 +2677,27 @@ class DemoControlPlane:
         status["fidelity_summary"] = _fidelity_summary_from_sees_config(
             self._controller.config
         )
+        effective_generated_config = (
+            generated_config if generated_config is not None else self._generated_config_json()
+        )
         status["configuration_surface_summary"] = build_user_configuration_view(
             self._controller.config
         )
         status["user_configuration_control_surface_evidence_v1"] = (
             build_user_configuration_control_surface_evidence_v1(self._controller.config)
+        )
+        status["user_configuration_closure_v2"] = (
+            build_user_configuration_closure_v2(
+                self._controller.config,
+                generated_config=effective_generated_config,
+                configuration_surface_summary=status["configuration_surface_summary"],
+                control_surface_evidence=(
+                    status["user_configuration_control_surface_evidence_v1"]
+                ),
+                template_validation=status["configuration_surface_summary"].get(
+                    "template_validation",
+                ),
+            )
         )
         metrics_summary = self._metrics_summary_json()
         status["metrics_summary"] = metrics_summary
@@ -2799,9 +2818,7 @@ class DemoControlPlane:
                 runtime_status=status,
                 control_config=self._controller.config_json(),
                 generated_config=(
-                    generated_config
-                    if generated_config is not None
-                    else self._generated_config_json()
+                    effective_generated_config
                 ),
                 metrics_summary=metrics_summary,
             )
