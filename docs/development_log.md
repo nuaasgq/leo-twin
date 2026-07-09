@@ -47,6 +47,15 @@ change.
   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipRuntimeSmoke -SkipBuild -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml`
     - Result: passed. The command also ran existing targeted backend checks,
       frontend visual verification, and 27 frontend test files / 478 tests.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_disposable_acceptance.ps1 -SkipBuild -JsonSummary`
+    - Result: passed. The executable disposable acceptance harness ran all
+      shipped standard scenarios and restored runtime config paths:
+      `small_demo_72sat` processed 5149 events,
+      `medium_demo_300sat` processed 31755 events, and
+      `scale_demo_1200sat_short` processed 11456 events. Each scenario reached
+      `INITIALIZED`, `RUNNING`, and `STOPPED`, and the JSON summary reported
+      `ok=true`, `scenario_count=3`, `runtime_config_restored=true`, and
+      `standard_scenario_acceptance_file=standard_scenario_acceptance_v2.json`.
 - Problems encountered and handling:
   - `run_disposable_acceptance.ps1` plan summary initially exposed only the
     benchmark gate metadata. It now includes the standard acceptance id, field,
