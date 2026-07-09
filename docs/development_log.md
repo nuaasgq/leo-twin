@@ -21205,3 +21205,49 @@ change.
     so advanced fields are clearly separated from key controls.
   - This task fixes payload alignment only; it does not change compute placement,
     scheduling, or hardware telemetry semantics.
+
+## 2026-07-08 - T415 user configuration compute vector drift guard v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: make the backend user-configuration contract the single source of
+  truth for control-panel key fields and align the full compute resource vector
+  with initialization/configuration control semantics. `configuration_schema`
+  now exposes ordered `CONTROL_PANEL_KEY_FIELD_PATHS`, `configuration_view`
+  reuses that ordered contract instead of maintaining a duplicate list, and
+  CPU FP64, GPU FP16, memory, and storage fields are no longer described as
+  file-only when they are accepted by backend `CONFIG_UPDATE` and frontend
+  initialization payloads. No Event Kernel, runtime model, packet-level,
+  external simulator, dashboard layout, or rendering behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_schema.py`
+  - `src/leo_twin/services/configuration_view.py`
+  - `tests/unit/test_user_configuration_schema_v2.py`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - `git diff --check`.
+    - Result: passed; Git reported existing CRLF normalization warnings only.
+  - Direct targeted test runner with local pytest shim for schema, view, and
+    control-plane configuration contract paths.
+    - Result: 19 passed.
+- Problems encountered:
+  - `apply_patch` failed again in the Windows sandbox with
+    `orchestrator_helper_launch_canceled`; the change was applied through
+    deterministic UTF-8 text replacement and kept to the intended files.
+  - The full repository pytest command remains inappropriate in the dirty local
+    workspace because `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml` are still intentionally modified runtime/config
+    state and must remain unstaged.
+- Known remaining issues:
+  - This task fixes schema/view/control-plane drift for compute resource fields;
+    it does not yet add a generic generated contract-drift checker for every
+    frontend control key.
+  - Advanced configuration still needs a user-facing import/export workflow and
+    schema-driven UI grouping so the compact panel and detailed file remain
+    understandable at product scale.
+

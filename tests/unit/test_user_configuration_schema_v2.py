@@ -18,8 +18,12 @@ def test_user_configuration_schema_v2_covers_full_effective_config() -> None:
         scenario=ScenarioConfig(
             satellite_count=120,
             compute_nodes=120,
+            compute_cpu_gflops_fp64=6.0,
             compute_gpu_tflops_fp32=2.5,
+            compute_gpu_tflops_fp16=5.0,
             compute_npu_tops_int8=12.0,
+            compute_memory_gb=32.0,
+            compute_storage_gb=512.0,
         ),
         runtime=RuntimeConfig(mode="ACCELERATED", speed_factor=10.0),
     )
@@ -45,9 +49,23 @@ def test_user_configuration_schema_v2_covers_full_effective_config() -> None:
     assert fields["scenario.satellite_count"]["minimum"] == 1
     assert fields["scenario.satellite_count"]["default_value"] == 72
     assert fields["scenario.satellite_count"]["current_value"] == 120
-    assert fields["scenario.compute_gpu_tflops_fp32"]["unit"] == "TFLOPS FP32"
-    assert fields["scenario.compute_gpu_tflops_fp32"]["minimum"] == 0.0
-    assert fields["scenario.compute_gpu_tflops_fp32"]["current_value"] == 2.5
+    compute_vector_expectations = {
+        "scenario.compute_capacity": ("GFLOPS FP32", 10.0),
+        "scenario.compute_cpu_gflops_fp64": ("GFLOPS FP64", 6.0),
+        "scenario.compute_gpu_tflops_fp32": ("TFLOPS FP32", 2.5),
+        "scenario.compute_gpu_tflops_fp16": ("TFLOPS FP16", 5.0),
+        "scenario.compute_npu_tops_int8": ("TOPS INT8", 12.0),
+        "scenario.compute_memory_gb": ("GB", 32.0),
+        "scenario.compute_storage_gb": ("GB", 512.0),
+    }
+    for path, (unit, current_value) in compute_vector_expectations.items():
+        assert fields[path]["unit"] == unit
+        if path == "scenario.compute_capacity":
+            assert fields[path]["exclusive_minimum"] == 0.0
+        else:
+            assert fields[path]["minimum"] == 0.0
+        assert fields[path]["current_value"] == current_value
+        assert fields[path]["editable_surface"] == "CONTROL_PANEL_KEY_FIELD"
     assert fields["scenario.orbit.orbit_update_mode"]["value_type"] == "enum|null"
     assert fields["scenario.orbit.orbit_update_mode"]["nullable"] is True
     assert fields["scenario.orbit.orbit_update_mode"]["enum_values"] == (

@@ -130,17 +130,25 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
         "editable_in_ui": True,
     }
     assert _field(first, "scenario.compute_gpu_tflops_fp32")["value"] == 2.5
+    compute_vector_paths = (
+        "scenario.compute_capacity",
+        "scenario.compute_cpu_gflops_fp64",
+        "scenario.compute_gpu_tflops_fp32",
+        "scenario.compute_gpu_tflops_fp16",
+        "scenario.compute_npu_tops_int8",
+        "scenario.compute_memory_gb",
+        "scenario.compute_storage_gb",
+    )
+    for path in compute_vector_paths:
+        assert _field(first, path)["editable_in_ui"] is True
+        assert path not in first["file_only_fields"]
     assert _field(first, "network.transport_protocol")["value"] == "UDP"
     assert _field(first, "runtime.duration")["unit"] == "s"
-    assert "scenario.compute_gpu_tflops_fp16" in first["file_only_fields"]
     assert "network.carrier_frequency_hz" in first["file_only_fields"]
     file_only_sections = {
         section["section"]: section for section in first["file_only_sections"]
     }
     assert file_only_sections["scenario"]["field_count"] >= 1
-    assert "scenario.compute_gpu_tflops_fp16" in file_only_sections["scenario"][
-        "example_paths"
-    ]
     assert file_only_sections["scenario.traffic_model"]["field_count"] >= 4
     assert file_only_sections["network"]["field_count"] >= 8
     assert "network.carrier_frequency_hz" in file_only_sections["network"][
@@ -205,11 +213,20 @@ def test_user_configuration_reference_v1_summarizes_full_file_contract() -> None
     sections = {section["section"]: section for section in first["sections"]}
     assert sections["scenario"]["key_field_count"] > 0
     assert sections["network"]["file_only_field_count"] > 0
-    assert "scenario.compute_gpu_tflops_fp16" in sections["scenario"]["file_only_paths"]
     fields = {field["path"]: field for field in first["fields"]}
     assert fields["scenario.satellite_count"]["ui_key_field"] is True
     assert fields["scenario.satellite_count"]["current_value"] == 300
-    assert fields["scenario.compute_gpu_tflops_fp16"]["ui_key_field"] is False
+    for path in (
+        "scenario.compute_capacity",
+        "scenario.compute_cpu_gflops_fp64",
+        "scenario.compute_gpu_tflops_fp32",
+        "scenario.compute_gpu_tflops_fp16",
+        "scenario.compute_npu_tops_int8",
+        "scenario.compute_memory_gb",
+        "scenario.compute_storage_gb",
+    ):
+        assert fields[path]["ui_key_field"] is True
+        assert path not in sections["scenario"]["file_only_paths"]
     assert fields["network.space_link_mode"]["current_value"] == "BOUNDED_CANDIDATE"
     assert "POST /scenario/user-config/validate-text" == first["mutation_policy"][
         "validate_endpoint"

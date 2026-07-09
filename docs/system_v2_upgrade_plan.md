@@ -1419,6 +1419,13 @@ Current Phase 3 progress:
   INT8, memory, and storage fields together, matching backend `CONFIG_UPDATE`
   acceptance and preventing partial compute-resource initialization.
 
+- T415 removes another configuration drift source by exposing ordered
+  `CONTROL_PANEL_KEY_FIELD_PATHS` from the backend schema and reusing it in the
+  configuration view. The full compute resource vector is now consistently
+  marked as control-panel/configuration-control supported instead of partially
+  file-only, keeping frontend initialization, backend validation, and user
+  configuration reference semantics aligned.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

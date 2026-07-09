@@ -669,7 +669,12 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
                 "payload": {
                     "satellite_count": 96,
                     "user_count": 144,
+                    "compute_cpu_gflops_fp64": 6.0,
                     "compute_gpu_tflops_fp32": 2.5,
+                    "compute_gpu_tflops_fp16": 5.0,
+                    "compute_npu_tops_int8": 12.0,
+                    "compute_memory_gb": 32.0,
+                    "compute_storage_gb": 512.0,
                     "duration": 900,
                 },
             }
@@ -692,7 +697,17 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
         if isinstance(field, dict)
     }
     assert schema_fields["scenario.satellite_count"]["current_value"] == 96
-    assert schema_fields["scenario.compute_gpu_tflops_fp32"]["current_value"] == 2.5
+    compute_vector_values = {
+        "scenario.compute_cpu_gflops_fp64": 6.0,
+        "scenario.compute_gpu_tflops_fp32": 2.5,
+        "scenario.compute_gpu_tflops_fp16": 5.0,
+        "scenario.compute_npu_tops_int8": 12.0,
+        "scenario.compute_memory_gb": 32.0,
+        "scenario.compute_storage_gb": 512.0,
+    }
+    for path, value in compute_vector_values.items():
+        assert schema_fields[path]["current_value"] == value
+        assert schema_fields[path]["editable_surface"] == "CONTROL_PANEL_KEY_FIELD"
     assert schema_fields["runtime.duration"]["current_value"] == 900
 
     assert templates["type"] == "USER_CONFIGURATION_TEMPLATE_CATALOG"
@@ -766,6 +781,9 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     }
     assert reference_fields["scenario.satellite_count"]["current_value"] == 96
     assert reference_fields["scenario.satellite_count"]["ui_key_field"] is True
+    for path, value in compute_vector_values.items():
+        assert reference_fields[path]["current_value"] == value
+        assert reference_fields[path]["ui_key_field"] is True
     assert reference_fields["network.carrier_frequency_hz"]["ui_key_field"] is False
     assert reference_summary["model_boundaries"]["packet_level_simulation"] is False
     assert reference_summary["model_boundaries"]["forbidden_integrations"] == (
@@ -786,6 +804,9 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     assert export_summary["config_hash"].startswith("sha256:")
     assert export_summary["config"]["scenario"]["satellite_count"] == 96
     assert export_summary["config"]["scenario"]["user_count"] == 144
+    for path, value in compute_vector_values.items():
+        scenario_key = path.split(".", maxsplit=1)[1]
+        assert export_summary["config"]["scenario"][scenario_key] == value
     assert export_summary["config"]["runtime"]["duration"] == 900
     assert "CONFIG_UPDATE control message for partial updates" in export_summary[
         "import_paths"

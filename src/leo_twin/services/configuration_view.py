@@ -10,6 +10,7 @@ from typing import Any
 from leo_twin.schema.config import SEESConfig, config_to_dict
 from leo_twin.schema.config_loader import ConfigValidationError, load_config
 from leo_twin.services.configuration_schema import (
+    CONTROL_PANEL_KEY_FIELD_PATHS,
     USER_CONFIGURATION_SCHEMA_V2_ID,
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
@@ -21,37 +22,7 @@ ConfigurationView = dict[str, object]
 UserConfigurationReference = dict[str, object]
 UserConfigurationTemplateValidation = dict[str, object]
 
-_KEY_FIELD_PATHS = (
-    "scenario.satellite_count",
-    "scenario.user_count",
-    "scenario.compute_nodes",
-    "scenario.compute_capacity",
-    "scenario.compute_gpu_tflops_fp32",
-    "scenario.compute_npu_tops_int8",
-    "scenario.orbit.update_interval_seconds",
-    "scenario.orbit.plane_count",
-    "scenario.orbit.altitude_m",
-    "scenario.orbit.inclination_deg",
-    "scenario.traffic_model.traffic_class",
-    "scenario.traffic_model.destination_type",
-    "scenario.traffic_model.flow_interval_seconds",
-    "scenario.traffic_model.task_interval_seconds",
-    "scenario.traffic_model.flow_demand_capacity",
-    "scenario.traffic_model.task_compute_demand",
-    "scenario.traffic_model.task_data_size",
-    "scenario.traffic_model.output_data_size",
-    "network.application_protocol",
-    "network.transport_protocol",
-    "network.transport_loss_rate",
-    "network.transport_congestion_window_segments",
-    "network.routing_protocol",
-    "network.datalink_mac_protocol",
-    "network.space_link_mode",
-    "runtime.mode",
-    "runtime.speed_factor",
-    "runtime.seed",
-    "runtime.duration",
-)
+_KEY_FIELD_PATHS = CONTROL_PANEL_KEY_FIELD_PATHS
 
 _FIELD_METADATA: Mapping[str, Mapping[str, str]] = {
     "scenario.satellite_count": {
@@ -75,17 +46,41 @@ _FIELD_METADATA: Mapping[str, Mapping[str, str]] = {
         "role": "Legacy scalar capacity mapped to FP32 GFLOPS.",
         "unit": "GFLOPS",
     },
+    "scenario.compute_cpu_gflops_fp64": {
+        "label": "CPU FP64 per compute satellite",
+        "section": "Compute resources",
+        "role": "Double-precision CPU capacity exposed by each compute satellite.",
+        "unit": "GFLOPS",
+    },
     "scenario.compute_gpu_tflops_fp32": {
         "label": "GPU FP32 per compute satellite",
         "section": "Compute resources",
-        "role": "Optional accelerator capacity.",
+        "role": "Single-precision GPU accelerator capacity.",
+        "unit": "TFLOPS",
+    },
+    "scenario.compute_gpu_tflops_fp16": {
+        "label": "GPU FP16 per compute satellite",
+        "section": "Compute resources",
+        "role": "Half-precision GPU accelerator capacity.",
         "unit": "TFLOPS",
     },
     "scenario.compute_npu_tops_int8": {
         "label": "NPU INT8 per compute satellite",
         "section": "Compute resources",
-        "role": "Optional inference accelerator capacity.",
+        "role": "Integer inference accelerator capacity.",
         "unit": "TOPS",
+    },
+    "scenario.compute_memory_gb": {
+        "label": "Memory per compute satellite",
+        "section": "Compute resources",
+        "role": "Memory capacity available to onboard compute workloads.",
+        "unit": "GB",
+    },
+    "scenario.compute_storage_gb": {
+        "label": "Storage per compute satellite",
+        "section": "Compute resources",
+        "role": "Persistent storage capacity available to onboard compute workloads.",
+        "unit": "GB",
     },
     "scenario.orbit.plane_count": {
         "label": "Orbit plane count",
