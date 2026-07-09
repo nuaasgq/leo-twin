@@ -140,6 +140,18 @@ RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID = (
 RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1_ID = (
     "leo_twin.runtime_export_user_service_request_page.v1"
 )
+RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1_ID = (
+    "leo_twin.runtime_export_business_request_lifecycle.v1"
+)
+RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID = (
+    "leo_twin.runtime_export_network_kpi_assurance.v1"
+)
+RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID = (
+    "leo_twin.runtime_export_compute_service_resource_evidence.v1"
+)
+RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID = (
+    "leo_twin.runtime_export_user_configuration_closure.v1"
+)
 USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
     "leo_twin.user_configuration_audit_binding.v1"
 )
@@ -184,6 +196,12 @@ USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME = (
     "user_configuration_control_surface_evidence_v1.json"
 )
 TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
+BUSINESS_REQUEST_LIFECYCLE_FILENAME = "business_request_lifecycle_v2.json"
+NETWORK_KPI_ASSURANCE_FILENAME = "network_kpi_assurance_v2.json"
+COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME = (
+    "compute_service_resource_evidence_v1.json"
+)
+USER_CONFIGURATION_CLOSURE_FILENAME = "user_configuration_closure_v2.json"
 SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md"
 ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = "route_comparison_review_report_v1.json"
@@ -477,6 +495,42 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "backend-owned runtime business activity window exported "
                     "for offline user-state review"
+                ),
+            },
+            {
+                "logical_name": "business_request_lifecycle_v2",
+                "filename": BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+                "format": "json",
+                "content": (
+                    "runtime business request lifecycle evidence exported "
+                    "for offline communication/compute request review"
+                ),
+            },
+            {
+                "logical_name": "network_kpi_assurance_v2",
+                "filename": NETWORK_KPI_ASSURANCE_FILENAME,
+                "format": "json",
+                "content": (
+                    "runtime network KPI assurance evidence exported for "
+                    "offline KPI credibility review"
+                ),
+            },
+            {
+                "logical_name": "compute_service_resource_evidence_v1",
+                "filename": COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+                "format": "json",
+                "content": (
+                    "runtime compute-service resource evidence exported for "
+                    "offline resource consumption review"
+                ),
+            },
+            {
+                "logical_name": "user_configuration_closure_v2",
+                "filename": USER_CONFIGURATION_CLOSURE_FILENAME,
+                "format": "json",
+                "content": (
+                    "runtime user-configuration closure evidence exported "
+                    "for offline configuration review"
                 ),
             },
             {
@@ -866,6 +920,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "dynamic status",
         },
         {
+            "logical_name": "network_kpi_assurance_v2",
+            "filename": NETWORK_KPI_ASSURANCE_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 126,
+            "format": "json",
+            "review_role": "Network KPI assurance evidence.",
+            "content": "Backend-owned KPI credibility and source-field assurance evidence.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "kpi assurance",
+        },
+        {
             "logical_name": "runtime_kpi_movement_summary_v1",
             "filename": RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
             "category": "NETWORK_KPI_EVIDENCE",
@@ -932,6 +997,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "business activity",
         },
         {
+            "logical_name": "business_request_lifecycle_v2",
+            "filename": BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+            "category": "TRAFFIC_BUSINESS",
+            "review_priority": 206,
+            "format": "json",
+            "review_role": "Business request lifecycle evidence.",
+            "content": "Backend-owned request lifecycle coverage and traceability evidence.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "business lifecycle",
+        },
+        {
             "logical_name": "user_service_request_summary_v2",
             "filename": USER_SERVICE_REQUEST_SUMMARY_FILENAME,
             "category": "TRAFFIC_BUSINESS",
@@ -963,6 +1039,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "content": "Backend-owned mapping from user config fields to editable surfaces.",
             "default_json_pointer": "/control_surface_evidence/fields",
             "filter_hint": "control_surface",
+        },
+        {
+            "logical_name": "user_configuration_closure_v2",
+            "filename": USER_CONFIGURATION_CLOSURE_FILENAME,
+            "category": "CORE_REPRODUCIBILITY",
+            "review_priority": 56,
+            "format": "json",
+            "review_role": "User configuration closure evidence.",
+            "content": "Backend-owned evidence that user-visible configuration has closed-loop semantics.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "configuration closure",
         },
         {
             "logical_name": "route_detail_index_v1",
@@ -1007,6 +1094,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "content": "Per-dimension CPU, GPU, NPU, memory, and storage resource evidence.",
             "default_json_pointer": "/compute_resource_pool_summary/dimensions",
             "filter_hint": "compute resource",
+        },
+        {
+            "logical_name": "compute_service_resource_evidence_v1",
+            "filename": COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+            "category": "COMPUTE_RESOURCE_EVIDENCE",
+            "review_priority": 307,
+            "format": "json",
+            "review_role": "Compute-service resource evidence.",
+            "content": "Backend-owned compute-service demand and resource traceability evidence.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "compute service resource",
         },
         {
             "logical_name": "service_lifecycle_stage_summary_v1",
@@ -1147,6 +1245,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_temporal_pressure_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
             "network_kpi_dynamic_status_v1.json",
+            "network_kpi_assurance_v2.json",
             "runtime_kpi_movement_summary_v1.json",
             "runtime_closure_readiness_v1.json",
             "runtime_dashboard_kpi_v1.json",
@@ -1155,11 +1254,14 @@ def build_runtime_export_reproducibility_boundary_v1(
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
+            "compute_service_resource_evidence_v1.json",
             "v2_executable_readiness_v1.json",
             "user_configuration_template_validation_v1.json",
             "user_configuration_control_surface_evidence_v1.json",
+            "user_configuration_closure_v2.json",
             "traffic_demand_explanation_v1.json",
             "traffic_business_activity_window_v1.json",
+            "business_request_lifecycle_v2.json",
             "user_service_request_summary_v2.json",
             "scenario_review_bundle_v1.json",
         ),
@@ -3166,6 +3268,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "network_temporal_pressure_evidence_v1.json",
                 "network_kpi_variation_explanation_v1.json",
                 "network_kpi_dynamic_status_v1.json",
+                "network_kpi_assurance_v2.json",
                 "runtime_kpi_movement_summary_v1.json",
                 "runtime_closure_readiness_v1.json",
                 "runtime_dashboard_kpi_v1.json",
@@ -3177,9 +3280,12 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "route_pressure_evidence_v1.json",
                 "node_network_pressure_summary_v1.json",
                 "compute_resource_pool_summary_v1.json",
+                "compute_service_resource_evidence_v1.json",
                 "v2_executable_readiness_v1.json",
                 "user_service_request_summary_v2.json",
                 "traffic_business_activity_window_v1.json",
+                "business_request_lifecycle_v2.json",
+                "user_configuration_closure_v2.json",
                 "manifest.json",
                 "config_snapshot.json",
             ),
@@ -3206,6 +3312,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_temporal_pressure_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
             "network_kpi_dynamic_status_v1.json",
+            "network_kpi_assurance_v2.json",
             "runtime_kpi_movement_summary_v1.json",
             "runtime_closure_readiness_v1.json",
             "runtime_dashboard_kpi_v1.json",
@@ -3214,11 +3321,14 @@ def build_runtime_export_scenario_review_bundle_v1(
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
+            "compute_service_resource_evidence_v1.json",
             "v2_executable_readiness_v1.json",
             "user_configuration_template_validation_v1.json",
             "user_configuration_control_surface_evidence_v1.json",
+            "user_configuration_closure_v2.json",
             "traffic_demand_explanation_v1.json",
             "traffic_business_activity_window_v1.json",
+            "business_request_lifecycle_v2.json",
             "user_service_request_summary_v2.json",
             "service_lifecycle_trace_v2.json",
             "service_trace_comparison_review_report_v1.json",
@@ -7701,16 +7811,20 @@ def _runtime_export_scenario_review_step_label(
         "network_temporal_pressure_evidence_v1.json": "network temporal pressure evidence",
         "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
         "network_kpi_dynamic_status_v1.json": "network KPI dynamic status",
+        "network_kpi_assurance_v2.json": "network KPI assurance",
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "runtime_closure_readiness_v1.json": "runtime closure readiness",
         "runtime_dashboard_kpi_v1.json": "runtime dashboard KPI",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "traffic_business_activity_window_v1.json": "business activity",
+        "business_request_lifecycle_v2.json": "business request lifecycle",
         "service_lifecycle_stage_summary_v1.json": "service stage summary",
         "user_configuration_control_surface_evidence_v1.json": "configuration control surface",
+        "user_configuration_closure_v2.json": "configuration closure",
         "route_pressure_evidence_v1.json": "route pressure",
         "node_network_pressure_summary_v1.json": "node pressure",
         "compute_resource_pool_summary_v1.json": "compute resource pool",
+        "compute_service_resource_evidence_v1.json": "compute service resource",
         "v2_executable_readiness_v1.json": "v2 readiness",
         "user_service_request_summary_v2.json": "user services",
         "service_lifecycle_trace_v2.json": "service trace",

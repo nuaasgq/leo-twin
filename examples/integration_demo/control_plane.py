@@ -124,6 +124,10 @@ from leo_twin.services.runtime_reproducibility import (
     stable_json_payload,
 )
 from leo_twin.services.result_package_contract import (
+    RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1_ID,
+    RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID,
+    RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
@@ -270,6 +274,16 @@ _RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_FILENAME = (
 )
 _RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME = (
     "traffic_business_activity_window_v1.json"
+)
+_RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_FILENAME = (
+    "business_request_lifecycle_v2.json"
+)
+_RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_FILENAME = "network_kpi_assurance_v2.json"
+_RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME = (
+    "compute_service_resource_evidence_v1.json"
+)
+_RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_FILENAME = (
+    "user_configuration_closure_v2.json"
 )
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
@@ -1228,6 +1242,72 @@ class DemoControlPlane:
         )
         written_files["traffic_business_activity_window_v1"] = (
             traffic_business_activity_window_path
+        )
+        business_request_lifecycle_path = (
+            package_dir / _RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_FILENAME
+        )
+        business_request_lifecycle = _runtime_status_evidence_snapshot_export(
+            export_status,
+            runtime_status_field="business_request_lifecycle_v2",
+            artifact_type="RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1",
+            artifact_id=RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1_ID,
+            evidence_label="business request lifecycle",
+        )
+        business_request_lifecycle_path.write_text(
+            stable_json_pretty(business_request_lifecycle),
+            encoding="utf-8",
+        )
+        written_files["business_request_lifecycle_v2"] = (
+            business_request_lifecycle_path
+        )
+        network_kpi_assurance_path = (
+            package_dir / _RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_FILENAME
+        )
+        network_kpi_assurance = _runtime_status_evidence_snapshot_export(
+            export_status,
+            runtime_status_field="network_kpi_assurance_v2",
+            artifact_type="RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1",
+            artifact_id=RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID,
+            evidence_label="network KPI assurance",
+        )
+        network_kpi_assurance_path.write_text(
+            stable_json_pretty(network_kpi_assurance),
+            encoding="utf-8",
+        )
+        written_files["network_kpi_assurance_v2"] = network_kpi_assurance_path
+        compute_service_resource_evidence_path = (
+            package_dir / _RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME
+        )
+        compute_service_resource_evidence = _runtime_status_evidence_snapshot_export(
+            export_status,
+            runtime_status_field="compute_service_resource_evidence_v1",
+            artifact_type="RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1",
+            artifact_id=RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID,
+            evidence_label="compute service resource evidence",
+        )
+        compute_service_resource_evidence_path.write_text(
+            stable_json_pretty(compute_service_resource_evidence),
+            encoding="utf-8",
+        )
+        written_files["compute_service_resource_evidence_v1"] = (
+            compute_service_resource_evidence_path
+        )
+        user_configuration_closure_path = (
+            package_dir / _RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_FILENAME
+        )
+        user_configuration_closure = _runtime_status_evidence_snapshot_export(
+            export_status,
+            runtime_status_field="user_configuration_closure_v2",
+            artifact_type="RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1",
+            artifact_id=RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID,
+            evidence_label="user configuration closure",
+        )
+        user_configuration_closure_path.write_text(
+            stable_json_pretty(user_configuration_closure),
+            encoding="utf-8",
+        )
+        written_files["user_configuration_closure_v2"] = (
+            user_configuration_closure_path
         )
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path
@@ -4259,6 +4339,46 @@ def _runtime_route_pressure_evidence_export(status: dict[str, Any]) -> dict[str,
         "route_pressure_evidence_export_policy": policy,
         "summary": evidence,
     }
+
+
+def _runtime_status_evidence_snapshot_export(
+    status: dict[str, Any],
+    *,
+    runtime_status_field: str,
+    artifact_type: str,
+    artifact_id: str,
+    evidence_label: str,
+) -> dict[str, Any]:
+    raw_evidence = status.get(runtime_status_field)
+    evidence = dict(raw_evidence) if isinstance(raw_evidence, dict) else {}
+    export: dict[str, Any] = {
+        "type": artifact_type,
+        "version": "v1",
+        "artifact_id": artifact_id,
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_policy": "STANDALONE_RUNTIME_STATUS_EVIDENCE_SNAPSHOT",
+        "runtime_status_field": runtime_status_field,
+        "evidence_label": evidence_label,
+        "evidence_present": bool(evidence),
+        "evidence_hash": stable_hash_payload(evidence),
+        "packet_level_simulation": bool(evidence.get("packet_level_simulation") is True),
+        "frontend_inference_required": bool(
+            evidence.get("frontend_inference_required") is True
+        ),
+        "event_replay": False,
+        "model_recompute": False,
+        "boundary_conditions": (
+            "COPY_BACKEND_RUNTIME_STATUS_FIELD",
+            "NO_EVENT_REPLAY",
+            "NO_MODEL_RECOMPUTE",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR",
+        ),
+        "evidence": evidence,
+        runtime_status_field: evidence,
+    }
+    export["artifact_hash"] = stable_hash_payload(export)
+    return export
 
 
 def _runtime_service_lifecycle_trace_export(status: dict[str, Any]) -> dict[str, Any]:

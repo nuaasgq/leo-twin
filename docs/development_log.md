@@ -5,6 +5,54 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-09 - Runtime Evidence Result Export v1
+
+- Branch: `feature/T446-runtime-evidence-result-export-v1`
+- Commit: pending in this commit
+- Scope: persist the latest backend runtime evidence fields as standalone
+  result-package artifacts so offline review does not require searching through
+  the full `config_snapshot.json`. The task adds package files for
+  `business_request_lifecycle_v2`, `network_kpi_assurance_v2`,
+  `compute_service_resource_evidence_v1`, and
+  `user_configuration_closure_v2`. Each artifact copies the backend-owned
+  runtime status field, records a stable evidence hash, and declares no event
+  replay, no model recomputation, no packet-level simulation, and no external
+  simulator boundaries. Event Kernel behavior was not changed.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples\integration_demo\control_plane.py src\leo_twin\services\result_package_contract.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 2 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_live_runtime_streaming.py -q`
+    - Result: passed, 14 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_product_acceptance_scenarios.py -q`
+    - Result: passed, 5 passed.
+- Problems encountered and handling:
+  - Running pytest without `PYTHONPATH` failed to import the local `examples`
+    package in this shell. The command was rerun with `PYTHONPATH=src;.`, which
+    matches the project-local import boundary used by existing tests.
+  - Adding `compute_service_resource_evidence_v1.json` correctly increased the
+    compute-resource artifact browser category from one to two entries; the
+    integration test was updated to assert the new category count and browser
+    item.
+  - Scenario review order was explicit rather than inferred from the
+    recommended-file contract. The new runtime evidence artifacts were added
+    to the review bundle artifact list and recommended review order so offline
+    users can discover them from the primary review entry point.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - Standard scenario acceptance remains the next backend closure task after
+    this result-export closure is committed and pushed.
+
 ## 2026-07-08 - Network Temporal Pressure Evidence v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

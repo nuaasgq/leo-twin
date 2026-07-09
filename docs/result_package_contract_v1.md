@@ -65,6 +65,24 @@ file for offline per-user communication/compute request state review. It copies
 the backend-owned `user_service_request_summary_v2` export window and its
 `runtime_export_user_service_request_policy_v1` boundary without replaying
 events or recomputing services.
+`business_request_lifecycle_v2.json` is emitted as an optional backend evidence
+file for offline request lifecycle review. It copies
+`config_snapshot.status.business_request_lifecycle_v2` as a standalone
+runtime-status evidence snapshot without replaying events or recomputing
+business state.
+`network_kpi_assurance_v2.json` is emitted as an optional backend evidence file
+for offline KPI credibility review. It copies
+`config_snapshot.status.network_kpi_assurance_v2` and preserves the no-packet,
+no-external-simulator, no-recompute boundary.
+`compute_service_resource_evidence_v1.json` is emitted as an optional backend
+evidence file for offline compute-service resource review. It copies
+`config_snapshot.status.compute_service_resource_evidence_v1` so the result
+package can be audited without opening the full status snapshot.
+`user_configuration_closure_v2.json` is emitted as an optional backend evidence
+file for offline user-configuration closure review. It copies
+`config_snapshot.status.user_configuration_closure_v2` and documents that the
+configuration semantics are sourced from backend runtime status rather than
+frontend inference.
 `route_detail_index_v1.json` is emitted as an optional route evidence artifact.
 It preserves the exported `route_explanation_summary_v1` window, route trust
 sample ids, indexed route ids, and compact flow-level route explanation rows

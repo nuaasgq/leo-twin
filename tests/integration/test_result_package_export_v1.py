@@ -8,7 +8,11 @@ from examples.integration_demo.config import DemoConfig, load_demo_config
 from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
+from leo_twin.services.runtime_reproducibility import stable_hash_payload
 from leo_twin.services.result_package_contract import (
+    RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1_ID,
+    RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
@@ -26,6 +30,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
@@ -90,6 +95,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "user_configuration_control_surface_evidence_v1.json").exists()
     assert (package_dir / "traffic_demand_explanation_v1.json").exists()
     assert (package_dir / "traffic_business_activity_window_v1.json").exists()
+    assert (package_dir / "business_request_lifecycle_v2.json").exists()
+    assert (package_dir / "network_kpi_assurance_v2.json").exists()
+    assert (package_dir / "compute_service_resource_evidence_v1.json").exists()
+    assert (package_dir / "user_configuration_closure_v2.json").exists()
     assert (package_dir / "user_service_request_summary_v2.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
@@ -119,6 +128,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "user_configuration_control_surface_evidence_v1.json" in filenames
     assert "traffic_demand_explanation_v1.json" in filenames
     assert "traffic_business_activity_window_v1.json" in filenames
+    assert "business_request_lifecycle_v2.json" in filenames
+    assert "network_kpi_assurance_v2.json" in filenames
+    assert "compute_service_resource_evidence_v1.json" in filenames
+    assert "user_configuration_closure_v2.json" in filenames
     assert "user_service_request_summary_v2.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
@@ -230,6 +243,24 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     traffic_business_activity_window = json.loads(
         (package_dir / "traffic_business_activity_window_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    business_request_lifecycle = json.loads(
+        (package_dir / "business_request_lifecycle_v2.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    network_kpi_assurance = json.loads(
+        (package_dir / "network_kpi_assurance_v2.json").read_text(encoding="utf-8")
+    )
+    compute_service_resource_evidence = json.loads(
+        (package_dir / "compute_service_resource_evidence_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    user_configuration_closure = json.loads(
+        (package_dir / "user_configuration_closure_v2.json").read_text(
             encoding="utf-8"
         )
     )
@@ -595,7 +626,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         category["category"]: category for category in artifact_browser["categories"]
     }
     assert browser_categories["NETWORK_KPI_EVIDENCE"]["present_count"] >= 3
-    assert browser_categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
+    assert browser_categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 2
     compute_browser_item = next(
         item
         for item in artifact_browser["items"]
@@ -606,6 +637,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert compute_browser_item["default_json_pointer"] == (
         "/compute_resource_pool_summary/dimensions"
     )
+    compute_service_resource_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "compute_service_resource_evidence_v1.json"
+    )
+    assert compute_service_resource_browser_item["category"] == (
+        "COMPUTE_RESOURCE_EVIDENCE"
+    )
+    assert compute_service_resource_browser_item["present"] is True
+    assert compute_service_resource_browser_item["default_json_pointer"] == "/evidence"
     variation_browser_item = next(
         item
         for item in artifact_browser["items"]
@@ -964,6 +1005,54 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "NO_TRAFFIC_REGENERATION" in traffic_demand_explanation[
         "boundary_conditions"
     ]
+    runtime_status_evidence_exports = (
+        (
+            business_request_lifecycle,
+            "business_request_lifecycle_v2",
+            "RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1",
+            RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1_ID,
+        ),
+        (
+            network_kpi_assurance,
+            "network_kpi_assurance_v2",
+            "RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1",
+            RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID,
+        ),
+        (
+            compute_service_resource_evidence,
+            "compute_service_resource_evidence_v1",
+            "RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1",
+            RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID,
+        ),
+        (
+            user_configuration_closure,
+            "user_configuration_closure_v2",
+            "RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1",
+            RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID,
+        ),
+    )
+    for artifact, field_name, artifact_type, artifact_id in (
+        runtime_status_evidence_exports
+    ):
+        expected_evidence = config_snapshot["status"][field_name]
+        assert artifact["type"] == artifact_type
+        assert artifact["artifact_id"] == artifact_id
+        assert artifact["source"] == "BACKEND_RUNTIME_STATUS"
+        assert artifact["artifact_policy"] == (
+            "STANDALONE_RUNTIME_STATUS_EVIDENCE_SNAPSHOT"
+        )
+        assert artifact["runtime_status_field"] == field_name
+        assert artifact["evidence"] == expected_evidence
+        assert artifact[field_name] == expected_evidence
+        assert artifact["evidence_present"] is True
+        assert artifact["evidence_hash"] == stable_hash_payload(expected_evidence)
+        assert artifact["packet_level_simulation"] is False
+        assert artifact["frontend_inference_required"] is False
+        assert artifact["event_replay"] is False
+        assert artifact["model_recompute"] is False
+        assert "NO_EVENT_REPLAY" in artifact["boundary_conditions"]
+        assert "NO_MODEL_RECOMPUTE" in artifact["boundary_conditions"]
+        assert artifact["artifact_hash"].startswith("sha256:")
     assert user_service_request_summary["artifact_id"] == (
         "leo_twin.runtime_export_user_service_request_summary.v2"
     )
@@ -1141,6 +1230,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "network_kpi_dynamic_status_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
+    assert "network_kpi_assurance_v2.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
     assert "runtime_closure_readiness_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
@@ -1160,6 +1252,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "compute_resource_pool_summary_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "compute_service_resource_evidence_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "business_request_lifecycle_v2.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "user_configuration_closure_v2.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
