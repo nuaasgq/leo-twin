@@ -409,8 +409,8 @@ class ScenarioConfig:
     compute_gpu_tflops_fp32: float = 0.0
     compute_gpu_tflops_fp16: float = 0.0
     compute_npu_tops_int8: float = 0.0
-    compute_memory_gb: float = 0.0
-    compute_storage_gb: float = 0.0
+    compute_memory_gb: float = 32.0
+    compute_storage_gb: float = 512.0
     ground_station_count: int = 3
     cell_count: int = 100
     compute_scheduling_policy: ComputeSchedulingPolicyConfig = ComputeSchedulingPolicyConfig.FIFO

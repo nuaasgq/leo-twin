@@ -361,6 +361,78 @@ def test_non_compute_demo_traffic_generates_flow_only_events() -> None:
     ] == 4
 
 
+def test_non_compute_demo_traffic_uses_flow_interval_for_arrivals() -> None:
+    config = _demo_config(
+        traffic_class="BULK_DOWNLINK",
+        traffic_destination_type="GROUND_ENDPOINT",
+        ground_station_count=2,
+        compute_node_count=4,
+        duration_seconds=120,
+        flow_interval_seconds=30,
+        task_interval_seconds=60,
+    )
+    scenario = build_demo_scenario(config)
+    demand_batch = _traffic_demand_batch(config)
+    flow_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.FLOW_ARRIVAL
+    )
+    task_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.TASK_ARRIVAL
+    )
+
+    assert demand_batch == _traffic_demand_batch(config)
+    assert len(demand_batch.records) == len(flow_events) == 8
+    assert task_events == ()
+    assert tuple(record.arrival_time for record in demand_batch.records) == pytest.approx(
+        (0.15, 0.16, 30.15, 30.16, 60.15, 60.16, 90.15, 90.16)
+    )
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "generated_flow_count"
+    ] == 8
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "generated_task_count"
+    ] == 0
+
+
+def test_compute_demo_traffic_uses_task_interval_for_correlated_arrivals() -> None:
+    config = _demo_config(
+        duration_seconds=120,
+        flow_interval_seconds=15,
+        task_interval_seconds=60,
+    )
+    scenario = build_demo_scenario(config)
+    demand_batch = _traffic_demand_batch(config)
+    flow_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.FLOW_ARRIVAL
+    )
+    task_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.TASK_ARRIVAL
+    )
+
+    assert len(demand_batch.records) == len(flow_events) == len(task_events) == 4
+    assert tuple(record.arrival_time for record in demand_batch.records) == pytest.approx(
+        (0.15, 0.16, 60.15, 60.16)
+    )
+    assert tuple(event.sim_time for event in task_events) == pytest.approx(
+        (0.2, 0.21, 60.2, 60.21)
+    )
+    assert all(record.task is not None for record in demand_batch.records)
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "generated_flow_count"
+    ] == 4
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "generated_task_count"
+    ] == 4
+
+
 def test_scale_initial_workload_smoothing_spreads_first_burst() -> None:
     scenario = build_demo_scenario(
         _demo_config(

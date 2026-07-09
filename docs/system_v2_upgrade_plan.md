@@ -1504,6 +1504,19 @@ Current Phase 3 progress:
   traffic-class rows, and a profile label without packet-level simulation or
   frontend inference.
 
+- T437 makes the legacy integration-demo traffic scheduler honor the distinct
+  user-facing interval controls. Flow-only traffic classes now use
+  `flow_interval_seconds` to generate `FLOW_ARRIVAL` records, while
+  `COMPUTE_SERVICE` keeps `task_interval_seconds` for correlated input-flow and
+  task arrivals. Backend generated-count summaries and workload smoothing
+  defaults use the same interval policy, so control-plane configuration updates
+  now drive actual backend business events rather than only configuration text.
+  The default checked-in integration demo and backend scenario defaults now also
+  declare executable compute CPU, memory, and storage resources when advanced
+  resource fields are omitted. Route-aware compute can fall back from an
+  incapable route-local candidate set to the configured compute pool while
+  preserving route-local preference when a capable route candidate exists.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

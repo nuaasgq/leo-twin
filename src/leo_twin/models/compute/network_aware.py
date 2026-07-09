@@ -20,6 +20,7 @@ from leo_twin.models.compute.placement import (
 from leo_twin.models.compute.resources import (
     compute_node_resource_usage_fields,
 )
+from leo_twin.schema.service_placement_contract import ServicePlacementRejectionReason
 from leo_twin.models.traffic import ComputeOutputFlowMetadata
 from leo_twin.schema import (
     ComputeNodeState,
@@ -352,6 +353,21 @@ class RouteAwareComputeEngine(SimulationModule):
         ready_time: float,
     ) -> ComputeServicePlacementDecision:
         candidates = self._candidate_nodes(route)
+        placement = self._place_task(task, candidates, ready_time)
+        if (
+            placement.selected_node_id is None
+            and placement.rejection_reason == ServicePlacementRejectionReason.NO_CAPABLE_NODE
+            and len(candidates) < len(self._nodes)
+        ):
+            return self._place_task(task, self._nodes, ready_time)
+        return placement
+
+    def _place_task(
+        self,
+        task: TaskRequest,
+        candidates: tuple[ComputeNode, ...],
+        ready_time: float,
+    ) -> ComputeServicePlacementDecision:
         queue_states = tuple(
             ServicePlacementQueueState(
                 node_id=compute_node.node_id,

@@ -126,6 +126,8 @@ def test_large_batch_runtime_keeps_snapshot_and_controls_responsive(tmp_path: Pa
     )
 
     assert initialize_ack["ok"] is True
+    assert initialize_ack["generated_config"]["compute_memory_gb"] == 32.0
+    assert initialize_ack["generated_config"]["compute_storage_gb"] == 512.0
     fidelity = initialize_ack["status"]["fidelity_summary"]
     assert fidelity == initialize_ack["generated_config"]["backend_summary"][
         "fidelity_summary"

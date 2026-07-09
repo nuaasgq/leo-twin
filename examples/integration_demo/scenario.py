@@ -270,7 +270,7 @@ def _backend_summary(
         user_count=config.ground_user_count,
         compute_node_count=min(config.compute_node_count, config.satellite_count),
         compute_capacity=config.compute_capacity,
-        flow_count=_scheduled_task_count(config),
+        flow_count=_scheduled_request_count(config),
         demand_capacity=config.flow_demand_capacity,
         task_compute_demand=config.task_compute_demand,
         task_data_size=config.task_data_size,
@@ -325,13 +325,36 @@ def _fidelity_summary(config: DemoConfig) -> dict[str, object]:
     )
 
 
-def _scheduled_task_count(config: DemoConfig) -> int:
-    ticks = range(0, config.duration_seconds, config.task_interval_seconds)
+def _scheduled_request_count(config: DemoConfig) -> int:
     traffic_class = TrafficClass(str(config.traffic_class))
     destination_type = TrafficDestinationType(str(config.traffic_destination_type))
+    return _scheduled_legacy_request_count(
+        config,
+        traffic_class=traffic_class,
+        destination_type=destination_type,
+    )
+
+
+def _scheduled_legacy_request_count(
+    config: DemoConfig,
+    *,
+    traffic_class: TrafficClass,
+    destination_type: TrafficDestinationType,
+) -> int:
+    interval_seconds = _legacy_traffic_interval_seconds(config, traffic_class)
+    ticks = range(0, config.duration_seconds, interval_seconds)
     return len(tuple(ticks)) * len(
         _traffic_target_ids(config, traffic_class, destination_type)
     )
+
+
+def _legacy_traffic_interval_seconds(
+    config: DemoConfig,
+    traffic_class: TrafficClass,
+) -> int:
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return config.task_interval_seconds
+    return config.flow_interval_seconds
 
 
 def _network_satellites(config: DemoConfig) -> tuple[SatelliteProfile, ...]:
@@ -507,7 +530,7 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                     _traffic_service_mix_item(config, traffic_class, weight)
                     for traffic_class, weight in service_mix_weights
                 ),
-                total_request_count=_scheduled_task_count(config),
+                total_request_count=_scheduled_request_count(config),
                 arrival_interval=_service_mix_arrival_interval_s(config),
                 start_time=0.15,
                 id_prefix="demo-service",
@@ -520,7 +543,8 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
     destination_type = TrafficDestinationType(str(config.traffic_destination_type))
     target_ids = _traffic_target_ids(config, traffic_class, destination_type)
     spacing_s = _initial_workload_spacing_s(config, len(target_ids))
-    for tick in range(0, config.duration_seconds, config.task_interval_seconds):
+    interval_seconds = _legacy_traffic_interval_seconds(config, traffic_class)
+    for tick in range(0, config.duration_seconds, interval_seconds):
         for offset, target_id in enumerate(target_ids):
             flow_id = f"task-{flow_index:05d}"
             source_id = _traffic_source_id(config, traffic_class, flow_index)
@@ -638,7 +662,7 @@ def _ground_user_ids(config: DemoConfig) -> tuple[str, ...]:
 
 
 def _service_mix_arrival_interval_s(config: DemoConfig) -> float:
-    total_request_count = _scheduled_task_count(config)
+    total_request_count = _scheduled_request_count(config)
     if total_request_count <= 1:
         return 0.001
     duration_window_s = max(0.001, float(config.duration_seconds) - 0.2)
@@ -767,9 +791,13 @@ def _workload_smoothing_window_s(config: DemoConfig) -> float:
         return 0.0
     if config.initial_workload_window_s > 0.0:
         return float(config.initial_workload_window_s)
-    if config.task_interval_seconds <= 1:
+    interval_seconds = _legacy_traffic_interval_seconds(
+        config,
+        TrafficClass(str(config.traffic_class)),
+    )
+    if interval_seconds <= 1:
         return 1.0
-    return float(min(60, max(1, config.task_interval_seconds - 1)))
+    return float(min(60, max(1, interval_seconds - 1)))
 
 
 def _initial_workload_spacing_s(config: DemoConfig, workload_count: int) -> float:

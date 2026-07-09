@@ -42,8 +42,8 @@ def test_frontend_sync_test() -> None:
 
     assert len(snapshot["satellites"]) == 72
     assert len(snapshot["ground_users"]) == 1003
-    assert len(snapshot["tasks"]) == 65
-    assert len(snapshot["compute_nodes"]) == 10
+    assert len(snapshot["tasks"]) == 26
+    assert len(snapshot["compute_nodes"]) == 8
     assert {
         "node_id",
         "capacity",
@@ -248,14 +248,14 @@ def test_scale_test_basic() -> None:
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 23_615
+    assert len(result.processed_events) == 32_154
     assert summary["event_count"] >= 10_000
     assert summary["routes_total"] == 100
-    assert summary["routes_available"] == 25
+    assert summary["routes_available"] == 26
     assert summary["route_hop_count_avg"] >= 2.0
     assert 500.0 <= summary["satellite_altitude_avg"] <= 600.0
     assert summary["task_duration_avg"] >= 0.0
-    assert summary["finished_tasks"] == 65
-    assert summary["deadline_missed_tasks"] == 39
+    assert summary["finished_tasks"] == 26
+    assert summary["deadline_missed_tasks"] == 0
     assert len(result.state_timeline) <= len(result.processed_events) // 1000 + 1
     assert len(result.final_snapshot["links"]) <= 72 * 21

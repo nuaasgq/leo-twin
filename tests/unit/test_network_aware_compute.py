@@ -156,6 +156,42 @@ def test_route_aware_compute_uses_route_endpoint_node_when_present() -> None:
     )
 
 
+def test_route_aware_compute_falls_back_when_route_node_is_not_capable() -> None:
+    kernel = SimulationKernel()
+    engine = RouteAwareComputeEngine(
+        nodes=(
+            ComputeNode("node-b", capacity=100.0, gpu_tflops_fp32=10.0),
+            ComputeNode("node-a", capacity=100.0),
+        )
+    )
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(_event("route", EventType.ROUTE_UPDATE.value, _route()))
+    kernel.schedule_event(
+        _event(
+            "task",
+            EventType.TASK_ARRIVAL.value,
+            TaskRequest(
+                task_id="flow-001",
+                source_id="user-001",
+                submit_time=0.0,
+                compute_demand=0.0,
+                data_size=0.0,
+                fp32_ops=10_000_000_000_000.0,
+            ),
+        )
+    )
+
+    kernel.run()
+
+    decision = engine.scheduled_tasks()[0]
+    assert decision.node_id == "node-b"
+    assert decision.placement_status == "PLACED"
+    assert decision.candidate_count == 2
+    assert decision.capable_candidate_count == 1
+
+
 def test_route_aware_compute_applies_scheduling_policy_to_ready_batch() -> None:
     kernel = SimulationKernel()
     engine = RouteAwareComputeEngine(

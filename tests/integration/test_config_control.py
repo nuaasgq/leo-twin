@@ -428,6 +428,24 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "execution_shape"
     ] == "FLOW_ONLY"
     assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
+        "generated_flow_count"
+    ] == 4
+    assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
+        "generated_task_count"
+    ] == 0
+    flow_arrivals = tuple(
+        event
+        for event in control_plane.result.scenario.initial_events
+        if event.event_type == "FLOW_ARRIVAL"
+    )
+    task_arrivals = tuple(
+        event
+        for event in control_plane.result.scenario.initial_events
+        if event.event_type == "TASK_ARRIVAL"
+    )
+    assert len(flow_arrivals) == 4
+    assert task_arrivals == ()
+    assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
         "lifecycle_note"
     ] == "网络流完成即完成本次业务；不触发星上计算任务生命周期。"
     assert ack["generated_config"]["backend_summary"]["compute_resource_summary"][

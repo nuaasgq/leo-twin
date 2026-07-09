@@ -96,8 +96,8 @@ class FullSystemScenarioBuilderConfig:
     compute_gpu_tflops_fp32: float = 0.0
     compute_gpu_tflops_fp16: float = 0.0
     compute_npu_tops_int8: float = 0.0
-    compute_memory_gb: float = 0.0
-    compute_storage_gb: float = 0.0
+    compute_memory_gb: float = 32.0
+    compute_storage_gb: float = 512.0
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
     task_data_size: float = 10.0

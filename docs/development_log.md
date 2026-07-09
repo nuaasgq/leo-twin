@@ -22249,3 +22249,108 @@ change.
     width, but the safest event-scheduling convergence for legacy demo traffic
     remains a later backend task because changing it would alter event volume
     and timing baselines.
+
+
+## 2026-07-09 - T437 traffic interval scheduler v1
+
+- Branch: `feature/T437-traffic-interval-scheduler-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: make the integration-demo legacy traffic scheduler honor the two
+  user-facing traffic interval controls and keep the default full-system demo
+  executable after resource-vector placement became explicit. Flow-only traffic
+  classes now generate `FLOW_ARRIVAL` records with `flow_interval_seconds`;
+  `COMPUTE_SERVICE` continues to generate correlated input-flow and task arrivals
+  with `task_interval_seconds`. Backend generated request counts and workload
+  smoothing default windows use the same interval policy. The checked-in
+  integration demo config now declares enough CPU, memory, and storage resources
+  for its default compute-service workload. Backend configuration defaults for
+  demo/runtime scenario construction now use 32 GB memory and 512 GB storage
+  when advanced resource fields are omitted, while explicit user values are
+  preserved. Route-aware compute still prefers route-local candidates, but can
+  fall back to the configured compute pool when the route-local candidate set has
+  no capable node. This is a backend
+  scheduling/resource-alignment task only. No Event Kernel behavior,
+  packet-level simulation, frontend rendering, network routing topology,
+  external simulator integration, or runtime generated config behavior was
+  changed.
+- Changed files/modules:
+  - `examples/integration_demo/scenario.py`
+  - `examples/integration_demo/config.py`
+  - `configs/integration_demo.yaml`
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/unit/test_network_aware_compute.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/integration/test_config_control.py`
+  - `tests/integration/test_full_system_demo.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples\integration_demo\config.py examples\integration_demo\scenario.py src\leo_twin\models\compute\network_aware.py src\leo_twin\schema\config.py src\leo_twin\services\scenario_builder.py src\leo_twin\services\derived_summary.py tests\unit\test_integration_demo_scenario.py tests\unit\test_network_aware_compute.py tests\integration\test_config_control.py tests\integration\test_full_system_demo.py tests\integration\test_runtime_session_control.py tests\integration\test_live_runtime_streaming.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_integration_demo_scenario.py tests\unit\test_network_aware_compute.py tests\unit\test_scenario_builder.py -k "not default_generated_scenario_config_file_loads" tests\unit\test_user_configuration_schema_v2.py`
+    - Result: 46 passed, 1 deselected.
+  - `python -m pytest tests\unit\test_configuration_view.py tests\unit\test_backend_derived_summary.py tests\unit\test_compute_resource_contract_v2.py`
+    - Result: 26 passed.
+  - `python -m pytest tests\integration\test_full_system_demo.py`
+    - Result: 6 passed.
+  - `python -m pytest tests\integration\test_config_control.py::test_frontend_control_messages_are_processed tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer`
+    - Result: 2 passed.
+  - `python -m pytest tests\integration\test_config_control.py`
+    - Result: 19 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py`
+    - Result: 24 passed.
+  - `python -m pytest tests\integration\test_generated_full_system_demo.py`
+    - Result: 9 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py`
+    - Result: 14 passed.
+- Problems encountered:
+  - A read-only explorer was started to inspect the same interval-control path,
+    but it had not produced findings by the time the local implementation and
+    test anchors were identified. The agent was closed without code changes;
+    the final implementation is based on direct inspection of
+    `examples/integration_demo/scenario.py` and existing tests.
+  - An initial targeted config-control pytest command used a stale test node id
+    and returned "no tests ran". The correct target was
+    `test_frontend_control_messages_are_processed`, which passed.
+  - Full-system demo validation initially failed with placement rejection after
+    previous resource-vector work made input data and storage requirements
+    explicit. The checked-in default demo config had CPU capacity but no memory
+    or storage resource fields, so placement had no capable default node. The
+    default config now declares CPU, memory, and storage dimensions.
+  - Live runtime streaming validation passed but emitted a background
+    `PytestUnhandledThreadExceptionWarning` in the 1200-satellite control test
+    because the initialize payload omitted memory/storage and inherited zero
+    defaults. The product defaults now provide executable memory/storage
+    resources, and the live test asserts those generated config values.
+  - A route-aware compute diagnostic showed that a route-local candidate can be
+    present but incapable for a task's required resource lane. The compute engine
+    now preserves route-local preference, then falls back to the full configured
+    compute pool only when the route-local candidate set has no capable node.
+  - An early unit-test attempt treated the legacy scalar `capacity` as a hard
+    capability threshold. That was corrected to use an explicit GPU FP32 demand,
+    because scalar capacity controls execution rate compatibility rather than
+    resource-lane capability.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+  - Running the full `tests/unit/test_scenario_builder.py` in the dirty local
+    worktree still hits the known generated-config drift: the checked test
+    expects the fixture default to describe 6 satellites, while the local
+    runtime-generated `configs/generated_full_system_demo.json` currently
+    describes 72 satellites. That local generated config was not modified,
+    staged, or reset; the unrelated test was deselected in the final targeted
+    backend validation.
+- Known remaining issues:
+  - Weighted service-mix mode still uses one shared deterministic arrival
+    interval for its expanded request mix. A later traffic-demand v2 task should
+    add class-specific interval contracts for service-mix traffic without
+    breaking deterministic request allocation.
+  - This task changes flow-level request scheduling only. It does not add
+    packet-level queues, RF propagation, high-fidelity traffic processes, or
+    frontend chart bindings.

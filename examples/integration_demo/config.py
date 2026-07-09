@@ -58,8 +58,8 @@ class DemoConfig:
     compute_gpu_tflops_fp32: float = 0.0
     compute_gpu_tflops_fp16: float = 0.0
     compute_npu_tops_int8: float = 0.0
-    compute_memory_gb: float = 0.0
-    compute_storage_gb: float = 0.0
+    compute_memory_gb: float = 32.0
+    compute_storage_gb: float = 512.0
     orbit_plane_count: int = 12
     orbit_plane_count_explicit: bool = True
     constellation_profile: str = "CUSTOM_WALKER"
@@ -145,8 +145,8 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
             0.0,
         ),
         compute_npu_tops_int8=_optional_float(scenario, "compute_npu_tops_int8", 0.0),
-        compute_memory_gb=_optional_float(scenario, "compute_memory_gb", 0.0),
-        compute_storage_gb=_optional_float(scenario, "compute_storage_gb", 0.0),
+        compute_memory_gb=_optional_float(scenario, "compute_memory_gb", 32.0),
+        compute_storage_gb=_optional_float(scenario, "compute_storage_gb", 512.0),
         compute_scheduling_policy=_optional_str(
             scenario,
             "compute_scheduling_policy",
