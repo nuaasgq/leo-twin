@@ -107,6 +107,9 @@ RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID = (
 RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_user_configuration_template_validation.v1"
 )
+RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID = (
+    "leo_twin.runtime_export_user_configuration_control_surface_evidence.v1"
+)
 RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID = (
     "leo_twin.runtime_export_traffic_demand_explanation.v1"
 )
@@ -151,6 +154,9 @@ RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
+)
+USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME = (
+    "user_configuration_control_surface_evidence_v1.json"
 )
 TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
@@ -365,6 +371,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "backend-owned approved user configuration template "
                     "validation evidence exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "user_configuration_control_surface_evidence_v1",
+                "filename": "user_configuration_control_surface_evidence_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned control-panel and configuration-control "
+                    "field coverage evidence exported for offline review"
                 ),
             },
             {
@@ -785,6 +800,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "template_validation",
         },
         {
+            "logical_name": "user_configuration_control_surface_evidence_v1",
+            "filename": USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
+            "category": "CORE_REPRODUCIBILITY",
+            "review_priority": 55,
+            "format": "json",
+            "review_role": "Configuration control-surface coverage evidence.",
+            "content": "Backend-owned mapping from user config fields to editable surfaces.",
+            "default_json_pointer": "/control_surface_evidence/fields",
+            "filter_hint": "control_surface",
+        },
+        {
             "logical_name": "route_detail_index_v1",
             "filename": ROUTE_DETAIL_INDEX_FILENAME,
             "category": "ROUTE_SERVICE_EVIDENCE",
@@ -960,6 +986,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
             "user_configuration_template_validation_v1.json",
+            "user_configuration_control_surface_evidence_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
             "scenario_review_bundle_v1.json",
@@ -1377,6 +1404,53 @@ def build_runtime_export_user_configuration_template_validation_v1(
     return artifact
 
 
+def build_runtime_export_user_configuration_control_surface_evidence_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for user configuration control coverage."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    control_surface = _mapping(
+        config_snapshot.get("user_configuration_control_surface_evidence_v1")
+    )
+    if not control_surface:
+        status = _mapping(config_snapshot.get("status"))
+        control_surface = _mapping(
+            status.get("user_configuration_control_surface_evidence_v1")
+        )
+    evidence = _runtime_export_user_configuration_control_surface_evidence(
+        config_snapshot
+    )
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "USER_CONFIGURATION_CONTROL_SURFACE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "config_snapshot_field": "user_configuration_control_surface_evidence_v1",
+        "runtime_status_field": "user_configuration_control_surface_evidence_v1",
+        "control_surface_evidence": dict(control_surface),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_CONFIG_SNAPSHOT_ONLY",
+            "NO_CONFIG_RECOMPUTE",
+            "NO_CONFIG_APPLY",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_traffic_demand_explanation_v1(
     *,
     package_id: str,
@@ -1518,6 +1592,9 @@ def build_runtime_export_review_summary_v1(
             config_snapshot
         )
     )
+    user_config_control_surface = (
+        _runtime_export_user_configuration_control_surface_evidence(config_snapshot)
+    )
     traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
         config_snapshot
     )
@@ -1576,6 +1653,7 @@ def build_runtime_export_review_summary_v1(
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "user_configuration_template_validation": user_config_template_validation,
+        "user_configuration_control_surface_evidence": user_config_control_surface,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
@@ -1629,6 +1707,9 @@ def build_runtime_export_review_summary_v1(
             "user_configuration_template_validation_exported": (
                 "user_configuration_template_validation_v1.json" in artifacts
             ),
+            "user_configuration_control_surface_evidence_exported": (
+                "user_configuration_control_surface_evidence_v1.json" in artifacts
+            ),
             "traffic_demand_explanation_exported": (
                 "traffic_demand_explanation_v1.json" in artifacts
             ),
@@ -1652,6 +1733,7 @@ def build_runtime_export_review_summary_v1(
             "Use runtime_kpi_movement_summary_v1.json to review network and compute KPI movement over simulation time.",
             "Use network_flow_lifecycle_summary_v1.json to review active, blocked, completed, and failed flow lifecycle state.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
+            "Use user_configuration_control_surface_evidence_v1.json to review which user configuration fields are backend-backed and editable.",
             "Use traffic_demand_explanation_v1.json to review backend-owned business request generation semantics.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
             "Use route_comparison_review to compare exported route rows with the current live runtime when available.",
@@ -1728,6 +1810,9 @@ def build_runtime_export_diagnostics_bundle_v1(
             config_snapshot
         )
     )
+    user_config_control_surface = (
+        _runtime_export_user_configuration_control_surface_evidence(config_snapshot)
+    )
     traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
         config_snapshot
     )
@@ -1757,6 +1842,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         network_temporal_pressure_evidence=network_temporal_pressure_evidence,
         network_kpi_variation_explanation=network_kpi_variation_explanation,
         user_config_template_validation=user_config_template_validation,
+        user_config_control_surface=user_config_control_surface,
         traffic_demand_explanation=traffic_demand_explanation,
         user_service_requests=user_service_requests,
     )
@@ -1790,6 +1876,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "user_configuration_template_validation": user_config_template_validation,
+        "user_configuration_control_surface_evidence": user_config_control_surface,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
@@ -1913,6 +2000,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     user_config_template_validation = _mapping(
         review_summary.get("user_configuration_template_validation")
     )
+    user_config_control_surface = _mapping(
+        review_summary.get("user_configuration_control_surface_evidence")
+    )
     traffic_demand_explanation = _mapping(
         review_summary.get("traffic_demand_explanation")
     )
@@ -1940,6 +2030,14 @@ def build_runtime_export_scenario_review_bundle_v1(
     if user_config_template_validation.get("evidence_present") is not True:
         scenario_review_warnings.append(
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING"
+        )
+    if user_config_control_surface.get("evidence_present") is not True:
+        scenario_review_warnings.append(
+            "USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_MISSING"
+        )
+    elif str(user_config_control_surface.get("coverage_status", "")) != "COMPLETE":
+        scenario_review_warnings.append(
+            "USER_CONFIGURATION_CONTROL_SURFACE_REQUIRES_REVIEW"
         )
     if traffic_demand_explanation.get("evidence_present") is not True:
         scenario_review_warnings.append("TRAFFIC_DEMAND_EXPLANATION_MISSING")
@@ -2267,6 +2365,39 @@ def build_runtime_export_scenario_review_bundle_v1(
                 user_config_template_validation.get("evidence_present") is True
             ),
         },
+        "user_configuration_control_surface_evidence": {
+            "evidence_id": str(user_config_control_surface.get("evidence_id", "")),
+            "schema_id": str(user_config_control_surface.get("schema_id", "")),
+            "coverage_status": str(
+                user_config_control_surface.get("coverage_status", "")
+            ),
+            "key_field_count": _integer(
+                user_config_control_surface.get("key_field_count")
+            ),
+            "covered_key_field_count": _integer(
+                user_config_control_surface.get("covered_key_field_count")
+            ),
+            "missing_key_count": _integer(
+                user_config_control_surface.get("missing_key_count")
+            ),
+            "wrong_surface_count": _integer(
+                user_config_control_surface.get("wrong_surface_count")
+            ),
+            "duplicate_key_path_count": _integer(
+                user_config_control_surface.get("duplicate_key_path_count")
+            ),
+            "duplicate_flat_payload_key_count": _integer(
+                user_config_control_surface.get("duplicate_flat_payload_key_count")
+            ),
+            "field_count": _integer(user_config_control_surface.get("field_count")),
+            "control_surface_evidence_hash": str(
+                user_config_control_surface.get("control_surface_evidence_hash", "")
+            ),
+            "evidence_hash": str(user_config_control_surface.get("evidence_hash", "")),
+            "evidence_present": (
+                user_config_control_surface.get("evidence_present") is True
+            ),
+        },
         "traffic_demand_explanation": {
             "evidence_id": str(traffic_demand_explanation.get("evidence_id", "")),
             "request_count": _integer(
@@ -2344,6 +2475,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "runtime_kpi_movement_summary_v1.json",
                 "network_flow_lifecycle_summary_v1.json",
                 "user_configuration_template_validation_v1.json",
+                "user_configuration_control_surface_evidence_v1.json",
                 "traffic_demand_explanation_v1.json",
                 "route_pressure_evidence_v1.json",
                 "node_network_pressure_summary_v1.json",
@@ -2379,6 +2511,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
             "user_configuration_template_validation_v1.json",
+            "user_configuration_control_surface_evidence_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
             "service_lifecycle_trace_v2.json",
@@ -3838,6 +3971,9 @@ def build_runtime_export_package_audit_index_v1(
             config_snapshot
         )
     )
+    user_config_control_surface = (
+        _runtime_export_user_configuration_control_surface_evidence(config_snapshot)
+    )
     traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
         config_snapshot
     )
@@ -4105,6 +4241,30 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "user_configuration_template_validation_invalid_template_count": _integer(
             user_config_template_validation.get("invalid_template_count")
+        ),
+        "user_configuration_control_surface_evidence_hash": str(
+            user_config_control_surface.get("evidence_hash", "")
+        ),
+        "user_configuration_control_surface_evidence_present": (
+            user_config_control_surface.get("evidence_present") is True
+        ),
+        "user_configuration_control_surface_evidence_status": str(
+            user_config_control_surface.get("coverage_status", "")
+        ),
+        "user_configuration_control_surface_key_field_count": _integer(
+            user_config_control_surface.get("key_field_count")
+        ),
+        "user_configuration_control_surface_covered_key_field_count": _integer(
+            user_config_control_surface.get("covered_key_field_count")
+        ),
+        "user_configuration_control_surface_missing_key_count": _integer(
+            user_config_control_surface.get("missing_key_count")
+        ),
+        "user_configuration_control_surface_wrong_surface_count": _integer(
+            user_config_control_surface.get("wrong_surface_count")
+        ),
+        "user_configuration_control_surface_duplicate_flat_payload_key_count": _integer(
+            user_config_control_surface.get("duplicate_flat_payload_key_count")
         ),
         "traffic_demand_explanation_hash": str(
             traffic_demand_explanation.get("evidence_hash", "")
@@ -5485,6 +5645,7 @@ def _runtime_export_diagnostic_findings(
     network_temporal_pressure_evidence: Mapping[str, Any],
     network_kpi_variation_explanation: Mapping[str, Any],
     user_config_template_validation: Mapping[str, Any],
+    user_config_control_surface: Mapping[str, Any],
     traffic_demand_explanation: Mapping[str, Any],
     user_service_requests: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
@@ -5816,6 +5977,43 @@ def _runtime_export_diagnostic_findings(
                     "approved user configuration template validation requires "
                     "operator review."
                 ),
+            )
+        )
+    if user_config_control_surface.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_MISSING",
+                (
+                    "config_snapshot does not include "
+                    "user_configuration_control_surface_evidence_v1."
+                ),
+            )
+        )
+    if user_config_control_surface.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "USER_CONFIGURATION_CONTROL_SURFACE_PACKET_LEVEL_DECLARED",
+                "user configuration control-surface evidence declares packet-level simulation.",
+            )
+        )
+    if user_config_control_surface.get("external_simulators") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "USER_CONFIGURATION_CONTROL_SURFACE_EXTERNAL_SIMULATOR_DECLARED",
+                "user configuration control-surface evidence declares external simulator use.",
+            )
+        )
+    if user_config_control_surface.get("evidence_present") is True and str(
+        user_config_control_surface.get("coverage_status", "")
+    ) != "COMPLETE":
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "USER_CONFIGURATION_CONTROL_SURFACE_DRIFT",
+                "user configuration control-surface coverage requires operator review.",
             )
         )
     if traffic_demand_explanation.get("evidence_present") is not True:
@@ -6289,6 +6487,12 @@ def _runtime_export_scenario_review_evidence_hash(
                 "",
             )
         )
+    if filename == "user_configuration_control_surface_evidence_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("user_configuration_control_surface_evidence")
+            ).get("evidence_hash", "")
+        )
     if filename == "route_pressure_evidence_v1.json":
         return str(
             _mapping(scenario_review_bundle.get("route_pressure_evidence")).get(
@@ -6364,6 +6568,7 @@ def _runtime_export_scenario_review_step_label(
         "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "traffic_demand_explanation_v1.json": "traffic demand",
+        "user_configuration_control_surface_evidence_v1.json": "configuration control surface",
         "route_pressure_evidence_v1.json": "route pressure",
         "node_network_pressure_summary_v1.json": "node pressure",
         "compute_resource_pool_summary_v1.json": "compute resource pool",
@@ -7278,6 +7483,112 @@ def _runtime_export_user_configuration_template_validation_evidence(
         "invalid_template_ids": tuple(str(row.get("id", "")) for row in invalid_rows),
         "template_evidence_hash": str(template_validation.get("evidence_hash", "")),
         "notes": _string_tuple(template_validation.get("notes")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_user_configuration_control_surface_evidence(
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    source = "config_snapshot.user_configuration_control_surface_evidence_v1"
+    control_surface = _mapping(
+        config_snapshot.get("user_configuration_control_surface_evidence_v1")
+    )
+    if not control_surface:
+        status = _mapping(config_snapshot.get("status"))
+        control_surface = _mapping(
+            status.get("user_configuration_control_surface_evidence_v1")
+        )
+        source = "config_snapshot.status.user_configuration_control_surface_evidence_v1"
+    evidence_present = bool(control_surface)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": "",
+            "source": source,
+            "evidence_present": False,
+            "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+            "coverage_status": "MISSING_CONTROL_SURFACE_EVIDENCE",
+            "key_field_count": 0,
+            "schema_field_count": 0,
+            "covered_key_field_count": 0,
+            "missing_key_count": 0,
+            "wrong_surface_count": 0,
+            "duplicate_key_path_count": 0,
+            "duplicate_flat_payload_key_count": 0,
+            "field_count": 0,
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "missing_key_paths": (),
+            "wrong_surface_paths": (),
+            "duplicate_key_paths": (),
+            "duplicate_flat_payload_keys": (),
+            "flat_payload_keys": (),
+            "caveats": (
+                "Config snapshot did not include user_configuration_control_surface_evidence_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    field_rows = _records(control_surface.get("fields"))
+    missing_key_paths = _string_tuple(control_surface.get("missing_key_paths"))
+    wrong_surface_paths = _string_tuple(control_surface.get("wrong_surface_paths"))
+    duplicate_key_paths = _string_tuple(control_surface.get("duplicate_key_paths"))
+    duplicate_flat_payload_keys = _string_tuple(
+        control_surface.get("duplicate_flat_payload_keys")
+    )
+    model_boundaries = _mapping(control_surface.get("model_boundaries"))
+    packet_level = model_boundaries.get("packet_level_simulation") is True
+    external_simulators = model_boundaries.get("external_simulators") is True
+    coverage_status = str(control_surface.get("coverage_status", ""))
+    evidence = {
+        "version": "v1",
+        "evidence_id": str(control_surface.get("evidence_id", "")),
+        "source": source,
+        "evidence_present": True,
+        "schema_id": str(
+            control_surface.get("schema_id", USER_CONFIGURATION_SCHEMA_V2_ID)
+        ),
+        "coverage_status": coverage_status,
+        "key_field_count": _integer(control_surface.get("key_field_count")),
+        "schema_field_count": _integer(control_surface.get("schema_field_count")),
+        "covered_key_field_count": _integer(
+            control_surface.get("covered_key_field_count")
+        ),
+        "missing_key_count": len(missing_key_paths),
+        "wrong_surface_count": len(wrong_surface_paths),
+        "duplicate_key_path_count": len(duplicate_key_paths),
+        "duplicate_flat_payload_key_count": len(duplicate_flat_payload_keys),
+        "field_count": len(field_rows),
+        "missing_key_paths": missing_key_paths,
+        "wrong_surface_paths": wrong_surface_paths,
+        "duplicate_key_paths": duplicate_key_paths,
+        "duplicate_flat_payload_keys": duplicate_flat_payload_keys,
+        "flat_payload_keys": tuple(
+            str(row.get("flat_payload_key", ""))
+            for row in field_rows
+            if str(row.get("flat_payload_key", ""))
+        ),
+        "control_surface_evidence_hash": str(control_surface.get("evidence_hash", "")),
+        "packet_level_simulation": packet_level,
+        "external_simulators": external_simulators,
+        "forbidden_integrations": _string_tuple(
+            model_boundaries.get("forbidden_integrations")
+        ),
+        "frontend_inference_required": False,
+        "acceptable_for_demo_review": (
+            coverage_status == "COMPLETE"
+            and not missing_key_paths
+            and not wrong_surface_paths
+            and not duplicate_key_paths
+            and not duplicate_flat_payload_keys
+            and not packet_level
+            and not external_simulators
+        ),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence

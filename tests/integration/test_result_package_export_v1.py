@@ -17,6 +17,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
+    RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
@@ -72,6 +73,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "runtime_kpi_movement_summary_v1.json").exists()
     assert (package_dir / "network_flow_lifecycle_summary_v1.json").exists()
     assert (package_dir / "user_configuration_template_validation_v1.json").exists()
+    assert (package_dir / "user_configuration_control_surface_evidence_v1.json").exists()
     assert (package_dir / "traffic_demand_explanation_v1.json").exists()
     assert (package_dir / "user_service_request_summary_v2.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
@@ -93,6 +95,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "runtime_kpi_movement_summary_v1.json" in filenames
     assert "network_flow_lifecycle_summary_v1.json" in filenames
     assert "user_configuration_template_validation_v1.json" in filenames
+    assert "user_configuration_control_surface_evidence_v1.json" in filenames
     assert "traffic_demand_explanation_v1.json" in filenames
     assert "user_service_request_summary_v2.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
@@ -163,6 +166,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
             encoding="utf-8"
         )
     )
+    user_configuration_control_surface_evidence = json.loads(
+        (package_dir / "user_configuration_control_surface_evidence_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
     traffic_demand_explanation = json.loads(
         (package_dir / "traffic_demand_explanation_v1.json").read_text(
             encoding="utf-8"
@@ -194,6 +202,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert config_snapshot["status"]["export_status_policy"] == (
         "STABLE_RUNTIME_STATUS_WITHOUT_STREAM_DIAGNOSTICS"
     )
+    assert config_snapshot["user_configuration_control_surface_evidence_v1"] == (
+        config_snapshot["status"]["user_configuration_control_surface_evidence_v1"]
+    )
+    assert config_snapshot["user_configuration_control_surface_evidence_v1"][
+        "coverage_status"
+    ] == "COMPLETE"
     reproducibility_boundary = config_snapshot["status"][
         "runtime_export_reproducibility_boundary_v1"
     ]
@@ -421,6 +435,20 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_summary["artifacts"][
         "user_configuration_template_validation_exported"
     ] is True
+    assert review_summary["user_configuration_control_surface_evidence"][
+        "evidence_present"
+    ] is True
+    assert review_summary["user_configuration_control_surface_evidence"][
+        "coverage_status"
+    ] == "COMPLETE"
+    assert review_summary["user_configuration_control_surface_evidence"][
+        "key_field_count"
+    ] == config_snapshot["user_configuration_control_surface_evidence_v1"][
+        "key_field_count"
+    ]
+    assert review_summary["artifacts"][
+        "user_configuration_control_surface_evidence_exported"
+    ] is True
     assert review_summary["traffic_demand_explanation"]["evidence_present"] is True
     assert review_summary["traffic_demand_explanation"][
         "frontend_inference_required"
@@ -462,6 +490,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert variation_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
     assert variation_browser_item["present"] is True
     assert variation_browser_item["default_json_pointer"] == "/evidence"
+    control_surface_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "user_configuration_control_surface_evidence_v1.json"
+    )
+    assert control_surface_browser_item["category"] == "CORE_REPRODUCIBILITY"
+    assert control_surface_browser_item["present"] is True
+    assert control_surface_browser_item["default_json_pointer"] == (
+        "/control_surface_evidence/fields"
+    )
     pressure_browser_item = next(
         item
         for item in artifact_browser["items"]
@@ -538,6 +576,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
+    assert diagnostics_bundle["user_configuration_control_surface_evidence"][
+        "evidence_hash"
+    ] == review_summary["user_configuration_control_surface_evidence"][
+        "evidence_hash"
+    ]
+    assert diagnostics_bundle["user_configuration_control_surface_evidence"][
+        "coverage_status"
+    ] == "COMPLETE"
+    assert diagnostics_bundle["user_configuration_control_surface_evidence"][
+        "evidence_present"
+    ] is True
     assert diagnostics_bundle["traffic_demand_explanation"]["evidence_hash"] == (
         review_summary["traffic_demand_explanation"]["evidence_hash"]
     )
@@ -640,6 +689,26 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
     assert "NO_TEMPLATE_RELOAD" in user_configuration_template_validation[
+        "boundary_conditions"
+    ]
+    assert user_configuration_control_surface_evidence["artifact_id"] == (
+        RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID
+    )
+    assert user_configuration_control_surface_evidence[
+        "control_surface_evidence"
+    ] == config_snapshot["user_configuration_control_surface_evidence_v1"]
+    assert user_configuration_control_surface_evidence["evidence"][
+        "evidence_hash"
+    ] == review_summary["user_configuration_control_surface_evidence"][
+        "evidence_hash"
+    ]
+    assert user_configuration_control_surface_evidence["evidence"][
+        "coverage_status"
+    ] == "COMPLETE"
+    assert user_configuration_control_surface_evidence["evidence"][
+        "acceptable_for_demo_review"
+    ] is True
+    assert "NO_CONFIG_RECOMPUTE" in user_configuration_control_surface_evidence[
         "boundary_conditions"
     ]
     assert traffic_demand_explanation["artifact_id"] == (
@@ -745,6 +814,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["user_configuration_template_validation"][
         "all_templates_valid"
     ] is True
+    assert scenario_review_bundle["user_configuration_control_surface_evidence"][
+        "evidence_hash"
+    ] == user_configuration_control_surface_evidence["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["user_configuration_control_surface_evidence"][
+        "coverage_status"
+    ] == "COMPLETE"
+    assert scenario_review_bundle["user_configuration_control_surface_evidence"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["traffic_demand_explanation"][
         "evidence_hash"
     ] == traffic_demand_explanation["evidence"]["evidence_hash"]
@@ -767,6 +845,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "user_configuration_template_validation_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "user_configuration_control_surface_evidence_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert "traffic_demand_explanation_v1.json" in (
@@ -804,6 +885,19 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         user_config_export["config_hash"]
     )
     assert audit_index["user_configuration_validation_ok"] is True
+    assert audit_index["user_configuration_control_surface_evidence_present"] is True
+    assert audit_index["user_configuration_control_surface_evidence_status"] == (
+        "COMPLETE"
+    )
+    assert audit_index["user_configuration_control_surface_evidence_hash"] == (
+        user_configuration_control_surface_evidence["evidence"]["evidence_hash"]
+    )
+    assert audit_index["user_configuration_control_surface_key_field_count"] == (
+        review_summary["user_configuration_control_surface_evidence"][
+            "key_field_count"
+        ]
+    )
+    assert audit_index["user_configuration_control_surface_missing_key_count"] == 0
     assert audit_index["user_configuration_binding_v1"]["binding_id"] == (
         "leo_twin.user_configuration_audit_binding.v1"
     )

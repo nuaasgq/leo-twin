@@ -133,6 +133,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_traffic_demand_user_page_v1,
     build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_user_configuration_template_validation_v1,
+    build_runtime_export_user_configuration_control_surface_evidence_v1,
     build_runtime_export_user_service_request_page_v1,
     build_runtime_export_user_service_request_summary_v2,
 )
@@ -209,6 +210,9 @@ _RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = (
 )
 _RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
+)
+_RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME = (
+    "user_configuration_control_surface_evidence_v1.json"
 )
 _RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_FILENAME = (
     "traffic_demand_explanation_v1.json"
@@ -793,6 +797,9 @@ class DemoControlPlane:
             "user_configuration_template_validation_v1": (
                 user_configuration_template_validation
             ),
+            "user_configuration_control_surface_evidence_v1": status[
+                "user_configuration_control_surface_evidence_v1"
+            ],
         }
         config_snapshot_path = package_dir / "config_snapshot.json"
         manifest_path = package_dir / "manifest.json"
@@ -957,6 +964,24 @@ class DemoControlPlane:
         )
         written_files["user_configuration_template_validation_v1"] = (
             user_configuration_template_validation_path
+        )
+        user_configuration_control_surface_evidence_path = (
+            package_dir
+            / _RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME
+        )
+        user_configuration_control_surface_evidence_artifact = (
+            build_runtime_export_user_configuration_control_surface_evidence_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        user_configuration_control_surface_evidence_path.write_text(
+            stable_json_pretty(user_configuration_control_surface_evidence_artifact),
+            encoding="utf-8",
+        )
+        written_files["user_configuration_control_surface_evidence_v1"] = (
+            user_configuration_control_surface_evidence_path
         )
         traffic_demand_explanation_path = (
             package_dir / _RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_FILENAME

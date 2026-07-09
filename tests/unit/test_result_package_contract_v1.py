@@ -23,6 +23,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
+    RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID,
@@ -57,6 +58,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_traffic_demand_user_page_v1,
     build_runtime_export_user_configuration_template_validation_v1,
+    build_runtime_export_user_configuration_control_surface_evidence_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
@@ -93,6 +95,9 @@ _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
     "network_temporal_pressure_evidence_v1.json"
+)
+_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME = (
+    "user_configuration_control_surface_evidence_v1.json"
 )
 
 
@@ -132,6 +137,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
+        _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
@@ -272,6 +278,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+        _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -281,6 +288,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
+        _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
@@ -350,6 +358,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
+        "user_configuration_control_surface_evidence_v1": (
+            _user_configuration_control_surface_evidence()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -367,6 +378,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "user_configuration_template_validation_v1.json",
+        _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
@@ -467,6 +479,15 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["user_configuration_template_validation"][
         "invalid_template_count"
     ] == 0
+    assert first["user_configuration_control_surface_evidence"][
+        "evidence_present"
+    ] is True
+    assert first["user_configuration_control_surface_evidence"][
+        "coverage_status"
+    ] == "COMPLETE"
+    assert first["user_configuration_control_surface_evidence"][
+        "key_field_count"
+    ] == 2
     assert first["traffic_demand_explanation"]["evidence_present"] is True
     assert first["traffic_demand_explanation"]["request_count"] == 2
     assert first["traffic_demand_explanation"]["compute_service_request_count"] == 1
@@ -485,6 +506,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     ] is True
     assert first["artifacts"][
         "user_configuration_template_validation_exported"
+    ] is True
+    assert first["artifacts"][
+        "user_configuration_control_surface_evidence_exported"
     ] is True
     assert first["artifacts"]["traffic_demand_explanation_exported"] is True
     assert first["artifacts"]["route_pressure_evidence_exported"] is True
@@ -782,6 +806,9 @@ def test_runtime_export_user_configuration_template_validation_v1_is_determinist
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
+        "user_configuration_control_surface_evidence_v1": (
+            _user_configuration_control_surface_evidence()
+        ),
     }
 
     first = build_runtime_export_user_configuration_template_validation_v1(
@@ -815,6 +842,51 @@ def test_runtime_export_user_configuration_template_validation_v1_is_determinist
     assert first["evidence"]["evidence_hash"].startswith("sha256:")
     assert first["artifact_hash"].startswith("sha256:")
     assert "NO_TEMPLATE_RELOAD" in first["boundary_conditions"]
+
+
+def test_runtime_export_user_configuration_control_surface_evidence_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {},
+        "config": {"seed": 7},
+        "generated_config": {"seed": 7, "satellite_count": 72},
+        "user_configuration_control_surface_evidence_v1": (
+            _user_configuration_control_surface_evidence()
+        ),
+    }
+
+    first = build_runtime_export_user_configuration_control_surface_evidence_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_user_configuration_control_surface_evidence_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["artifact_id"] == (
+        RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID
+    )
+    assert first["config_snapshot_field"] == (
+        "user_configuration_control_surface_evidence_v1"
+    )
+    assert first["control_surface_evidence"] == config_snapshot[
+        "user_configuration_control_surface_evidence_v1"
+    ]
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["coverage_status"] == "COMPLETE"
+    assert first["evidence"]["key_field_count"] == 2
+    assert first["evidence"]["missing_key_count"] == 0
+    assert first["evidence"]["wrong_surface_count"] == 0
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["external_simulators"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["evidence"]["evidence_hash"].startswith("sha256:")
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_CONFIG_RECOMPUTE" in first["boundary_conditions"]
 
 
 def test_runtime_export_traffic_demand_explanation_v1_is_deterministic() -> None:
@@ -1082,6 +1154,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
+        "user_configuration_control_surface_evidence_v1": (
+            _user_configuration_control_surface_evidence()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -1104,6 +1179,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
+        _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
@@ -1188,6 +1264,14 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["user_configuration_template_validation"][
         "evidence_hash"
     ] == review_summary["user_configuration_template_validation"]["evidence_hash"]
+    assert first["user_configuration_control_surface_evidence"][
+        "evidence_hash"
+    ] == review_summary["user_configuration_control_surface_evidence"][
+        "evidence_hash"
+    ]
+    assert first["user_configuration_control_surface_evidence"][
+        "coverage_status"
+    ] == "COMPLETE"
     assert first["traffic_demand_explanation"]["evidence_present"] is True
     assert first["traffic_demand_explanation"]["request_count"] == 2
     assert first["traffic_demand_explanation"]["compute_service_request_count"] == 1
@@ -1307,6 +1391,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
+        "user_configuration_control_surface_evidence_v1": (
+            _user_configuration_control_surface_evidence()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -1331,6 +1418,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
+        _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
@@ -1453,6 +1541,12 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert first["user_configuration_template_validation"][
         "all_templates_valid"
     ] is True
+    assert first["user_configuration_control_surface_evidence"][
+        "evidence_present"
+    ] is True
+    assert first["user_configuration_control_surface_evidence"][
+        "coverage_status"
+    ] == "COMPLETE"
     assert first["traffic_demand_explanation"]["evidence_present"] is True
     assert first["traffic_demand_explanation"]["request_count"] == 2
     assert first["traffic_demand_explanation"]["compute_service_request_count"] == 1
@@ -1467,6 +1561,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "recommended_review_order"
     ]
     assert "user_configuration_template_validation_v1.json" in first[
+        "recommended_review_order"
+    ]
+    assert _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME in first[
         "recommended_review_order"
     ]
     assert _TRAFFIC_DEMAND_EXPLANATION_FILENAME in first["recommended_review_order"]
@@ -3142,6 +3239,9 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
+        "user_configuration_control_surface_evidence_v1": (
+            _user_configuration_control_surface_evidence()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -3191,6 +3291,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "user_configuration_template_validation_v1",
             "user_configuration_template_validation_v1.json",
             "sha256:template-validation-file",
+        ),
+        _file(
+            "user_configuration_control_surface_evidence_v1",
+            _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
+            "sha256:control-surface-file",
         ),
         _file(
             "traffic_demand_explanation_v1",
@@ -3251,6 +3356,13 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     ] is True
     assert first["user_configuration_template_validation_invalid_template_count"] == 0
     assert first["user_configuration_template_validation_hash"].startswith("sha256:")
+    assert first["user_configuration_control_surface_evidence_present"] is True
+    assert first["user_configuration_control_surface_evidence_status"] == "COMPLETE"
+    assert first["user_configuration_control_surface_key_field_count"] == 2
+    assert first["user_configuration_control_surface_missing_key_count"] == 0
+    assert first["user_configuration_control_surface_evidence_hash"].startswith(
+        "sha256:"
+    )
     assert first["traffic_demand_explanation_present"] is True
     assert first["traffic_demand_explanation_request_count"] == 2
     assert first["traffic_demand_explanation_compute_service_request_count"] == 1
@@ -3306,6 +3418,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "service_trace_comparison_review_report_v1.json",
         "summary.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+        _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         "user_configuration_template_validation_v1.json",
     ]
     assert first["audit_hash"].startswith("sha256:")
@@ -3353,6 +3466,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
+        _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
@@ -3399,10 +3513,11 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "NETWORK_TEMPORAL_PRESSURE_EVIDENCE_MISSING",
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING",
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING",
+            "USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_MISSING",
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 12
+    assert diagnostics["finding_count"] == 13
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -4086,6 +4201,51 @@ def _user_configuration_template_validation() -> dict[str, object]:
             "Approved templates validate against user configuration schema v2.",
         ),
         "evidence_hash": "sha256:template-validation",
+    }
+
+
+def _user_configuration_control_surface_evidence() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "evidence_id": "sees.user_configuration_control_surface_evidence.v1",
+        "source": "BACKEND_USER_CONFIGURATION_SCHEMA",
+        "schema_id": "sees.user_configuration.v2",
+        "coverage_status": "COMPLETE",
+        "key_field_count": 2,
+        "schema_field_count": 2,
+        "covered_key_field_count": 2,
+        "missing_key_paths": (),
+        "wrong_surface_paths": (),
+        "duplicate_key_paths": (),
+        "duplicate_flat_payload_keys": (),
+        "fields": (
+            {
+                "path": "scenario.satellite_count",
+                "flat_payload_key": "satellite_count",
+                "section": "scenario",
+                "label": "Satellite count",
+                "value_type": "integer",
+                "editable_surface": "CONTROL_PANEL",
+                "current_value": 72,
+                "validation_rules": ("min=1",),
+            },
+            {
+                "path": "scenario.duration_seconds",
+                "flat_payload_key": "duration_seconds",
+                "section": "scenario",
+                "label": "Duration seconds",
+                "value_type": "number",
+                "editable_surface": "CONTROL_PANEL",
+                "current_value": 120,
+                "validation_rules": ("min=1",),
+            },
+        ),
+        "model_boundaries": {
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        },
+        "evidence_hash": "sha256:control-surface",
     }
 
 

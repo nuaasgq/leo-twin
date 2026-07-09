@@ -21295,3 +21295,51 @@ change.
   - A later frontend task should consume this evidence directly instead of
     maintaining hand-written control assumptions.
 
+## 2026-07-09 - T417 result package control surface evidence v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: persist the backend-generated user configuration control-surface
+  evidence into runtime result packages. Export packages now include
+  `user_configuration_control_surface_evidence_v1.json`, and the same evidence
+  hash is wired through review summary, diagnostics bundle, scenario review
+  bundle, artifact browser, reproducibility boundary, and audit index. The
+  builder reads the runtime config snapshot only and does not recompute config
+  coverage during offline review. No Event Kernel, simulation model,
+  packet-level, external simulator, or frontend rendering behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - `git diff --check`.
+    - Result: passed; Git reported existing CRLF normalization warnings only.
+  - Direct targeted test runner with `PYTHONPATH=src` for result-package
+    contract, control-surface evidence builder, review summary, diagnostics,
+    scenario review, audit index, missing-evidence diagnostics, and integration
+    runtime export package paths.
+    - Result: 10 selected checks passed.
+- Problems encountered:
+  - `apply_patch` failed in the Windows sandbox with
+    `orchestrator_helper_launch_canceled`; exact UTF-8 replacement scripts were
+    used instead, and the diff was reviewed afterward.
+  - The initial replacement script failed on the Chinese absolute path encoding
+    and made no file changes; rerunning with relative paths fixed it.
+  - `pytest` is not installed in the bundled Python environment, so validation
+    used direct test-function invocation for the targeted set.
+  - Running every unit test through the direct runner hit an existing
+    benchmark-acceptance fixture failure where time-pressure fields are missing
+    from standard scenario config snapshots. This is outside T417 and was not
+    changed in this task.
+- Known remaining issues:
+  - Result packages now preserve control-surface coverage evidence, but the
+    frontend still needs a later task to render/export this evidence for user
+    review instead of hiding it inside JSON artifacts.
+  - Benchmark acceptance fixtures should be aligned with the newer
+    time-pressure configuration fields in a dedicated backend benchmark task.
+

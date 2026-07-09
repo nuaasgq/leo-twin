@@ -1432,6 +1432,13 @@ Current Phase 3 progress:
   deterministic coverage hash, missing/wrong-surface path lists, duplicate flat
   payload-key checks, and per-field payload-key mappings.
 
+- T417 persists `user_configuration_control_surface_evidence_v1` into runtime
+  result packages. Offline review packages now include the same backend-owned
+  control-surface coverage hash in `config_snapshot.json`,
+  `user_configuration_control_surface_evidence_v1.json`, review summary,
+  diagnostics, scenario review bundles, artifact browser entries, reproducibility
+  boundary metadata, and long-term audit indexes.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior
