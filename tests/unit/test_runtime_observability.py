@@ -7,6 +7,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_route_detail_item,
     build_runtime_service_detail_page,
     build_runtime_service_detail_item,
+    build_runtime_service_lifecycle_stage_summary_v1,
     build_runtime_service_lifecycle_trace_v2,
     build_runtime_service_trace_detail_item,
     build_runtime_lifecycle_summaries,
@@ -1065,6 +1066,120 @@ def test_compute_task_timeline_summary_is_backend_owned_and_deterministic() -> N
         ),
     }
     assert build_runtime_compute_task_timeline_summary(None)["task_count"] == 0
+
+
+def test_service_lifecycle_stage_summary_v1_aggregates_runtime_stage_state() -> None:
+    history = {
+        "items": [
+            {
+                "task_id": "svc-02-compute_service-00000-task",
+                "input_flow_id": "svc-02-compute_service-00000-input",
+                "output_flow_id": "svc-02-compute_service-00000-output",
+                "input_route_id": "route:input",
+                "output_route_id": "route:output",
+                "compute_node_id": "sat-a",
+                "complete": True,
+                "first_sample_sim_time": 6.0,
+                "last_sample_sim_time": 8.0,
+                "input_network_latency_s": 3.0,
+                "compute_queue_delay_s": 0.0,
+                "compute_execution_delay_s": 2.0,
+                "output_network_latency_s": 1.5,
+                "total_latency_s": 6.5,
+                "component_timeline": [
+                    {
+                        "component": "input_network",
+                        "sample_sim_time": 6.0,
+                        "duration_s": 3.0,
+                    },
+                    {
+                        "component": "compute_queue",
+                        "sample_sim_time": 6.0,
+                        "duration_s": 0.0,
+                    },
+                    {
+                        "component": "compute_execution",
+                        "sample_sim_time": 6.0,
+                        "duration_s": 2.0,
+                    },
+                    {
+                        "component": "output_network",
+                        "sample_sim_time": 8.0,
+                        "duration_s": 1.5,
+                    },
+                ],
+            },
+            {
+                "task_id": "svc-01-compute_service-00000-task",
+                "input_flow_id": "svc-01-compute_service-00000-input",
+                "output_flow_id": "svc-01-compute_service-00000-output",
+                "input_route_id": "route:pending-input",
+                "compute_node_id": "sat-b",
+                "complete": False,
+                "last_sample_sim_time": 10.0,
+                "input_network_latency_s": 4.0,
+                "compute_queue_delay_s": 1.0,
+                "compute_execution_delay_s": 2.5,
+                "component_timeline": [
+                    {
+                        "component": "compute_execution",
+                        "sample_sim_time": 10.0,
+                        "duration_s": 2.5,
+                    }
+                ],
+            },
+        ],
+    }
+
+    first = build_runtime_service_lifecycle_stage_summary_v1(history)
+    second = build_runtime_service_lifecycle_stage_summary_v1(history)
+    lifecycle = build_runtime_lifecycle_summaries({}, service_latency_history=history)
+
+    assert first == second
+    assert lifecycle["service_lifecycle_stage_summary_v1"] == first
+    assert first["version"] == "v1"
+    assert first["summary_id"] == "leo_twin.service_lifecycle_stage_summary.v1"
+    assert first["source_summary"] == "service_latency_history_v1"
+    assert first["packet_level_simulation"] is False
+    assert first["frontend_inference_required"] is False
+    assert first["service_count"] == 2
+    assert first["complete_service_count"] == 1
+    assert first["running_service_count"] == 1
+    assert first["incomplete_service_count"] == 0
+    assert first["observed_stage_count"] == 7
+    assert first["pending_stage_count"] == 1
+    assert first["unknown_stage_count"] == 0
+    assert first["total_stage_duration_s"] == 14.0
+    assert first["dominant_stage_kind"] == "INPUT_NETWORK"
+    assert first["dominant_stage_reason"] == "MAX_TOTAL_STAGE_DURATION"
+    assert first["terminal_state_counts"] == (
+        {"terminal_state": "COMPLETE", "trace_count": 1},
+        {"terminal_state": "RUNNING", "trace_count": 1},
+    )
+    assert first["terminal_reason_counts"] == (
+        {"terminal_reason": "OUTPUT_NETWORK_PENDING", "trace_count": 1},
+        {"terminal_reason": "TOTAL_LATENCY_OBSERVED", "trace_count": 1},
+    )
+    input_network = first["stage_counts"][0]
+    assert input_network == {
+        "component": "input_network",
+        "stage_kind": "INPUT_NETWORK",
+        "stage_label": "Input network",
+        "service_count": 2,
+        "observed_count": 2,
+        "pending_count": 0,
+        "unknown_count": 0,
+        "total_duration_s": 7.0,
+        "avg_duration_s": 3.5,
+        "max_duration_s": 4.0,
+        "first_sample_sim_time": 6.0,
+        "last_sample_sim_time": 10.0,
+    }
+    output_network = first["stage_counts"][3]
+    assert output_network["observed_count"] == 1
+    assert output_network["pending_count"] == 1
+    assert output_network["total_duration_s"] == 1.5
+    assert first["summary_hash"]
 
 
 def test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic() -> None:

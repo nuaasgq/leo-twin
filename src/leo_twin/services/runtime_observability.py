@@ -93,6 +93,11 @@ def build_runtime_lifecycle_summaries(
         "compute_task_timeline_summary_v1": build_runtime_compute_task_timeline_summary(
             service_latency_history
         ),
+        "service_lifecycle_stage_summary_v1": (
+            build_runtime_service_lifecycle_stage_summary_v1(
+                service_latency_history
+            )
+        ),
         "service_lifecycle_trace_v2": build_runtime_service_lifecycle_trace_v2(
             service_latency_history
         ),
@@ -238,6 +243,67 @@ def build_runtime_service_lifecycle_trace_v2(
             result["filter_stage_kind"] = stage_filter
         if terminal_reason_filter != "ALL":
             result["filter_terminal_reason"] = terminal_reason_filter
+    return result
+
+
+def build_runtime_service_lifecycle_stage_summary_v1(
+    service_latency_history: Mapping[str, Any] | None,
+) -> dict[str, object]:
+    """Build a compact stage-level service lifecycle summary."""
+
+    items = tuple(_records((service_latency_history or {}).get("items")))
+    ordered_items = tuple(sorted(items, key=_service_detail_sort_key))
+    traces = tuple(_service_lifecycle_trace_item(item) for item in ordered_items)
+    stage_items = tuple(
+        _service_lifecycle_stage_summary_item(component, traces)
+        for component in _SERVICE_LIFECYCLE_TRACE_COMPONENTS
+    )
+    terminal_state_counts = _service_lifecycle_trace_value_counts(
+        traces,
+        field="terminal_state",
+        output_field="terminal_state",
+    )
+    terminal_reason_counts = _service_lifecycle_trace_value_counts(
+        traces,
+        field="terminal_state_reason",
+        output_field="terminal_reason",
+    )
+    dominant_stage = _dominant_service_lifecycle_stage(stage_items)
+    result: dict[str, object] = {
+        "version": "v1",
+        "summary_id": "leo_twin.service_lifecycle_stage_summary.v1",
+        "source": "SERVICE_LATENCY_HISTORY",
+        "source_summary": "service_latency_history_v1",
+        "trace_model": "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "service_count": len(traces),
+        "complete_service_count": sum(
+            1 for trace in traces if trace["terminal_state"] == "COMPLETE"
+        ),
+        "running_service_count": sum(
+            1 for trace in traces if trace["terminal_state"] == "RUNNING"
+        ),
+        "incomplete_service_count": sum(
+            1 for trace in traces if trace["terminal_state"] == "INCOMPLETE"
+        ),
+        "stage_family_count": len(stage_items),
+        "observed_stage_count": sum(
+            int(item["observed_count"]) for item in stage_items
+        ),
+        "pending_stage_count": sum(int(item["pending_count"]) for item in stage_items),
+        "unknown_stage_count": sum(int(item["unknown_count"]) for item in stage_items),
+        "total_stage_duration_s": sum(
+            float(item["total_duration_s"]) for item in stage_items
+        ),
+        "dominant_stage_kind": dominant_stage["stage_kind"],
+        "dominant_stage_label": dominant_stage["stage_label"],
+        "dominant_stage_reason": dominant_stage["reason"],
+        "stage_counts": stage_items,
+        "terminal_state_counts": terminal_state_counts,
+        "terminal_reason_counts": terminal_reason_counts,
+    }
+    result["summary_hash"] = stable_hash_payload(result)
     return result
 
 
@@ -2501,6 +2567,92 @@ def _service_lifecycle_trace_stage(
             if component in {"compute_queue", "compute_execution"}
             else ""
         ),
+    }
+
+
+def _service_lifecycle_stage_summary_item(
+    component: str,
+    traces: tuple[Mapping[str, Any], ...],
+) -> dict[str, object]:
+    stages = tuple(
+        stage
+        for trace in traces
+        for stage in _records(trace.get("stages"))
+        if _str(stage.get("component")) == component
+    )
+    observed = tuple(
+        stage for stage in stages if _str(stage.get("stage_status")) == "OBSERVED"
+    )
+    pending = tuple(
+        stage for stage in stages if _str(stage.get("stage_status")) == "PENDING"
+    )
+    unknown = tuple(
+        stage for stage in stages if _str(stage.get("stage_status")) == "UNKNOWN"
+    )
+    durations = tuple(_float(stage.get("duration_s")) for stage in observed)
+    sample_times = tuple(
+        value
+        for value in (_optional_float(stage.get("sample_sim_time")) for stage in observed)
+        if value is not None
+    )
+    return {
+        "component": component,
+        "stage_kind": component.upper(),
+        "stage_label": _compute_task_stage_label(component),
+        "service_count": len(traces),
+        "observed_count": len(observed),
+        "pending_count": len(pending),
+        "unknown_count": len(unknown),
+        "total_duration_s": float(sum(durations)),
+        "avg_duration_s": _average(durations),
+        "max_duration_s": max(durations, default=0.0),
+        "first_sample_sim_time": min(sample_times, default=None),
+        "last_sample_sim_time": max(sample_times, default=None),
+    }
+
+
+def _service_lifecycle_trace_value_counts(
+    traces: tuple[Mapping[str, Any], ...],
+    *,
+    field: str,
+    output_field: str,
+) -> tuple[dict[str, object], ...]:
+    counts: dict[str, int] = {}
+    for trace in traces:
+        value = _str(trace.get(field)) or "UNKNOWN"
+        counts[value] = counts.get(value, 0) + 1
+    return tuple(
+        {
+            output_field: value,
+            "trace_count": count,
+        }
+        for value, count in sorted(counts.items())
+    )
+
+
+def _dominant_service_lifecycle_stage(
+    stage_items: tuple[Mapping[str, Any], ...],
+) -> dict[str, str]:
+    if not stage_items or not any(int(item["observed_count"]) for item in stage_items):
+        return {
+            "stage_kind": "NONE",
+            "stage_label": "No observed stage",
+            "reason": "NO_OBSERVED_STAGE_DURATION",
+        }
+    ranked = sorted(
+        stage_items,
+        key=lambda item: (
+            -float(item["total_duration_s"]),
+            -int(item["pending_count"]),
+            -int(item["observed_count"]),
+            _SERVICE_LIFECYCLE_TRACE_COMPONENTS.index(str(item["component"])),
+        ),
+    )
+    selected = ranked[0]
+    return {
+        "stage_kind": str(selected["stage_kind"]),
+        "stage_label": str(selected["stage_label"]),
+        "reason": "MAX_TOTAL_STAGE_DURATION",
     }
 
 

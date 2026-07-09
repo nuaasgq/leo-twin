@@ -1479,6 +1479,15 @@ Current Phase 3 progress:
   demand while a flow is still active, without packet-level simulation or
   frontend-side semantic inference.
 
+- T434 adds `service_lifecycle_stage_summary_v1` to runtime lifecycle
+  summaries. The backend now aggregates service lifecycle traces into
+  stage-level observed/pending/unknown counts, duration totals/averages/maxima,
+  terminal-state and terminal-reason counts, and a deterministic dominant-stage
+  indicator. This gives the dashboard a compact backend-owned view of whether
+  communication-compute services are dominated by input network, compute queue,
+  compute execution, or output network delay without recomputing traces in the
+  frontend.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

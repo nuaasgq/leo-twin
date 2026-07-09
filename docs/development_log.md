@@ -22076,3 +22076,54 @@ change.
     not add packet-level queues, RF propagation, or external network simulator
     fidelity. Follow-up work should connect richer service lifecycle timing and
     route contention evidence into the same KPI path.
+
+
+## 2026-07-09 - T434 service lifecycle stage summary v1
+
+- Branch: `feature/T434-service-lifecycle-stage-summary-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a compact backend-owned `service_lifecycle_stage_summary_v1` to
+  runtime lifecycle summaries. The summary is derived from existing
+  `service_latency_history_v1` and the existing `service_lifecycle_trace_v2`
+  stage semantics. It reports service terminal-state counts, terminal-reason
+  counts, per-stage observed/pending/unknown counts, total/average/max stage
+  durations, and a deterministic dominant-stage indicator. This is a runtime
+  observability task only. No Event Kernel behavior, compute scheduling,
+  network routing, packet-level simulation, frontend rendering, external
+  simulator integration, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/runtime_observability.py tests/unit/test_runtime_observability.py tests/integration/test_compute_service_lifecycle.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_runtime_observability.py::test_service_lifecycle_stage_summary_v1_aggregates_runtime_stage_state`
+    - Result: 1 passed.
+  - `python -m pytest tests/unit/test_runtime_observability.py::test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic tests/unit/test_runtime_observability.py::test_compute_task_timeline_summary_is_backend_owned_and_deterministic`
+    - Result: 2 passed.
+  - `python -m pytest tests/unit/test_runtime_observability.py`
+    - Result: 12 passed.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py`
+    - Result: 1 passed.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py`
+    - Result: 14 passed.
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_compute_service_lifecycle.py`
+    - Result: 13 passed.
+- Problems encountered:
+  - Existing service lifecycle trace support was already complete enough for
+    row-level inspection. The task therefore avoided adding another trace model
+    and instead added a compact aggregate summary over the existing trace
+    stages.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The dashboard has not yet been bound to render
+    `service_lifecycle_stage_summary_v1`. Result export packages also do not
+    yet persist this new compact summary as a standalone artifact. A follow-up
+    task should bind or export the summary only after backend status validation
+    remains stable.
