@@ -21,6 +21,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
@@ -59,6 +60,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_compute_resource_pool_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
+    build_runtime_export_service_lifecycle_stage_summary_v1,
     build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_traffic_business_activity_window_v1,
     build_runtime_export_traffic_demand_user_page_v1,
@@ -103,6 +105,7 @@ _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME = (
 )
 _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
+_SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME = "service_lifecycle_stage_summary_v1.json"
 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
     "network_temporal_pressure_evidence_v1.json"
 )
@@ -151,6 +154,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -306,6 +310,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -369,6 +374,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
+            "service_lifecycle_stage_summary_v1": (
+                _service_lifecycle_stage_summary()
+            ),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -403,6 +411,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
+        _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -501,6 +512,14 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "TIME_VARYING_OBSERVED"
     )
     assert first["runtime_kpi_movement_summary"]["moving_metric_count"] == 3
+    assert first["network_flow_lifecycle_summary"]["evidence_present"] is True
+    assert first["network_flow_lifecycle_summary"]["active_flow_count"] == 2
+    assert first["service_lifecycle_stage_summary"]["evidence_present"] is True
+    assert first["service_lifecycle_stage_summary"]["service_count"] == 2
+    assert first["service_lifecycle_stage_summary"]["observed_stage_count"] == 5
+    assert first["service_lifecycle_stage_summary"]["dominant_stage_kind"] == (
+        "COMPUTE_EXECUTION"
+    )
     assert first["user_configuration_template_validation"][
         "evidence_present"
     ] is True
@@ -537,6 +556,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "network_temporal_pressure_evidence_exported"
     ] is True
     assert first["artifacts"]["network_kpi_dynamic_status_exported"] is True
+    assert first["artifacts"]["runtime_kpi_movement_summary_exported"] is True
+    assert first["artifacts"]["network_flow_lifecycle_summary_exported"] is True
+    assert first["artifacts"]["service_lifecycle_stage_summary_exported"] is True
     assert first["artifacts"][
         "user_configuration_template_validation_exported"
     ] is True
@@ -794,6 +816,42 @@ def test_runtime_export_network_flow_lifecycle_summary_v1_is_deterministic() -> 
     assert first["evidence"]["frontend_inference_required"] is False
     assert first["evidence"]["acceptable_for_demo_review"] is True
     assert "NO_FLOW_LIFECYCLE_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
+def test_runtime_export_service_lifecycle_stage_summary_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "service_lifecycle_stage_summary_v1": (
+                _service_lifecycle_stage_summary()
+            ),
+        }
+    }
+
+    first = build_runtime_export_service_lifecycle_stage_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_service_lifecycle_stage_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID
+    assert first["runtime_status_field"] == "service_lifecycle_stage_summary_v1"
+    assert first["stage_summary"] == _service_lifecycle_stage_summary()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["service_count"] == 2
+    assert first["evidence"]["observed_stage_count"] == 5
+    assert first["evidence"]["pending_stage_count"] == 3
+    assert first["evidence"]["dominant_stage_kind"] == "COMPUTE_EXECUTION"
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert "NO_SERVICE_LIFECYCLE_RECOMPUTE" in first["boundary_conditions"]
     assert first["artifact_hash"].startswith("sha256:")
 
 
@@ -1290,6 +1348,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
+            "service_lifecycle_stage_summary_v1": (
+                _service_lifecycle_stage_summary()
+            ),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -1328,6 +1389,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -1413,6 +1475,16 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["network_kpi_dynamic_status"]["evidence_present"] is True
     assert first["network_kpi_dynamic_status"]["dynamic_status"] == "DYNAMIC"
     assert first["network_kpi_dynamic_status"]["acceptable_for_demo_review"] is True
+    assert first["runtime_kpi_movement_summary"]["evidence_present"] is True
+    assert first["network_flow_lifecycle_summary"]["evidence_present"] is True
+    assert first["service_lifecycle_stage_summary"]["evidence_present"] is True
+    assert first["service_lifecycle_stage_summary"]["service_count"] == 2
+    assert first["service_lifecycle_stage_summary"]["dominant_stage_kind"] == (
+        "COMPUTE_EXECUTION"
+    )
+    assert first["service_lifecycle_stage_summary"]["evidence_hash"] == (
+        review_summary["service_lifecycle_stage_summary"]["evidence_hash"]
+    )
     assert first["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
@@ -1448,6 +1520,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
     assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 7
+    assert categories["ROUTE_SERVICE_EVIDENCE"]["present_count"] == 5
     assert categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
     benchmark_acceptance_item = next(
         item
@@ -1515,6 +1588,15 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert pressure_item["category"] == "ROUTE_SERVICE_EVIDENCE"
     assert pressure_item["present"] is True
     assert pressure_item["default_json_pointer"] == "/summary/items"
+    stage_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME
+    )
+    assert stage_item["category"] == "ROUTE_SERVICE_EVIDENCE"
+    assert stage_item["present"] is True
+    assert stage_item["default_json_pointer"] == "/stage_summary/stage_counts"
+    assert stage_item["filter_hint"] == "service stage"
     assert first["model_boundaries"]["event_replay_restore"] is False
     assert first["model_boundaries"]["route_recomputation"] is False
     assert first["model_boundaries"]["service_recomputation"] is False
@@ -1557,6 +1639,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
+            "service_lifecycle_stage_summary_v1": (
+                _service_lifecycle_stage_summary()
+            ),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -1597,6 +1682,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -1719,6 +1805,14 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     )
     assert first["network_kpi_dynamic_status"]["dynamic_status"] == "DYNAMIC"
     assert first["network_kpi_dynamic_status"]["evidence_present"] is True
+    assert first["service_lifecycle_stage_summary"]["evidence_present"] is True
+    assert first["service_lifecycle_stage_summary"]["service_count"] == 2
+    assert first["service_lifecycle_stage_summary"]["dominant_stage_kind"] == (
+        "COMPUTE_EXECUTION"
+    )
+    assert first["service_lifecycle_stage_summary"]["evidence_hash"] == (
+        review_summary["service_lifecycle_stage_summary"]["evidence_hash"]
+    )
     assert first["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
@@ -1774,6 +1868,12 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert "service_trace_comparison_review_report_v1.json" in first[
         "recommended_review_order"
     ]
+    assert _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME in first[
+        "recommended_review_order"
+    ]
+    assert first["recommended_review_order"].index(
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME
+    ) < first["recommended_review_order"].index("service_lifecycle_trace_v2.json")
     assert first["recommended_review_order"].index(
         "service_lifecycle_trace_v2.json"
     ) < first["recommended_review_order"].index(
@@ -1790,6 +1890,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     ]
     assert _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME in first[
         "recommended_review_order"
+    ]
+    assert _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME in first["artifact_review"][
+        "entrypoint_filenames"
     ]
     assert "user_configuration_template_validation_v1.json" in first[
         "artifact_review"
@@ -3445,6 +3548,9 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "runtime_export_reproducibility_boundary_v1": boundary,
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
+            "service_lifecycle_stage_summary_v1": (
+                _service_lifecycle_stage_summary()
+            ),
         },
         "config": {"seed": 7},
         "generated_config": _generated_config(),
@@ -3471,6 +3577,14 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     diagnostics_bundle = {
         "bundle_id": RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
         "diagnostics_hash": "sha256:diagnostics",
+        "service_lifecycle_stage_summary": {
+            "evidence_present": True,
+            "evidence_hash": "sha256:service-stage",
+            "service_count": 2,
+            "observed_stage_count": 5,
+            "pending_stage_count": 3,
+            "dominant_stage_kind": "COMPUTE_EXECUTION",
+        },
         "findings": ({"severity": "INFO", "code": "OK", "message": "ready"},),
     }
     artifact_records = (
@@ -3523,6 +3637,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "network_kpi_dynamic_status_v1",
             _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
             "sha256:network-dynamic-status-file",
+        ),
+        _file(
+            "service_lifecycle_stage_summary_v1",
+            _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
+            "sha256:service-stage-file",
         ),
     )
 
@@ -3595,6 +3714,13 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["network_kpi_dynamic_status_time_varying_kpi_count"] == 1
     assert first["network_kpi_dynamic_status_flat_kpi_count"] == 1
     assert first["network_kpi_dynamic_status_hash"].startswith("sha256:")
+    assert first["service_lifecycle_stage_summary_present"] is True
+    assert first["service_lifecycle_stage_summary_service_count"] == 2
+    assert first["service_lifecycle_stage_summary_observed_stage_count"] == 5
+    assert first["service_lifecycle_stage_summary_dominant_stage_kind"] == (
+        "COMPUTE_EXECUTION"
+    )
+    assert first["service_lifecycle_stage_summary_hash"].startswith("sha256:")
     assert first["route_comparison_review_report_hash"] == "sha256:route-report"
     assert first["route_comparison_review_report_present"] is True
     assert first["service_trace_comparison_review_report_hash"] == (
@@ -3623,6 +3749,8 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert completion["service_trace_comparison_review_report_present"] is True
     assert completion["service_trace_comparison_review_record_count"] == 2
     assert completion["service_trace_comparison_review_error_count"] == 0
+    assert completion["service_lifecycle_stage_summary_present"] is True
+    assert completion["service_lifecycle_stage_summary_service_count"] == 2
     assert completion["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
     assert completion[
         "scenario_review_checklist_recommended_review_complete"
@@ -3644,6 +3772,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "route_comparison_review_report_v1.json",
         "scenario_review_bundle_v1.json",
         "scenario_review_checklist_v1.json",
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "service_trace_comparison_review_report_v1.json",
         "summary.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -3698,6 +3827,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+        _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -3743,6 +3873,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "NODE_NETWORK_PRESSURE_SUMMARY_MISSING",
             "COMPUTE_RESOURCE_POOL_SUMMARY_MISSING",
             "NETWORK_FLOW_LIFECYCLE_SUMMARY_MISSING",
+            "SERVICE_LIFECYCLE_STAGE_SUMMARY_MISSING",
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
             "NETWORK_TEMPORAL_PRESSURE_EVIDENCE_MISSING",
@@ -3753,7 +3884,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 14
+    assert diagnostics["finding_count"] == 15
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -4308,6 +4439,57 @@ def _network_flow_lifecycle_summary() -> dict[str, object]:
             "Packet-level behavior is not simulated.",
         ),
         "summary_hash": "sha256:network-flow-lifecycle",
+    }
+
+
+def _service_lifecycle_stage_summary() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.service_lifecycle_stage_summary.v1",
+        "source": "SERVICE_LATENCY_HISTORY",
+        "source_summary": "service_latency_history_v1",
+        "trace_model": "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "service_count": 2,
+        "complete_service_count": 1,
+        "running_service_count": 1,
+        "incomplete_service_count": 0,
+        "stage_family_count": 4,
+        "observed_stage_count": 5,
+        "pending_stage_count": 3,
+        "unknown_stage_count": 0,
+        "total_stage_duration_s": 4.5,
+        "dominant_stage_kind": "COMPUTE_EXECUTION",
+        "dominant_stage_label": "Compute execution",
+        "dominant_stage_reason": "MAX_TOTAL_DURATION",
+        "stage_counts": (
+            {
+                "stage_kind": "INPUT_NETWORK",
+                "stage_label": "Input network",
+                "observed_count": 2,
+                "pending_count": 0,
+                "unknown_count": 0,
+                "total_duration_s": 1.5,
+            },
+            {
+                "stage_kind": "COMPUTE_EXECUTION",
+                "stage_label": "Compute execution",
+                "observed_count": 2,
+                "pending_count": 0,
+                "unknown_count": 0,
+                "total_duration_s": 3.0,
+            },
+        ),
+        "terminal_state_counts": (
+            {"terminal_state": "COMPLETE", "count": 1},
+            {"terminal_state": "RUNNING", "count": 1},
+        ),
+        "terminal_reason_counts": (
+            {"terminal_reason": "OUTPUT_DELIVERED", "count": 1},
+            {"terminal_reason": "WAITING_FOR_OUTPUT", "count": 1},
+        ),
+        "summary_hash": "sha256:service-stage",
     }
 
 def _compute_resource_pool_summary() -> dict[str, object]:

@@ -22127,3 +22127,45 @@ change.
     yet persist this new compact summary as a standalone artifact. A follow-up
     task should bind or export the summary only after backend status validation
     remains stable.
+
+
+## 2026-07-09 - T435 service lifecycle stage summary export v1
+
+- Branch: `feature/T435-service-stage-summary-export-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: persist the backend-owned `service_lifecycle_stage_summary_v1` into
+  runtime result packages as `service_lifecycle_stage_summary_v1.json`. The
+  artifact is now included in the result-package contract, artifact browser,
+  review summary, diagnostics bundle, scenario review bundle, checklist
+  evidence mapping, package review completion, and long-term audit index. This
+  is a result-package/export-contract task only. No Event Kernel behavior,
+  service lifecycle model, compute scheduling, network routing, packet-level
+  simulation, frontend rendering, external simulator integration, or runtime
+  generated config behavior was changed.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples\integration_demo\control_plane.py src\leo_twin\services\result_package_contract.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py`
+    - Result: 46 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py`
+    - Result: 14 passed.
+- Problems encountered:
+  - PowerShell double-quote parsing interrupted two broad `rg` commands, so
+    the searches were rerun with single-quoted patterns.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The standalone frontend/dashboard still does not render
+    `service_lifecycle_stage_summary_v1` directly. This task only makes the
+    compact summary available in offline export and audit surfaces. A follow-up
+    frontend binding task can consume the backend field without recomputing
+    service stage semantics locally.

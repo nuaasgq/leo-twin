@@ -17,6 +17,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID,
     RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID,
@@ -79,6 +80,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "network_kpi_dynamic_status_v1.json").exists()
     assert (package_dir / "runtime_kpi_movement_summary_v1.json").exists()
     assert (package_dir / "network_flow_lifecycle_summary_v1.json").exists()
+    assert (package_dir / "service_lifecycle_stage_summary_v1.json").exists()
     assert (package_dir / "user_configuration_template_validation_v1.json").exists()
     assert (package_dir / "user_configuration_control_surface_evidence_v1.json").exists()
     assert (package_dir / "traffic_demand_explanation_v1.json").exists()
@@ -105,6 +107,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "network_kpi_dynamic_status_v1.json" in filenames
     assert "runtime_kpi_movement_summary_v1.json" in filenames
     assert "network_flow_lifecycle_summary_v1.json" in filenames
+    assert "service_lifecycle_stage_summary_v1.json" in filenames
     assert "user_configuration_template_validation_v1.json" in filenames
     assert "user_configuration_control_surface_evidence_v1.json" in filenames
     assert "traffic_demand_explanation_v1.json" in filenames
@@ -185,6 +188,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     network_flow_lifecycle_summary = json.loads(
         (package_dir / "network_flow_lifecycle_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    service_lifecycle_stage_summary = json.loads(
+        (package_dir / "service_lifecycle_stage_summary_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -489,6 +497,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         network_flow_lifecycle_summary["evidence"]["evidence_hash"]
     )
     assert review_summary["artifacts"]["network_flow_lifecycle_summary_exported"] is True
+    assert review_summary["service_lifecycle_stage_summary"]["evidence_present"] is True
+    assert review_summary["service_lifecycle_stage_summary"]["evidence_hash"] == (
+        service_lifecycle_stage_summary["evidence"]["evidence_hash"]
+    )
+    assert review_summary["artifacts"][
+        "service_lifecycle_stage_summary_exported"
+    ] is True
     assert review_summary["user_configuration_template_validation"][
         "evidence_present"
     ] is True
@@ -667,6 +682,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["network_flow_lifecycle_summary"]["evidence_hash"] == (
         review_summary["network_flow_lifecycle_summary"]["evidence_hash"]
     )
+    assert diagnostics_bundle["service_lifecycle_stage_summary"]["evidence_hash"] == (
+        review_summary["service_lifecycle_stage_summary"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["service_lifecycle_stage_summary"][
+        "evidence_present"
+    ] is True
     assert diagnostics_bundle["network_kpi_variation_explanation"][
         "evidence_hash"
     ] == review_summary["network_kpi_variation_explanation"]["evidence_hash"]
@@ -778,6 +799,18 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert network_flow_lifecycle_summary["evidence"]["evidence_hash"] == (
         review_summary["network_flow_lifecycle_summary"]["evidence_hash"]
     )
+    assert service_lifecycle_stage_summary["artifact_id"] == (
+        RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID
+    )
+    assert service_lifecycle_stage_summary["stage_summary"] == (
+        config_snapshot["status"]["service_lifecycle_stage_summary_v1"]
+    )
+    assert service_lifecycle_stage_summary["evidence"]["evidence_hash"] == (
+        review_summary["service_lifecycle_stage_summary"]["evidence_hash"]
+    )
+    assert "NO_SERVICE_LIFECYCLE_RECOMPUTE" in service_lifecycle_stage_summary[
+        "boundary_conditions"
+    ]
     assert node_network_pressure_summary["evidence"]["evidence_hash"] == (
         review_summary["node_network_pressure_summary"]["evidence_hash"]
     )
@@ -942,6 +975,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         network_flow_lifecycle_summary["evidence"]["evidence_hash"]
     )
     assert scenario_review_bundle["network_flow_lifecycle_summary"]["evidence_present"] is True
+    assert scenario_review_bundle["service_lifecycle_stage_summary"]["evidence_hash"] == (
+        service_lifecycle_stage_summary["evidence"]["evidence_hash"]
+    )
+    assert scenario_review_bundle["service_lifecycle_stage_summary"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["network_kpi_variation_explanation"][
         "evidence_hash"
     ] == network_kpi_variation_explanation["evidence"]["evidence_hash"]
@@ -1024,6 +1063,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "network_flow_lifecycle_summary_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "service_lifecycle_stage_summary_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert "route_pressure_evidence_v1.json" in (
@@ -1128,6 +1170,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         network_flow_lifecycle_summary["evidence"]["evidence_hash"]
     )
     assert audit_index["network_flow_lifecycle_summary_active_flow_count"] >= 0
+    assert audit_index["service_lifecycle_stage_summary_present"] is True
+    assert audit_index["service_lifecycle_stage_summary_hash"] == (
+        service_lifecycle_stage_summary["evidence"]["evidence_hash"]
+    )
+    assert audit_index["service_lifecycle_stage_summary_service_count"] >= 0
+    assert audit_index["service_lifecycle_stage_summary_observed_stage_count"] >= 0
     assert audit_index[
         "network_kpi_variation_explanation_missing_explanation_count"
     ] == network_kpi_variation_explanation["evidence"][

@@ -113,6 +113,9 @@ RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID = (
 RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID = (
     "leo_twin.runtime_export_network_flow_lifecycle_summary.v1"
 )
+RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID = (
+    "leo_twin.runtime_export_service_lifecycle_stage_summary.v1"
+)
 RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_user_configuration_template_validation.v1"
 )
@@ -165,6 +168,7 @@ NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
 NETWORK_KPI_DYNAMIC_STATUS_FILENAME = "network_kpi_dynamic_status_v1.json"
 RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
+SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME = "service_lifecycle_stage_summary_v1.json"
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
 )
@@ -402,6 +406,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network flow lifecycle state exported for "
                     "offline active/completed/failed-flow review"
+                ),
+            },
+            {
+                "logical_name": "service_lifecycle_stage_summary_v1",
+                "filename": "service_lifecycle_stage_summary_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime communication-compute service stage summary "
+                    "exported for offline lifecycle review"
                 ),
             },
             {
@@ -948,6 +961,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "compute resource",
         },
         {
+            "logical_name": "service_lifecycle_stage_summary_v1",
+            "filename": SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
+            "category": "ROUTE_SERVICE_EVIDENCE",
+            "review_priority": 308,
+            "format": "json",
+            "review_role": "Communication-compute service stage summary.",
+            "content": "Aggregates observed, pending, and terminal service lifecycle stages.",
+            "default_json_pointer": "/stage_summary/stage_counts",
+            "filter_hint": "service stage",
+        },
+        {
             "logical_name": "service_lifecycle_trace_v2",
             "filename": SERVICE_LIFECYCLE_TRACE_FILENAME,
             "category": "ROUTE_SERVICE_EVIDENCE",
@@ -1077,6 +1101,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_kpi_dynamic_status_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "network_flow_lifecycle_summary_v1.json",
+            "service_lifecycle_stage_summary_v1.json",
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
@@ -1408,6 +1433,44 @@ def build_runtime_export_network_flow_lifecycle_summary_v1(
         "boundary_conditions": (
             "READ_RUNTIME_STATUS_ONLY",
             "NO_FLOW_LIFECYCLE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
+def build_runtime_export_service_lifecycle_stage_summary_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime service lifecycle stages."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    summary = _mapping(status.get("service_lifecycle_stage_summary_v1"))
+    evidence = _runtime_export_service_lifecycle_stage_summary(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "SERVICE_LIFECYCLE_STAGE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "service_lifecycle_stage_summary_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "stage_summary": dict(summary),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_SERVICE_LIFECYCLE_RECOMPUTE",
             "NO_EVENT_REPLAY",
             "NO_PACKET_LEVEL_SIMULATION",
             "NO_EXTERNAL_SIMULATOR_ARTIFACT",
@@ -1800,6 +1863,9 @@ def build_runtime_export_review_summary_v1(
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
     )
+    service_lifecycle_stage_summary = (
+        _runtime_export_service_lifecycle_stage_summary(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -1870,6 +1936,7 @@ def build_runtime_export_review_summary_v1(
         "network_kpi_dynamic_status": network_kpi_dynamic_status,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
+        "service_lifecycle_stage_summary": service_lifecycle_stage_summary,
         "user_configuration_template_validation": user_config_template_validation,
         "user_configuration_control_surface_evidence": user_config_control_surface,
         "traffic_demand_explanation": traffic_demand_explanation,
@@ -1932,6 +1999,9 @@ def build_runtime_export_review_summary_v1(
             "network_flow_lifecycle_summary_exported": (
                 "network_flow_lifecycle_summary_v1.json" in artifacts
             ),
+            "service_lifecycle_stage_summary_exported": (
+                "service_lifecycle_stage_summary_v1.json" in artifacts
+            ),
             "user_configuration_template_validation_exported": (
                 "user_configuration_template_validation_v1.json" in artifacts
             ),
@@ -1966,6 +2036,7 @@ def build_runtime_export_review_summary_v1(
             "Use network_kpi_dynamic_status_v1.json to review whether network KPIs are dynamic, flat, or sample-limited.",
             "Use runtime_kpi_movement_summary_v1.json to review network and compute KPI movement over simulation time.",
             "Use network_flow_lifecycle_summary_v1.json to review active, blocked, completed, and failed flow lifecycle state.",
+            "Use service_lifecycle_stage_summary_v1.json to review communication-compute service stage completeness.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
             "Use user_configuration_control_surface_evidence_v1.json to review which user configuration fields are backend-backed and editable.",
             "Use traffic_demand_explanation_v1.json to review backend-owned business request generation semantics.",
@@ -2042,6 +2113,9 @@ def build_runtime_export_diagnostics_bundle_v1(
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
     )
+    service_lifecycle_stage_summary = (
+        _runtime_export_service_lifecycle_stage_summary(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -2078,6 +2152,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         compute_resource_pool_summary=compute_resource_pool_summary,
         v2_executable_readiness=v2_executable_readiness,
         network_flow_lifecycle_summary=network_flow_lifecycle_summary,
+        service_lifecycle_stage_summary=service_lifecycle_stage_summary,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
         network_temporal_pressure_evidence=network_temporal_pressure_evidence,
@@ -2120,6 +2195,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "network_kpi_dynamic_status": network_kpi_dynamic_status,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
+        "service_lifecycle_stage_summary": service_lifecycle_stage_summary,
         "user_configuration_template_validation": user_config_template_validation,
         "user_configuration_control_surface_evidence": user_config_control_surface,
         "traffic_demand_explanation": traffic_demand_explanation,
@@ -2249,6 +2325,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_flow_lifecycle_summary = _mapping(
         review_summary.get("network_flow_lifecycle_summary")
     )
+    service_lifecycle_stage_summary = _mapping(
+        review_summary.get("service_lifecycle_stage_summary")
+    )
     user_config_template_validation = _mapping(
         review_summary.get("user_configuration_template_validation")
     )
@@ -2288,6 +2367,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("RUNTIME_KPI_MOVEMENT_SUMMARY_MISSING")
     if network_flow_lifecycle_summary.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_FLOW_LIFECYCLE_SUMMARY_MISSING")
+    if service_lifecycle_stage_summary.get("evidence_present") is not True:
+        scenario_review_warnings.append("SERVICE_LIFECYCLE_STAGE_SUMMARY_MISSING")
     if user_config_template_validation.get("evidence_present") is not True:
         scenario_review_warnings.append(
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING"
@@ -2657,6 +2738,42 @@ def build_runtime_export_scenario_review_bundle_v1(
                 network_flow_lifecycle_summary.get("evidence_present") is True
             ),
         },
+        "service_lifecycle_stage_summary": {
+            "summary_id": str(service_lifecycle_stage_summary.get("summary_id", "")),
+            "trace_model": str(
+                service_lifecycle_stage_summary.get("trace_model", "")
+            ),
+            "service_count": _integer(
+                service_lifecycle_stage_summary.get("service_count")
+            ),
+            "complete_service_count": _integer(
+                service_lifecycle_stage_summary.get("complete_service_count")
+            ),
+            "running_service_count": _integer(
+                service_lifecycle_stage_summary.get("running_service_count")
+            ),
+            "incomplete_service_count": _integer(
+                service_lifecycle_stage_summary.get("incomplete_service_count")
+            ),
+            "observed_stage_count": _integer(
+                service_lifecycle_stage_summary.get("observed_stage_count")
+            ),
+            "pending_stage_count": _integer(
+                service_lifecycle_stage_summary.get("pending_stage_count")
+            ),
+            "dominant_stage_kind": str(
+                service_lifecycle_stage_summary.get("dominant_stage_kind", "")
+            ),
+            "dominant_stage_reason": str(
+                service_lifecycle_stage_summary.get("dominant_stage_reason", "")
+            ),
+            "evidence_hash": str(
+                service_lifecycle_stage_summary.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                service_lifecycle_stage_summary.get("evidence_present") is True
+            ),
+        },
         "user_configuration_template_validation": {
             "evidence_id": str(user_config_template_validation.get("evidence_id", "")),
             "schema_id": str(user_config_template_validation.get("schema_id", "")),
@@ -2827,6 +2944,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "network_kpi_dynamic_status_v1.json",
                 "runtime_kpi_movement_summary_v1.json",
                 "network_flow_lifecycle_summary_v1.json",
+                "service_lifecycle_stage_summary_v1.json",
                 "user_configuration_template_validation_v1.json",
                 "user_configuration_control_surface_evidence_v1.json",
                 "traffic_demand_explanation_v1.json",
@@ -2864,6 +2982,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_kpi_dynamic_status_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "network_flow_lifecycle_summary_v1.json",
+            "service_lifecycle_stage_summary_v1.json",
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
@@ -4327,6 +4446,9 @@ def build_runtime_export_package_audit_index_v1(
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
     )
+    service_lifecycle_stage_summary = (
+        _runtime_export_service_lifecycle_stage_summary(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -4609,6 +4731,24 @@ def build_runtime_export_package_audit_index_v1(
         "network_flow_lifecycle_summary_failed_flow_count": _integer(
             network_flow_lifecycle_summary.get("failed_flow_count")
         ),
+        "service_lifecycle_stage_summary_hash": str(
+            service_lifecycle_stage_summary.get("evidence_hash", "")
+        ),
+        "service_lifecycle_stage_summary_present": (
+            service_lifecycle_stage_summary.get("evidence_present") is True
+        ),
+        "service_lifecycle_stage_summary_service_count": _integer(
+            service_lifecycle_stage_summary.get("service_count")
+        ),
+        "service_lifecycle_stage_summary_observed_stage_count": _integer(
+            service_lifecycle_stage_summary.get("observed_stage_count")
+        ),
+        "service_lifecycle_stage_summary_pending_stage_count": _integer(
+            service_lifecycle_stage_summary.get("pending_stage_count")
+        ),
+        "service_lifecycle_stage_summary_dominant_stage_kind": str(
+            service_lifecycle_stage_summary.get("dominant_stage_kind", "")
+        ),
         "runtime_kpi_movement_summary_hash": str(
             runtime_kpi_movement_summary.get("evidence_hash", "")
         ),
@@ -4818,6 +4958,9 @@ def build_runtime_export_package_review_completion_v1(
     network_kpi_formula_evidence = _mapping(
         diagnostics_bundle.get("network_kpi_formula_evidence")
     )
+    service_lifecycle_stage_summary = _mapping(
+        diagnostics_bundle.get("service_lifecycle_stage_summary")
+    )
     user_config_template_validation = _mapping(
         diagnostics_bundle.get("user_configuration_template_validation")
     )
@@ -4982,6 +5125,24 @@ def build_runtime_export_package_review_completion_v1(
         "network_kpi_formula_evidence_missing_selected_input_count": _integer(
             network_kpi_formula_evidence.get("missing_selected_input_count")
         ),
+        "service_lifecycle_stage_summary_present": (
+            service_lifecycle_stage_summary.get("evidence_present") is True
+        ),
+        "service_lifecycle_stage_summary_hash": str(
+            service_lifecycle_stage_summary.get("evidence_hash", "")
+        ),
+        "service_lifecycle_stage_summary_service_count": _integer(
+            service_lifecycle_stage_summary.get("service_count")
+        ),
+        "service_lifecycle_stage_summary_observed_stage_count": _integer(
+            service_lifecycle_stage_summary.get("observed_stage_count")
+        ),
+        "service_lifecycle_stage_summary_pending_stage_count": _integer(
+            service_lifecycle_stage_summary.get("pending_stage_count")
+        ),
+        "service_lifecycle_stage_summary_dominant_stage_kind": str(
+            service_lifecycle_stage_summary.get("dominant_stage_kind", "")
+        ),
         "user_configuration_template_validation_present": (
             user_config_template_validation.get("evidence_present") is True
         ),
@@ -5019,6 +5180,10 @@ def build_runtime_export_package_review_completion_v1(
             (
                 "network_kpi_formula "
                 f"{network_kpi_formula_evidence.get('formula_evidence_status', 'missing')}"
+            ),
+            (
+                "service_stages "
+                f"{service_lifecycle_stage_summary.get('dominant_stage_kind', 'missing')}"
             ),
             (
                 "config_templates "
@@ -6087,6 +6252,7 @@ def _runtime_export_diagnostic_findings(
     compute_resource_pool_summary: Mapping[str, Any],
     v2_executable_readiness: Mapping[str, Any],
     network_flow_lifecycle_summary: Mapping[str, Any],
+    service_lifecycle_stage_summary: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
     network_temporal_pressure_evidence: Mapping[str, Any],
@@ -6284,6 +6450,30 @@ def _runtime_export_diagnostic_findings(
                 "WARN",
                 "NETWORK_FLOW_LIFECYCLE_FRONTEND_INFERENCE_DECLARED",
                 "network flow lifecycle summary should be backend-owned and not require frontend inference.",
+            )
+        )
+    if service_lifecycle_stage_summary.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "SERVICE_LIFECYCLE_STAGE_SUMMARY_MISSING",
+                "config_snapshot.status does not include service_lifecycle_stage_summary_v1.",
+            )
+        )
+    if service_lifecycle_stage_summary.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "SERVICE_LIFECYCLE_STAGE_PACKET_LEVEL_DECLARED",
+                "service lifecycle stage summary declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if service_lifecycle_stage_summary.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "SERVICE_LIFECYCLE_STAGE_FRONTEND_INFERENCE_DECLARED",
+                "service lifecycle stage summary should be backend-owned and not require frontend inference.",
             )
         )
     if network_kpi_validation.get("evidence_present") is not True:
@@ -7053,6 +7243,13 @@ def _runtime_export_scenario_review_evidence_hash(
                 "",
             )
         )
+    if filename == "service_lifecycle_stage_summary_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("service_lifecycle_stage_summary")).get(
+                "evidence_hash",
+                "",
+            )
+        )
     if filename == "user_configuration_control_surface_evidence_v1.json":
         return str(
             _mapping(
@@ -7144,6 +7341,7 @@ def _runtime_export_scenario_review_step_label(
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "traffic_business_activity_window_v1.json": "business activity",
+        "service_lifecycle_stage_summary_v1.json": "service stage summary",
         "user_configuration_control_surface_evidence_v1.json": "configuration control surface",
         "route_pressure_evidence_v1.json": "route pressure",
         "node_network_pressure_summary_v1.json": "node pressure",
@@ -8213,6 +8411,99 @@ def _runtime_export_network_flow_lifecycle_summary(
             not in {"", "MISSING_NETWORK_FLOW_LIFECYCLE_SUMMARY"}
         ),
         "model_assumptions": _string_tuple(summary.get("model_assumptions")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_service_lifecycle_stage_summary(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    summary = _mapping(status.get("service_lifecycle_stage_summary_v1"))
+    evidence_present = bool(summary)
+    source = "config_snapshot.status.service_lifecycle_stage_summary_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "summary_id": "leo_twin.service_lifecycle_stage_summary.v1",
+            "source": source,
+            "artifact_id": RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID,
+            "artifact_filename": SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
+            "evidence_present": False,
+            "trace_model": "UNKNOWN",
+            "service_count": 0,
+            "complete_service_count": 0,
+            "running_service_count": 0,
+            "incomplete_service_count": 0,
+            "stage_family_count": 0,
+            "observed_stage_count": 0,
+            "pending_stage_count": 0,
+            "unknown_stage_count": 0,
+            "total_stage_duration_s": 0.0,
+            "dominant_stage_kind": "UNKNOWN",
+            "dominant_stage_label": "",
+            "dominant_stage_reason": "MISSING_SERVICE_LIFECYCLE_STAGE_SUMMARY",
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "model_assumptions": (),
+            "caveats": (
+                "Runtime status did not expose service_lifecycle_stage_summary_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    packet_level = summary.get("packet_level_simulation") is True
+    frontend_inference = summary.get("frontend_inference_required") is True
+    service_count = _integer(summary.get("service_count"))
+    observed_stage_count = _integer(summary.get("observed_stage_count"))
+    evidence = {
+        "version": "v1",
+        "summary_id": str(
+            summary.get(
+                "summary_id",
+                "leo_twin.service_lifecycle_stage_summary.v1",
+            )
+        ),
+        "source": source,
+        "runtime_status_source": str(summary.get("source", "")),
+        "artifact_id": RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID,
+        "artifact_filename": SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
+        "evidence_present": True,
+        "trace_model": str(summary.get("trace_model", "")),
+        "source_summary": str(summary.get("source_summary", "")),
+        "service_count": service_count,
+        "complete_service_count": _integer(summary.get("complete_service_count")),
+        "running_service_count": _integer(summary.get("running_service_count")),
+        "incomplete_service_count": _integer(summary.get("incomplete_service_count")),
+        "stage_family_count": _integer(summary.get("stage_family_count")),
+        "observed_stage_count": observed_stage_count,
+        "pending_stage_count": _integer(summary.get("pending_stage_count")),
+        "unknown_stage_count": _integer(summary.get("unknown_stage_count")),
+        "total_stage_duration_s": _number(summary.get("total_stage_duration_s")),
+        "dominant_stage_kind": str(summary.get("dominant_stage_kind", "")),
+        "dominant_stage_label": str(summary.get("dominant_stage_label", "")),
+        "dominant_stage_reason": str(summary.get("dominant_stage_reason", "")),
+        "stage_count_rows": len(_records(summary.get("stage_counts"))),
+        "terminal_state_row_count": len(_records(summary.get("terminal_state_counts"))),
+        "terminal_reason_row_count": len(_records(summary.get("terminal_reason_counts"))),
+        "summary_hash": str(summary.get("summary_hash", "")),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": (
+            not packet_level
+            and not frontend_inference
+            and service_count >= 0
+            and observed_stage_count >= 0
+            and str(summary.get("summary_id", ""))
+            == "leo_twin.service_lifecycle_stage_summary.v1"
+        ),
+        "model_assumptions": (
+            "Stage summary is derived from backend service_latency_history_v1.",
+            "Service stages are communication-compute proxy stages, not packet events.",
+            "No service lifecycle recomputation is performed during export.",
+        ),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence

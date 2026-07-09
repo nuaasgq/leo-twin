@@ -121,6 +121,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_traffic_business_activity_window_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
+    build_runtime_export_service_lifecycle_stage_summary_v1,
     build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
@@ -222,6 +223,9 @@ _RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = (
 )
 _RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = (
     "network_flow_lifecycle_summary_v1.json"
+)
+_RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME = (
+    "service_lifecycle_stage_summary_v1.json"
 )
 _RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
@@ -1011,6 +1015,23 @@ class DemoControlPlane:
         )
         written_files["network_flow_lifecycle_summary_v1"] = (
             network_flow_lifecycle_summary_path
+        )
+        service_lifecycle_stage_summary_path = (
+            package_dir / _RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME
+        )
+        service_lifecycle_stage_summary = (
+            build_runtime_export_service_lifecycle_stage_summary_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        service_lifecycle_stage_summary_path.write_text(
+            stable_json_pretty(service_lifecycle_stage_summary),
+            encoding="utf-8",
+        )
+        written_files["service_lifecycle_stage_summary_v1"] = (
+            service_lifecycle_stage_summary_path
         )
         user_configuration_template_validation_path = (
             package_dir

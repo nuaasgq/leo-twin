@@ -1488,6 +1488,13 @@ Current Phase 3 progress:
   compute execution, or output network delay without recomputing traces in the
   frontend.
 
+- T435 persists `service_lifecycle_stage_summary_v1` into runtime result
+  packages as `service_lifecycle_stage_summary_v1.json`. Offline review now
+  carries the same backend-owned communication-compute stage summary through
+  review summary, diagnostics, artifact browser, scenario review bundles,
+  checklist evidence mapping, package completion, and long-term audit indexes
+  without service lifecycle recomputation or frontend inference.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The
