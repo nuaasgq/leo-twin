@@ -21875,3 +21875,50 @@ change.
   - The frontend has not yet been rebound to render
     `network_kpi_dynamic_status_v1`. Result export packages do not yet persist
     this new status object as a standalone artifact.
+
+
+## 2026-07-09 - T430 network KPI dynamic status export v1
+
+- Branch: `feature/T430-network-kpi-dynamic-export-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: persist backend-owned `network_kpi_dynamic_status_v1` into runtime
+  result packages as `network_kpi_dynamic_status_v1.json`. The artifact is now
+  connected to result-package recommended files, artifact browser metadata,
+  review summary, diagnostics bundle, scenario review bundle, scenario review
+  checklist evidence hashes, and long-term audit index fields. This is a
+  result export/audit task only. No Event Kernel behavior, KPI formula, network
+  routing logic, runtime progression behavior, frontend rendering, external
+  simulator integration, packet-level simulation, or runtime generated config
+  behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/network_kpi_dynamic_status_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `PYTHONPATH=src python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py`
+    - Result: passed.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_result_package_contract_v1.py`
+    - Result: 44 passed.
+  - `PYTHONPATH=src python -m pytest tests/integration/test_result_package_export_v1.py`
+    - Result: 1 passed.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py`
+    - Result: 45 passed.
+- Problems encountered:
+  - The first test pass showed two incomplete bindings: the review-summary test
+    fixture did not list the new artifact filename, and
+    `recommended_review_order` did not include the new dynamic-status artifact.
+    Both were corrected so the package now exports, reviews, and audits the
+    same backend evidence.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The frontend has not yet been rebound to render
+    `network_kpi_dynamic_status_v1` from the runtime status or exported package.
+    This task intentionally keeps scope to backend result export and audit
+    surfaces.

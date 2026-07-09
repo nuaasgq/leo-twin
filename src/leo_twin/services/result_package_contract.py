@@ -104,6 +104,9 @@ RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID = (
 RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID = (
     "leo_twin.runtime_export_network_kpi_variation_explanation.v1"
 )
+RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID = (
+    "leo_twin.runtime_export_network_kpi_dynamic_status.v1"
+)
 RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID = (
     "leo_twin.runtime_export_runtime_kpi_movement_summary.v1"
 )
@@ -159,6 +162,7 @@ NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
 NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
     "network_kpi_variation_explanation_v1.json"
 )
+NETWORK_KPI_DYNAMIC_STATUS_FILENAME = "network_kpi_dynamic_status_v1.json"
 RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
@@ -371,6 +375,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network KPI variation explanation evidence "
                     "exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "network_kpi_dynamic_status_v1",
+                "filename": "network_kpi_dynamic_status_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime network KPI dynamic status evidence exported "
+                    "for offline review"
                 ),
             },
             {
@@ -803,6 +816,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "variation",
         },
         {
+            "logical_name": "network_kpi_dynamic_status_v1",
+            "filename": NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 125,
+            "format": "json",
+            "review_role": "Network KPI dynamic status.",
+            "content": "Condenses KPI calibration into dynamic, flat, or insufficient status.",
+            "default_json_pointer": "/dynamic_status",
+            "filter_hint": "dynamic status",
+        },
+        {
             "logical_name": "runtime_kpi_movement_summary_v1",
             "filename": RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
             "category": "NETWORK_KPI_EVIDENCE",
@@ -1050,6 +1074,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_kpi_formula_evidence_v1.json",
             "network_temporal_pressure_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
+            "network_kpi_dynamic_status_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "network_flow_lifecycle_summary_v1.json",
             "route_pressure_evidence_v1.json",
@@ -1263,6 +1288,43 @@ def build_runtime_export_network_kpi_variation_explanation_v1(
         "package_dir": str(package_dir),
         "runtime_status_field": "network_kpi_variation_explanation_v1",
         "variation_explanation": dict(explanation),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_METRIC_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
+def build_runtime_export_network_kpi_dynamic_status_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime network KPI dynamic status."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    dynamic_status = _mapping(status.get("network_kpi_dynamic_status_v1"))
+    evidence = _runtime_export_network_kpi_dynamic_status(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "NETWORK_KPI_DYNAMIC_STATUS_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "network_kpi_dynamic_status_v1",
+        "dynamic_status": dict(dynamic_status),
         "evidence": evidence,
         "boundary_conditions": (
             "READ_RUNTIME_STATUS_ONLY",
@@ -1733,6 +1795,7 @@ def build_runtime_export_review_summary_v1(
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
+    network_kpi_dynamic_status = _runtime_export_network_kpi_dynamic_status(status)
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
@@ -1804,6 +1867,7 @@ def build_runtime_export_review_summary_v1(
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
+        "network_kpi_dynamic_status": network_kpi_dynamic_status,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "user_configuration_template_validation": user_config_template_validation,
@@ -1859,6 +1923,9 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_variation_explanation_exported": (
                 "network_kpi_variation_explanation_v1.json" in artifacts
             ),
+            "network_kpi_dynamic_status_exported": (
+                "network_kpi_dynamic_status_v1.json" in artifacts
+            ),
             "runtime_kpi_movement_summary_exported": (
                 "runtime_kpi_movement_summary_v1.json" in artifacts
             ),
@@ -1896,6 +1963,7 @@ def build_runtime_export_review_summary_v1(
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use network_temporal_pressure_evidence_v1.json to review deterministic temporal pressure evidence.",
             "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
+            "Use network_kpi_dynamic_status_v1.json to review whether network KPIs are dynamic, flat, or sample-limited.",
             "Use runtime_kpi_movement_summary_v1.json to review network and compute KPI movement over simulation time.",
             "Use network_flow_lifecycle_summary_v1.json to review active, blocked, completed, and failed flow lifecycle state.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
@@ -1969,6 +2037,7 @@ def build_runtime_export_diagnostics_bundle_v1(
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
+    network_kpi_dynamic_status = _runtime_export_network_kpi_dynamic_status(status)
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
@@ -2013,6 +2082,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         network_kpi_formula_evidence=network_kpi_formula_evidence,
         network_temporal_pressure_evidence=network_temporal_pressure_evidence,
         network_kpi_variation_explanation=network_kpi_variation_explanation,
+        network_kpi_dynamic_status=network_kpi_dynamic_status,
         user_config_template_validation=user_config_template_validation,
         user_config_control_surface=user_config_control_surface,
         traffic_demand_explanation=traffic_demand_explanation,
@@ -2047,6 +2117,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
+        "network_kpi_dynamic_status": network_kpi_dynamic_status,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "user_configuration_template_validation": user_config_template_validation,
@@ -2169,6 +2240,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_kpi_variation_explanation = _mapping(
         review_summary.get("network_kpi_variation_explanation")
     )
+    network_kpi_dynamic_status = _mapping(
+        review_summary.get("network_kpi_dynamic_status")
+    )
     runtime_kpi_movement_summary = _mapping(
         review_summary.get("runtime_kpi_movement_summary")
     )
@@ -2208,6 +2282,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append(
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING"
         )
+    if network_kpi_dynamic_status.get("evidence_present") is not True:
+        scenario_review_warnings.append("NETWORK_KPI_DYNAMIC_STATUS_MISSING")
     if runtime_kpi_movement_summary.get("evidence_present") is not True:
         scenario_review_warnings.append("RUNTIME_KPI_MOVEMENT_SUMMARY_MISSING")
     if network_flow_lifecycle_summary.get("evidence_present") is not True:
@@ -2499,6 +2575,39 @@ def build_runtime_export_scenario_review_bundle_v1(
                 network_kpi_variation_explanation.get("evidence_present") is True
             ),
         },
+        "network_kpi_dynamic_status": {
+            "status_id": str(
+                network_kpi_dynamic_status.get("status_id", "")
+            ),
+            "metric_model": str(
+                network_kpi_dynamic_status.get("metric_model", "")
+            ),
+            "dynamic_status": str(
+                network_kpi_dynamic_status.get("dynamic_status", "")
+            ),
+            "sample_count": _integer(
+                network_kpi_dynamic_status.get("sample_count")
+            ),
+            "kpi_count": _integer(network_kpi_dynamic_status.get("kpi_count")),
+            "time_varying_kpi_count": _integer(
+                network_kpi_dynamic_status.get("time_varying_kpi_count")
+            ),
+            "flat_kpi_count": _integer(
+                network_kpi_dynamic_status.get("flat_kpi_count")
+            ),
+            "zero_latest_kpi_count": _integer(
+                network_kpi_dynamic_status.get("zero_latest_kpi_count")
+            ),
+            "recommended_next_action": str(
+                network_kpi_dynamic_status.get("recommended_next_action", "")
+            ),
+            "evidence_hash": str(
+                network_kpi_dynamic_status.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                network_kpi_dynamic_status.get("evidence_present") is True
+            ),
+        },
         "runtime_kpi_movement_summary": {
             "summary_id": str(runtime_kpi_movement_summary.get("summary_id", "")),
             "metric_model": str(runtime_kpi_movement_summary.get("metric_model", "")),
@@ -2715,6 +2824,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "network_kpi_formula_evidence_v1.json",
                 "network_temporal_pressure_evidence_v1.json",
                 "network_kpi_variation_explanation_v1.json",
+                "network_kpi_dynamic_status_v1.json",
                 "runtime_kpi_movement_summary_v1.json",
                 "network_flow_lifecycle_summary_v1.json",
                 "user_configuration_template_validation_v1.json",
@@ -2751,6 +2861,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_kpi_formula_evidence_v1.json",
             "network_temporal_pressure_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
+            "network_kpi_dynamic_status_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "network_flow_lifecycle_summary_v1.json",
             "route_pressure_evidence_v1.json",
@@ -4211,6 +4322,7 @@ def build_runtime_export_package_audit_index_v1(
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
+    network_kpi_dynamic_status = _runtime_export_network_kpi_dynamic_status(status)
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
@@ -4409,6 +4521,24 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_variation_explanation_missing_explanation_count": _integer(
             network_kpi_variation_explanation.get("missing_explanation_count")
+        ),
+        "network_kpi_dynamic_status_hash": str(
+            network_kpi_dynamic_status.get("evidence_hash", "")
+        ),
+        "network_kpi_dynamic_status_status": str(
+            network_kpi_dynamic_status.get("dynamic_status", "")
+        ),
+        "network_kpi_dynamic_status_present": (
+            network_kpi_dynamic_status.get("evidence_present") is True
+        ),
+        "network_kpi_dynamic_status_time_varying_kpi_count": _integer(
+            network_kpi_dynamic_status.get("time_varying_kpi_count")
+        ),
+        "network_kpi_dynamic_status_flat_kpi_count": _integer(
+            network_kpi_dynamic_status.get("flat_kpi_count")
+        ),
+        "network_kpi_dynamic_status_zero_latest_kpi_count": _integer(
+            network_kpi_dynamic_status.get("zero_latest_kpi_count")
         ),
         "node_network_pressure_summary_hash": str(
             node_network_pressure_summary.get("evidence_hash", "")
@@ -5961,6 +6091,7 @@ def _runtime_export_diagnostic_findings(
     network_kpi_formula_evidence: Mapping[str, Any],
     network_temporal_pressure_evidence: Mapping[str, Any],
     network_kpi_variation_explanation: Mapping[str, Any],
+    network_kpi_dynamic_status: Mapping[str, Any],
     user_config_template_validation: Mapping[str, Any],
     user_config_control_surface: Mapping[str, Any],
     traffic_demand_explanation: Mapping[str, Any],
@@ -6292,6 +6423,46 @@ def _runtime_export_diagnostic_findings(
                 (
                     "network KPI variation explanation requires operator review: "
                     f"{network_kpi_variation_explanation.get('explanation_status', '')}."
+                ),
+            )
+        )
+    if network_kpi_dynamic_status.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_DYNAMIC_STATUS_MISSING",
+                "config_snapshot.status does not include network_kpi_dynamic_status_v1.",
+            )
+        )
+    if network_kpi_dynamic_status.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NETWORK_KPI_DYNAMIC_STATUS_PACKET_LEVEL_DECLARED",
+                "network KPI dynamic status declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if network_kpi_dynamic_status.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_DYNAMIC_STATUS_FRONTEND_INFERENCE_REQUIRED",
+                "network KPI dynamic status should be backend-owned and not require frontend inference.",
+            )
+        )
+    if network_kpi_dynamic_status.get("evidence_present") is True and str(
+        network_kpi_dynamic_status.get("dynamic_status", "")
+    ) in {
+        "MISSING_NETWORK_KPI_DYNAMIC_STATUS",
+        "MISSING_NETWORK_KPI_CALIBRATION",
+    }:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_DYNAMIC_STATUS_INCOMPLETE",
+                (
+                    "network KPI dynamic status requires operator review: "
+                    f"{network_kpi_dynamic_status.get('dynamic_status', '')}."
                 ),
             )
         )
@@ -6855,6 +7026,12 @@ def _runtime_export_scenario_review_evidence_hash(
                 scenario_review_bundle.get("network_kpi_variation_explanation")
             ).get("evidence_hash", "")
         )
+    if filename == "network_kpi_dynamic_status_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("network_kpi_dynamic_status")
+            ).get("evidence_hash", "")
+        )
     if filename == "user_service_request_summary_v2.json":
         return str(
             _mapping(scenario_review_bundle.get("user_service_requests")).get(
@@ -6963,6 +7140,7 @@ def _runtime_export_scenario_review_step_label(
         "network_kpi_formula_evidence_v1.json": "network KPI formula evidence",
         "network_temporal_pressure_evidence_v1.json": "network temporal pressure evidence",
         "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
+        "network_kpi_dynamic_status_v1.json": "network KPI dynamic status",
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "traffic_business_activity_window_v1.json": "business activity",
@@ -7798,6 +7976,87 @@ def _runtime_export_network_kpi_variation_explanation(
         "acceptable_for_demo_review": acceptable,
         "model_assumptions": _string_tuple(explanation.get("model_assumptions")),
         "caveats": _string_tuple(explanation.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_network_kpi_dynamic_status(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    dynamic = _mapping(status.get("network_kpi_dynamic_status_v1"))
+    evidence_present = bool(dynamic)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "status_id": "",
+            "source": "config_snapshot.status.network_kpi_dynamic_status_v1",
+            "evidence_present": False,
+            "metric_model": "UNKNOWN",
+            "dynamic_status": "MISSING_NETWORK_KPI_DYNAMIC_STATUS",
+            "sample_count": 0,
+            "sim_time_span_s": 0.0,
+            "kpi_count": 0,
+            "time_varying_kpi_count": 0,
+            "flat_kpi_count": 0,
+            "zero_latest_kpi_count": 0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "recommended_next_action": "CHECK_RUNTIME_STATUS",
+            "caveats": (
+                "Runtime status did not expose network_kpi_dynamic_status_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    dynamic_status = str(dynamic.get("dynamic_status", ""))
+    packet_level = dynamic.get("packet_level_simulation") is True
+    frontend_inference = dynamic.get("frontend_inference_required") is True
+    acceptable = (
+        dynamic_status
+        in {
+            "DYNAMIC",
+            "PARTIALLY_DYNAMIC",
+            "FLAT_WITH_ACTIVITY",
+            "FLAT_NO_ACTIVITY",
+            "INSUFFICIENT_SERIES",
+        }
+        and not packet_level
+        and not frontend_inference
+    )
+    evidence = {
+        "version": "v1",
+        "status_id": str(dynamic.get("status_id", "")),
+        "source": "config_snapshot.status.network_kpi_dynamic_status_v1",
+        "runtime_status_source": str(dynamic.get("source", "")),
+        "evidence_present": True,
+        "calibration_id": str(dynamic.get("calibration_id", "")),
+        "metric_model": str(dynamic.get("metric_model", "")),
+        "dynamic_status": dynamic_status,
+        "sample_count": _integer(dynamic.get("sample_count")),
+        "sim_time_span_s": _number(dynamic.get("sim_time_span_s")),
+        "activity_active": dynamic.get("activity_active") is True,
+        "kpi_count": _integer(dynamic.get("kpi_count")),
+        "time_varying_kpi_count": _integer(
+            dynamic.get("time_varying_kpi_count")
+        ),
+        "flat_kpi_count": _integer(dynamic.get("flat_kpi_count")),
+        "missing_kpi_count": _integer(dynamic.get("missing_kpi_count")),
+        "zero_latest_kpi_count": _integer(dynamic.get("zero_latest_kpi_count")),
+        "dynamic_metric_names": _string_tuple(dynamic.get("dynamic_metric_names")),
+        "flat_metric_names": _string_tuple(dynamic.get("flat_metric_names")),
+        "zero_latest_metric_names": _string_tuple(
+            dynamic.get("zero_latest_metric_names")
+        ),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": acceptable,
+        "operator_summary": str(dynamic.get("operator_summary", "")),
+        "recommended_next_action": str(dynamic.get("recommended_next_action", "")),
+        "status_hash": str(dynamic.get("status_hash", "")),
+        "model_assumptions": _string_tuple(dynamic.get("model_assumptions")),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence

@@ -13,6 +13,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID,
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
@@ -75,6 +76,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
     assert (package_dir / "network_temporal_pressure_evidence_v1.json").exists()
     assert (package_dir / "network_kpi_variation_explanation_v1.json").exists()
+    assert (package_dir / "network_kpi_dynamic_status_v1.json").exists()
     assert (package_dir / "runtime_kpi_movement_summary_v1.json").exists()
     assert (package_dir / "network_flow_lifecycle_summary_v1.json").exists()
     assert (package_dir / "user_configuration_template_validation_v1.json").exists()
@@ -100,6 +102,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "network_kpi_formula_evidence_v1.json" in filenames
     assert "network_temporal_pressure_evidence_v1.json" in filenames
     assert "network_kpi_variation_explanation_v1.json" in filenames
+    assert "network_kpi_dynamic_status_v1.json" in filenames
     assert "runtime_kpi_movement_summary_v1.json" in filenames
     assert "network_flow_lifecycle_summary_v1.json" in filenames
     assert "user_configuration_template_validation_v1.json" in filenames
@@ -167,6 +170,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     network_kpi_variation_explanation = json.loads(
         (package_dir / "network_kpi_variation_explanation_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    network_kpi_dynamic_status = json.loads(
+        (package_dir / "network_kpi_dynamic_status_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -398,6 +406,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "FLAT_NO_ACTIVITY_EXPLAINED",
         "INSUFFICIENT_SERIES",
     }
+    assert review_summary["network_kpi_dynamic_status"][
+        "evidence_present"
+    ] is True
+    assert review_summary["network_kpi_dynamic_status"]["dynamic_status"] in {
+        "DYNAMIC",
+        "PARTIALLY_DYNAMIC",
+        "FLAT_WITH_ACTIVITY",
+        "FLAT_NO_ACTIVITY",
+        "INSUFFICIENT_SERIES",
+    }
     assert review_summary["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -461,6 +479,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     ] is True
     assert review_summary["artifacts"][
         "network_kpi_variation_explanation_exported"
+    ] is True
+    assert review_summary["artifacts"][
+        "network_kpi_dynamic_status_exported"
     ] is True
     assert review_summary["artifacts"]["runtime_kpi_movement_summary_exported"] is True
     assert review_summary["network_flow_lifecycle_summary"]["evidence_present"] is True
@@ -557,6 +578,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert variation_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
     assert variation_browser_item["present"] is True
     assert variation_browser_item["default_json_pointer"] == "/evidence"
+    dynamic_status_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "network_kpi_dynamic_status_v1.json"
+    )
+    assert dynamic_status_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert dynamic_status_browser_item["present"] is True
+    assert dynamic_status_browser_item["default_json_pointer"] == "/dynamic_status"
     benchmark_acceptance_browser_item = next(
         item
         for item in artifact_browser["items"]
@@ -641,6 +670,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["network_kpi_variation_explanation"][
         "evidence_hash"
     ] == review_summary["network_kpi_variation_explanation"]["evidence_hash"]
+    assert diagnostics_bundle["network_kpi_dynamic_status"][
+        "evidence_hash"
+    ] == review_summary["network_kpi_dynamic_status"]["evidence_hash"]
+    assert diagnostics_bundle["network_kpi_dynamic_status"][
+        "evidence_present"
+    ] is True
     assert diagnostics_bundle["runtime_kpi_movement_summary"]["evidence_hash"] == (
         review_summary["runtime_kpi_movement_summary"]["evidence_hash"]
     )
@@ -719,6 +754,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert network_kpi_variation_explanation["variation_explanation"] == (
         config_snapshot["status"]["network_kpi_variation_explanation_v1"]
     )
+    assert network_kpi_dynamic_status["artifact_id"] == (
+        RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID
+    )
+    assert network_kpi_dynamic_status["dynamic_status"] == (
+        config_snapshot["status"]["network_kpi_dynamic_status_v1"]
+    )
     assert runtime_kpi_movement_summary["artifact_id"] == (
         RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID
     )
@@ -761,6 +802,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         review_summary["network_kpi_variation_explanation"]["evidence_hash"]
     )
     assert "NO_METRIC_RECOMPUTE" in network_kpi_variation_explanation[
+        "boundary_conditions"
+    ]
+    assert network_kpi_dynamic_status["evidence"]["evidence_hash"] == (
+        review_summary["network_kpi_dynamic_status"]["evidence_hash"]
+    )
+    assert "NO_METRIC_RECOMPUTE" in network_kpi_dynamic_status[
         "boundary_conditions"
     ]
     assert user_configuration_template_validation["artifact_id"] == (
@@ -898,6 +945,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["network_kpi_variation_explanation"][
         "evidence_hash"
     ] == network_kpi_variation_explanation["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["network_kpi_dynamic_status"][
+        "evidence_hash"
+    ] == network_kpi_dynamic_status["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["network_kpi_dynamic_status"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["runtime_kpi_movement_summary"]["evidence_hash"] == (
         runtime_kpi_movement_summary["evidence"]["evidence_hash"]
     )
@@ -965,6 +1018,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "network_kpi_variation_explanation_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "network_kpi_dynamic_status_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert "network_flow_lifecycle_summary_v1.json" in (
@@ -1052,6 +1108,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert audit_index["network_kpi_variation_explanation_hash"] == (
         network_kpi_variation_explanation["evidence"]["evidence_hash"]
     )
+    assert audit_index["network_kpi_dynamic_status_present"] is True
+    assert audit_index["network_kpi_dynamic_status_hash"] == (
+        network_kpi_dynamic_status["evidence"]["evidence_hash"]
+    )
+    assert audit_index["network_kpi_dynamic_status_status"] in {
+        "DYNAMIC",
+        "PARTIALLY_DYNAMIC",
+        "FLAT_WITH_ACTIVITY",
+        "FLAT_NO_ACTIVITY",
+        "INSUFFICIENT_SERIES",
+    }
     assert audit_index["runtime_kpi_movement_summary_present"] is True
     assert audit_index["runtime_kpi_movement_summary_hash"] == (
         runtime_kpi_movement_summary["evidence"]["evidence_hash"]

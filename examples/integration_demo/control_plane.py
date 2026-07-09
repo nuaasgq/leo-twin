@@ -114,6 +114,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_network_temporal_pressure_evidence_v1,
     build_runtime_export_network_kpi_variation_explanation_v1,
+    build_runtime_export_network_kpi_dynamic_status_v1,
     build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_compute_resource_pool_summary_v1,
     build_runtime_export_v2_executable_readiness_v1,
@@ -212,6 +213,9 @@ _RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
 )
 _RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
     "network_kpi_variation_explanation_v1.json"
+)
+_RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_FILENAME = (
+    "network_kpi_dynamic_status_v1.json"
 )
 _RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = (
     "runtime_kpi_movement_summary_v1.json"
@@ -956,6 +960,23 @@ class DemoControlPlane:
         )
         written_files["network_kpi_variation_explanation_v1"] = (
             network_kpi_variation_explanation_path
+        )
+        network_kpi_dynamic_status_path = (
+            package_dir / _RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_FILENAME
+        )
+        network_kpi_dynamic_status = (
+            build_runtime_export_network_kpi_dynamic_status_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        network_kpi_dynamic_status_path.write_text(
+            stable_json_pretty(network_kpi_dynamic_status),
+            encoding="utf-8",
+        )
+        written_files["network_kpi_dynamic_status_v1"] = (
+            network_kpi_dynamic_status_path
         )
         runtime_kpi_movement_summary_path = (
             package_dir / _RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME

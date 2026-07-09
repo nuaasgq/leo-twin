@@ -1452,6 +1452,12 @@ Current Phase 3 progress:
   status with metric names, zero-value notes, blocking reasons, and recommended
   next actions for frontend rendering and operator diagnosis.
 
+- T430 persists `network_kpi_dynamic_status_v1` into runtime result packages as
+  `network_kpi_dynamic_status_v1.json`. The same backend-owned dynamic/flat
+  status is now available in review summary, diagnostics, artifact browser,
+  scenario review bundle, checklist evidence mapping, and long-term audit index
+  without metric recomputation or frontend inference.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

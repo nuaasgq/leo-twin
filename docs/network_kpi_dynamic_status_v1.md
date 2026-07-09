@@ -26,6 +26,26 @@ with status id:
 leo_twin.network_kpi_dynamic_status.v1
 ```
 
+## Runtime Result Package Export
+
+T430 persists the same backend-owned status into runtime result packages as:
+
+```text
+network_kpi_dynamic_status_v1.json
+```
+
+The standalone artifact has id:
+
+```text
+leo_twin.runtime_export_network_kpi_dynamic_status.v1
+```
+
+It is included in the result-package recommended files, artifact browser,
+review summary, diagnostics bundle, scenario review bundle, scenario review
+checklist evidence mapping, and long-term audit index. The export reads
+`config_snapshot.status.network_kpi_dynamic_status_v1`; it does not replay
+events, recompute metrics, or ask the frontend to infer KPI semantics.
+
 ## Status Values
 
 - `DYNAMIC`: at least two network KPIs vary over the observed time series.

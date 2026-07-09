@@ -16,6 +16,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID,
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
@@ -53,6 +54,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_network_temporal_pressure_evidence_v1,
+    build_runtime_export_network_kpi_dynamic_status_v1,
     build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_compute_resource_pool_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
@@ -104,6 +106,7 @@ _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.js
 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
     "network_temporal_pressure_evidence_v1.json"
 )
+_NETWORK_KPI_DYNAMIC_STATUS_FILENAME = "network_kpi_dynamic_status_v1.json"
 _BENCHMARK_ACCEPTANCE_BINDING_FILENAME = "benchmark_acceptance_binding_v1.json"
 _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME = (
     "user_configuration_control_surface_evidence_v1.json"
@@ -145,6 +148,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
+        _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -299,6 +303,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
+        _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -361,6 +366,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
+            "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
@@ -395,6 +401,8 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
+        "network_kpi_variation_explanation_v1.json",
+        _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
@@ -485,6 +493,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["network_temporal_pressure_evidence"]["status"] == "OBSERVED"
     assert first["network_temporal_pressure_evidence"]["time_pressure_factor"] == 0.85
     assert first["network_temporal_pressure_evidence"]["loss_proxy_rate"] == 0.07
+    assert first["network_kpi_dynamic_status"]["evidence_present"] is True
+    assert first["network_kpi_dynamic_status"]["dynamic_status"] == "DYNAMIC"
+    assert first["network_kpi_dynamic_status"]["time_varying_kpi_count"] == 1
     assert first["runtime_kpi_movement_summary"]["evidence_present"] is True
     assert first["runtime_kpi_movement_summary"]["movement_status"] == (
         "TIME_VARYING_OBSERVED"
@@ -525,6 +536,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["artifacts"][
         "network_temporal_pressure_evidence_exported"
     ] is True
+    assert first["artifacts"]["network_kpi_dynamic_status_exported"] is True
     assert first["artifacts"][
         "user_configuration_template_validation_exported"
     ] is True
@@ -677,6 +689,44 @@ def test_runtime_export_network_temporal_pressure_evidence_v1_is_deterministic()
     )
     assert first["evidence"]["time_pressure_factor"] == 0.85
     assert first["evidence"]["loss_proxy_rate"] == 0.07
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["evidence"]["evidence_hash"].startswith("sha256:")
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+
+
+def test_runtime_export_network_kpi_dynamic_status_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
+        },
+        "config": {"seed": 7},
+        "generated_config": _generated_config(),
+    }
+
+    first = build_runtime_export_network_kpi_dynamic_status_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_network_kpi_dynamic_status_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID
+    assert first["runtime_status_field"] == "network_kpi_dynamic_status_v1"
+    assert first["dynamic_status"] == _network_kpi_dynamic_status()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["dynamic_status"] == "DYNAMIC"
+    assert first["evidence"]["time_varying_kpi_count"] == 1
+    assert first["evidence"]["flat_kpi_count"] == 1
     assert first["evidence"]["packet_level_simulation"] is False
     assert first["evidence"]["frontend_inference_required"] is False
     assert first["evidence"]["acceptable_for_demo_review"] is True
@@ -1237,6 +1287,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
+            "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
@@ -1274,6 +1325,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
+        _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -1358,6 +1410,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["network_temporal_pressure_evidence"][
         "acceptable_for_demo_review"
     ] is True
+    assert first["network_kpi_dynamic_status"]["evidence_present"] is True
+    assert first["network_kpi_dynamic_status"]["dynamic_status"] == "DYNAMIC"
+    assert first["network_kpi_dynamic_status"]["acceptable_for_demo_review"] is True
     assert first["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
@@ -1392,7 +1447,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["missing_required_count"] == 0
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
-    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 6
+    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 7
     assert categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
     benchmark_acceptance_item = next(
         item
@@ -1425,6 +1480,15 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert variation_item["present"] is True
     assert variation_item["default_json_pointer"] == "/evidence"
     assert variation_item["filter_hint"] == "variation"
+    dynamic_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _NETWORK_KPI_DYNAMIC_STATUS_FILENAME
+    )
+    assert dynamic_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert dynamic_item["present"] is True
+    assert dynamic_item["default_json_pointer"] == "/dynamic_status"
+    assert dynamic_item["filter_hint"] == "dynamic status"
     movement_item = next(
         item
         for item in artifact_browser["items"]
@@ -1490,6 +1554,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
+            "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
@@ -1529,6 +1594,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
+        _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -1648,6 +1714,11 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         review_summary["network_temporal_pressure_evidence"]["evidence_hash"]
     )
     assert first["network_temporal_pressure_evidence"]["evidence_present"] is True
+    assert first["network_kpi_dynamic_status"]["evidence_hash"] == (
+        review_summary["network_kpi_dynamic_status"]["evidence_hash"]
+    )
+    assert first["network_kpi_dynamic_status"]["dynamic_status"] == "DYNAMIC"
+    assert first["network_kpi_dynamic_status"]["evidence_present"] is True
     assert first["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
@@ -1686,6 +1757,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME in first[
         "recommended_review_order"
     ]
+    assert _NETWORK_KPI_DYNAMIC_STATUS_FILENAME in first["recommended_review_order"]
     assert _BENCHMARK_ACCEPTANCE_BINDING_FILENAME in first[
         "recommended_review_order"
     ]
@@ -1728,6 +1800,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME in first[
         "artifact_review"
     ]["entrypoint_filenames"]
+    assert _NETWORK_KPI_DYNAMIC_STATUS_FILENAME in first["artifact_review"][
+        "entrypoint_filenames"
+    ]
     assert _BENCHMARK_ACCEPTANCE_BINDING_FILENAME in first["artifact_review"][
         "entrypoint_filenames"
     ]
@@ -3368,6 +3443,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "type": "RUNTIME_CONFIG_SNAPSHOT",
         "status": {
             "runtime_export_reproducibility_boundary_v1": boundary,
+            "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
         },
         "config": {"seed": 7},
@@ -3443,6 +3519,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
             "sha256:benchmark-acceptance-file",
         ),
+        _file(
+            "network_kpi_dynamic_status_v1",
+            _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
+            "sha256:network-dynamic-status-file",
+        ),
     )
 
     first = build_runtime_export_package_audit_index_v1(
@@ -3509,6 +3590,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["traffic_demand_explanation_compute_service_request_count"] == 1
     assert first["traffic_demand_explanation_frontend_inference_required"] is False
     assert first["traffic_demand_explanation_hash"].startswith("sha256:")
+    assert first["network_kpi_dynamic_status_present"] is True
+    assert first["network_kpi_dynamic_status_status"] == "DYNAMIC"
+    assert first["network_kpi_dynamic_status_time_varying_kpi_count"] == 1
+    assert first["network_kpi_dynamic_status_flat_kpi_count"] == 1
+    assert first["network_kpi_dynamic_status_hash"].startswith("sha256:")
     assert first["route_comparison_review_report_hash"] == "sha256:route-report"
     assert first["route_comparison_review_report_present"] is True
     assert first["service_trace_comparison_review_report_hash"] == (
@@ -3554,6 +3640,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
+        _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         "route_comparison_review_report_v1.json",
         "scenario_review_bundle_v1.json",
         "scenario_review_checklist_v1.json",
@@ -3608,6 +3695,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
+        _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -3659,12 +3747,13 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
             "NETWORK_TEMPORAL_PRESSURE_EVIDENCE_MISSING",
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING",
+            "NETWORK_KPI_DYNAMIC_STATUS_MISSING",
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING",
             "USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_MISSING",
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 13
+    assert diagnostics["finding_count"] == 14
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -4122,6 +4211,42 @@ def _network_kpi_variation_explanation() -> dict[str, object]:
         "caveats": (
             "Variation explanation is deterministic and not packet-level.",
         ),
+    }
+
+
+def _network_kpi_dynamic_status() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "status_id": "leo_twin.network_kpi_dynamic_status.v1",
+        "source": "NETWORK_KPI_CALIBRATION_V1",
+        "calibration_id": "leo_twin.network_kpi_calibration.v1",
+        "metric_model": "FLOW_LEVEL_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "sample_count": 6,
+        "sim_time_span_s": 120.0,
+        "activity_active": True,
+        "dynamic_status": "DYNAMIC",
+        "kpi_count": 2,
+        "time_varying_kpi_count": 1,
+        "flat_kpi_count": 1,
+        "missing_kpi_count": 0,
+        "zero_latest_kpi_count": 0,
+        "dynamic_metric_names": ("EFFECTIVE_THROUGHPUT",),
+        "flat_metric_names": ("EFFECTIVE_LOSS_PROXY",),
+        "zero_latest_metric_names": (),
+        "items": (),
+        "operator_summary": (
+            "Network KPI samples include backend-observed time variation."
+        ),
+        "blocking_reasons": (),
+        "recommended_next_action": (
+            "RENDER_BACKEND_KPI_SERIES_AND_EXPLANATION"
+        ),
+        "model_assumptions": (
+            "Dynamic status is derived from backend network_kpi_calibration_v1.",
+        ),
+        "status_hash": "sha256:network-dynamic-status-test",
     }
 
 
