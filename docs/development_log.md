@@ -22549,3 +22549,45 @@ change.
   - `business_request_lifecycle_v2` is a flow-level deterministic evidence join. It still does not model packet queues, retransmissions, RF propagation, stochastic transport effects, antenna patterns, or external simulators.
   - Communication-only requests can be reported without compute-service trace evidence; richer non-compute service lifecycle detail should be a follow-on network lifecycle task.
   - Frontend panels still need a binding task to display this backend-owned request lifecycle object in the standalone data dashboard.
+
+## 2026-07-09 - T443 network KPI assurance v2
+
+- Branch: `feature/T443-network-kpi-credibility-v2`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `network_kpi_assurance_v2` runtime status evidence. The new summary joins existing KPI provenance, credibility, calibration, dynamic status, formula evidence, and variation explanation into a product-facing assurance state. It exposes whether KPI values are time-varying, explained-flat, sample-limited, or missing backend evidence, plus per-KPI display policy and stable hashes. This task does not change Event Kernel behavior, KPI formulas, traffic generation, network/orbit/compute models, frontend rendering, packet-level boundaries, external simulator policy, or runtime generated config behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_assurance.py`
+  - `src/leo_twin/services/network_kpi_benchmark_validation.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_network_kpi_assurance.py`
+  - `tests/unit/test_network_kpi_benchmark_validation.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/network_kpi_assurance_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\network_kpi_assurance.py examples\integration_demo\control_plane.py tests\unit\test_network_kpi_assurance.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_network_kpi_assurance.py -q`
+    - Result: 3 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: 1 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py -q`
+    - Result: 14 passed.
+  - `python -m pytest tests\unit\test_network_kpi_assurance.py tests\unit\test_network_kpi_provenance_v2.py tests\unit\test_network_kpi_dynamic_status.py tests\unit\test_network_kpi_calibration_v1.py tests\unit\test_network_kpi_benchmark_validation.py tests\unit\test_runtime_kpi_movement.py tests\unit\test_runtime_dashboard_kpi.py -q`
+    - Result: 22 passed.
+  - `python -m pytest tests\integration\test_benchmark_acceptance_v1.py -q`
+    - Result: 15 passed.
+  - `python -m pytest tests\integration\test_product_acceptance_scenarios.py -q`
+    - Result: 5 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: 2 passed.
+- Problems encountered:
+  - Existing backend already had separate KPI provenance, calibration, dynamic-status, formula, and variation-explanation objects, but no single product-level field that told users whether charts should be displayed as dynamic, flat-but-explained, sample-limited, or missing-evidence. T443 adds that aggregation without changing formulas.
+  - The broader KPI unit sweep exposed an existing benchmark-validation fixture drift: current provenance can select route-decision inputs for route-blocking coverage, but the old fixture did not expose those fields. The fixture was updated, and the guard now reports `MISSING` when selected formula inputs exist but none are observed.
+  - One combined regression command timed out when benchmark and product acceptance were run together. The same suites passed when split into separate commands.
+  - One initial unit command referenced a non-existent file name (`tests\unit\test_network_kpi_calibration.py`); the actual suite is `tests\unit\test_network_kpi_calibration_v1.py`.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - `network_kpi_assurance_v2` is an evidence closure, not a higher-fidelity network model. Loss and delay variation remain deterministic flow-level proxies, not packet loss or packet jitter.
+  - Normal low-pressure scenarios may still show flat or zero loss/delay-variation proxies. The new summary explains that state; it does not force artificial variation into the formulas.
+  - Frontend panels still need a binding task to display per-KPI `display_policy`, `flat_reason`, and `zero_value_note`.

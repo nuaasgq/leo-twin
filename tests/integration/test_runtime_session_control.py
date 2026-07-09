@@ -677,6 +677,40 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     )
     assert variation_throughput["selected_input_count"] >= 0
     assert variation_throughput["user_explanation"]
+    network_kpi_assurance = status_after_tick["network_kpi_assurance_v2"]
+    assert network_kpi_assurance["version"] == "v2"
+    assert network_kpi_assurance["summary_id"] == (
+        "leo_twin.network_kpi_assurance.v2"
+    )
+    assert network_kpi_assurance["source"] == (
+        "network_kpi_provenance_v2 + network_kpi_calibration_v1 + "
+        "network_kpi_variation_explanation_v1"
+    )
+    assert network_kpi_assurance["packet_level_simulation"] is False
+    assert network_kpi_assurance["frontend_inference_required"] is False
+    assert network_kpi_assurance["dynamic_status"] == (
+        network_kpi_dynamic_status["dynamic_status"]
+    )
+    assert network_kpi_assurance["credibility_status"] == (
+        network_credibility["credibility_status"]
+    )
+    assert network_kpi_assurance["sample_count"] == (
+        network_kpi_calibration["sample_count"]
+    )
+    assert network_kpi_assurance["kpi_count"] == len(
+        network_kpi_assurance["items"]
+    )
+    assert network_kpi_assurance["assurance_status"] in {
+        "TIME_VARYING_FLOW_PROXY_READY",
+        "TIME_VARYING_PARTIAL_EVIDENCE",
+        "FLAT_UNDER_ACTIVITY_EXPLAINED",
+        "FLAT_NO_ACTIVITY_EXPLAINED",
+        "NEEDS_MORE_RUNTIME_SAMPLES",
+        "MISSING_BACKEND_EVIDENCE",
+        "FLOW_PROXY_EVIDENCE_READY",
+        "PARTIAL_FLOW_PROXY_EVIDENCE",
+    }
+    assert str(network_kpi_assurance["assurance_hash"]).startswith("sha256:")
     satellite_slices = status_after_tick["satellite_kpi_slices_v1"]
     assert satellite_slices["version"] == "v1"
     assert satellite_slices["mode"] == "TOP_ACTIVITY_LIMITED"

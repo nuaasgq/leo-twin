@@ -148,7 +148,7 @@ def _selected_input_guard(provenance: Mapping[str, Any]) -> dict[str, object]:
             continue
         selected += _int_value(trace.get("selected_input_count"))
         selected_observed += _int_value(trace.get("selected_observed_input_count"))
-    if selected == 0:
+    if selected == 0 or selected_observed == 0:
         status = "MISSING"
     elif selected_observed == selected:
         status = "PASS"

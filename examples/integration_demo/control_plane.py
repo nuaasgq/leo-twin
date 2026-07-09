@@ -67,6 +67,9 @@ from leo_twin.services.network_kpi_calibration import (
 from leo_twin.services.network_kpi_dynamic_status import (
     build_network_kpi_dynamic_status_v1,
 )
+from leo_twin.services.network_kpi_assurance import (
+    build_network_kpi_assurance_v2,
+)
 from leo_twin.services.network_kpi_formula_evidence import (
     build_network_kpi_formula_evidence_v1,
 )
@@ -2738,6 +2741,15 @@ class DemoControlPlane:
                 status["network_kpi_calibration_v1"],
                 status["network_kpi_formula_evidence_v1"],
             )
+        )
+        status["network_kpi_assurance_v2"] = build_network_kpi_assurance_v2(
+            metrics_summary,
+            network_kpi_provenance_v2,
+            status["network_kpi_credibility_v1"],
+            status["network_kpi_calibration_v1"],
+            status["network_kpi_dynamic_status_v1"],
+            status["network_kpi_formula_evidence_v1"],
+            status["network_kpi_variation_explanation_v1"],
         )
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
         status["satellite_kpi_history_v1"] = self._satellite_kpi_history_json()
