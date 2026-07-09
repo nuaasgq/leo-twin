@@ -2799,7 +2799,11 @@ class DemoControlPlane:
 
     def _metrics_summary_json(self) -> dict[str, Any]:
         if self._runtime_context is not None:
-            return dict(self._runtime_context.metrics.summary())
+            return dict(
+                self._runtime_context.metrics.summary(
+                    sim_time=self._runtime_observation_sim_time()
+                )
+            )
         return dict(self._result.metrics_summary)
 
     def _kpi_time_series_json(self) -> dict[str, Any]:
@@ -2811,13 +2815,16 @@ class DemoControlPlane:
                 "tail_sample_source_label": "等待运行时指标",
                 "samples": (),
             }
+        sample_time = self._runtime_observation_sim_time()
+        return dict(self._runtime_context.metrics.kpi_time_series(sim_time=sample_time))
+
+    def _runtime_observation_sim_time(self) -> float:
         runtime_status = self._require_session().get_status()
-        sample_time = (
+        return (
             runtime_status.runtime_target_sim_time
             if runtime_status.runtime_target_sim_time is not None
             else runtime_status.current_sim_time
         )
-        return dict(self._runtime_context.metrics.kpi_time_series(sim_time=sample_time))
 
     def _satellite_kpi_slices_json(self) -> dict[str, Any]:
         if self._runtime_context is None:

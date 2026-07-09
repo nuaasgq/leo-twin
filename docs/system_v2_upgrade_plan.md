@@ -1464,6 +1464,13 @@ Current Phase 3 progress:
   per-KPI visibility hints, and exported dynamic-status audit labels directly
   from backend fields instead of inferring whether KPI curves are dynamic.
 
+- T432 aligns runtime `metrics_summary` network KPI values with the same
+  runtime observation time used by `kpi_time_series_v1` tail samples. Runtime
+  status now exposes `metrics_summary_event_time_s`,
+  `metrics_summary_observation_time_s`, and `metrics_summary_time_source`, so
+  dashboard current KPI values can advance during sparse-event live gaps
+  without frontend inference or pretending that the kernel observed new events.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

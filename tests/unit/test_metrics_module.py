@@ -1263,6 +1263,71 @@ def test_metrics_collector_uses_configured_time_pressure_profile() -> None:
     assert tail["network_time_pressure_factor"] > 0.0
 
 
+def test_metrics_summary_can_use_runtime_observation_time_for_network_kpis() -> None:
+    collector = MetricsCollector(
+        metric_sample_interval=100,
+        time_pressure_period_s=80.0,
+        time_pressure_burst_center_phase=0.25,
+        time_pressure_burst_width_phase=0.25,
+        time_pressure_burst_amplitude=0.2,
+    )
+    for route_id, flow_id in (("route-a", "flow-a"), ("route-b", "flow-b")):
+        collector.observe(
+            _event(
+                route_id,
+                1.0,
+                EventType.ROUTE_UPDATE,
+                Route(
+                    route_id=route_id,
+                    flow_id=flow_id,
+                    path=("user-a", "sat-a", "user-b"),
+                    latency=0.04,
+                    capacity=100.0,
+                    available=True,
+                    demand_capacity=90.0,
+                ),
+                "network",
+            )
+        )
+        collector.observe(
+            _event(
+                flow_id,
+                2.0,
+                EventType.FLOW_COMPLETE,
+                FlowState(
+                    flow_id=flow_id,
+                    route_id=route_id,
+                    source_id="user-a",
+                    target_id="user-b",
+                    status="complete",
+                    latency=0.04,
+                    capacity=90.0,
+                ),
+                "network",
+            )
+        )
+
+    event_time_summary = collector.summary()
+    target_time_summary = collector.summary(sim_time=20.0)
+
+    assert event_time_summary["metrics_summary_time_source"] == "EVENT_TIME"
+    assert event_time_summary["metrics_summary_observation_time_s"] == 2.0
+    assert target_time_summary["metrics_summary_time_source"] == (
+        "RUNTIME_ADVANCE_TARGET"
+    )
+    assert target_time_summary["metrics_summary_event_time_s"] == 2.0
+    assert target_time_summary["metrics_summary_observation_time_s"] == 20.0
+    assert target_time_summary["network_quality_time_pressure_phase"] == pytest.approx(
+        0.25
+    )
+    assert target_time_summary["network_quality_time_pressure_factor"] > (
+        event_time_summary["network_quality_time_pressure_factor"]
+    )
+    assert target_time_summary["network_quality_effective_throughput_mbps"] < (
+        event_time_summary["network_quality_effective_throughput_mbps"]
+    )
+
+
 def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_sample() -> None:
     collector = MetricsCollector()
     collector.observe(

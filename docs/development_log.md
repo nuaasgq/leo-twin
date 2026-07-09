@@ -21971,3 +21971,50 @@ change.
     Next backend work should improve business demand, network KPI drivers, and
     compute-service lifecycle realism rather than adding more frontend-only
     presentation.
+
+
+## 2026-07-09 - T432 network KPI observation time alignment v2
+
+- Branch: `feature/T432-network-kpi-time-variation-v2`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: align live runtime `metrics_summary` network KPI values with the
+  runtime observation time already used by `kpi_time_series_v1` tail samples.
+  `MetricsCollector.summary()` now accepts an optional observation `sim_time`
+  while preserving the last observed event time. `DemoControlPlane` passes the
+  current runtime target time into the live summary path so dashboard current
+  KPI values can move during sparse-event live gaps. This is a runtime metrics
+  observation task only. No Event Kernel behavior, routing logic, KPI formula,
+  frontend rendering, external simulator integration, packet-level simulation,
+  or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_summary_can_use_runtime_observation_time_for_network_kpis`
+    - Result: 1 passed.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_demo_kpi_tail_uses_runtime_target_during_empty_event_gap`
+    - Result: 1 passed.
+  - `python -m py_compile src/leo_twin/services/metrics/collector.py examples/integration_demo/control_plane.py tests/unit/test_metrics_module.py tests/integration/test_live_runtime_streaming.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_metrics_module.py`
+    - Result: 27 passed.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py`
+    - Result: 14 passed.
+- Problems encountered:
+  - The first integration assertion incorrectly assumed the metrics event time
+    must equal the kernel current time. The runtime can advance past the latest
+    metric-observed event during an empty event gap, so the test now preserves
+    the distinction between event time and observation time.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - This task aligns backend observation time and current KPI summaries, but it
+    does not make the network model more realistic. Follow-up backend work
+    should improve demand-driven network load, route contention, service
+    lifecycle coupling, and benchmark-calibrated KPI formulas.

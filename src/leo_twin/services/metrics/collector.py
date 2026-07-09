@@ -235,11 +235,16 @@ class MetricsCollector:
         with self._lock:
             return tuple(dict(event) for event in self._event_log)
 
-    def summary(self) -> MetricSummary:
+    def summary(self, sim_time: float | None = None) -> MetricSummary:
         with self._lock:
-            return self._summary_unlocked()
+            return self._summary_unlocked(sim_time=sim_time)
 
-    def _summary_unlocked(self) -> MetricSummary:
+    def _summary_unlocked(self, sim_time: float | None = None) -> MetricSummary:
+        summary_time = (
+            self._last_sim_time
+            if sim_time is None
+            else max(self._last_sim_time, float(sim_time))
+        )
         active_links = self._active_link_states()
         available_routes = self._available_routes()
         summary: MetricSummary = {
@@ -254,6 +259,13 @@ class MetricsCollector:
             "event_count": sum(self._event_counts.values()),
             "finished_tasks": len(self._finished_tasks),
             "last_sim_time": self._last_sim_time,
+            "metrics_summary_event_time_s": self._last_sim_time,
+            "metrics_summary_observation_time_s": summary_time,
+            "metrics_summary_time_source": (
+                "RUNTIME_ADVANCE_TARGET"
+                if summary_time > self._last_sim_time
+                else "EVENT_TIME"
+            ),
             "last_orbit_update_time": self._last_orbit_update_time,
             "observed_links": len(self._links),
             "orbit_batch_updates": self._orbit_batch_updates,
@@ -301,11 +313,11 @@ class MetricsCollector:
             self._network_quality_summary(
                 active_links,
                 available_routes,
-                sim_time=self._last_sim_time,
+                sim_time=summary_time,
             )
         )
         summary.update(self._network_constraint_summary(active_links, available_routes))
-        summary.update(self._network_flow_lifecycle_summary(sim_time=self._last_sim_time))
+        summary.update(self._network_flow_lifecycle_summary(sim_time=summary_time))
         summary.update(self._compute_resource_summary())
         summary.update(self._service_latency_summary())
         for event_type, count in sorted(self._event_counts.items()):

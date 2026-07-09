@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
+import pytest
+
 from examples.integration_demo.config import DemoConfig
 from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
@@ -650,12 +652,28 @@ def test_demo_kpi_tail_uses_runtime_target_during_empty_event_gap(
 
     status = control_plane.runtime_status()["status"]
     kpi_tail = status["kpi_time_series_v1"]["samples"][-1]
+    metrics_summary = status["metrics_summary"]
 
     assert status["kernel_current_sim_time"] == status["current_sim_time"]
     assert status["runtime_target_sim_time"] > status["kernel_current_sim_time"]
     assert status["event_clock_lag_s"] > 0.0
     assert status["runtime_time_source"] == "RUNTIME_ADVANCE_TARGET"
     assert kpi_tail["sim_time"] == status["runtime_target_sim_time"]
+    assert (
+        metrics_summary["metrics_summary_event_time_s"]
+        <= status["kernel_current_sim_time"]
+    )
+    assert (
+        metrics_summary["metrics_summary_observation_time_s"]
+        == status["runtime_target_sim_time"]
+    )
+    assert metrics_summary["metrics_summary_time_source"] == "RUNTIME_ADVANCE_TARGET"
+    assert metrics_summary["network_quality_time_pressure_phase"] == pytest.approx(
+        kpi_tail["network_time_pressure_phase"]
+    )
+    assert metrics_summary["network_quality_effective_throughput_mbps"] == pytest.approx(
+        kpi_tail["network_lifetime_effective_throughput_mbps"]
+    )
 
 
 def test_live_stream_reads_do_not_run_until_idle(tmp_path: Path) -> None:
