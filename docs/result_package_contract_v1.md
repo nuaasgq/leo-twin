@@ -83,6 +83,11 @@ file for offline user-configuration closure review. It copies
 `config_snapshot.status.user_configuration_closure_v2` and documents that the
 configuration semantics are sourced from backend runtime status rather than
 frontend inference.
+`standard_scenario_acceptance_v2.json` is emitted as an optional backend
+evidence file for offline 72/300/1200 standard scenario closure review. It
+copies `config_snapshot.status.standard_scenario_acceptance_v2`, including the
+matched scenario id, gate checks, required runtime-status field coverage, and
+expected result-package evidence files.
 `route_detail_index_v1.json` is emitted as an optional route evidence artifact.
 It preserves the exported `route_explanation_summary_v1` window, route trust
 sample ids, indexed route ids, and compact flow-level route explanation rows

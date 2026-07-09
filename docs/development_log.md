@@ -5,6 +5,57 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-09 - Standard Scenario Acceptance v2
+
+- Branch: `feature/T447-standard-scenario-acceptance-v2`
+- Commit: pending in this commit
+- Scope: add backend-owned standard scenario acceptance evidence for the
+  shipped 72/300/1200 demo baselines. The new
+  `standard_scenario_acceptance_v2` runtime status object compares the active
+  SEES config and backend summaries against the benchmark scenario matrix,
+  reports exact/custom match status, validates runtime-status evidence field
+  coverage, and lists expected result-package evidence files. Runtime export
+  packages now persist `standard_scenario_acceptance_v2.json` as a standalone
+  evidence snapshot. Event Kernel behavior, packet-level simulation, frontend
+  architecture, and external simulator boundaries were not changed.
+- Changed files/modules:
+  - `src/leo_twin/services/standard_scenario_acceptance.py`
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_standard_scenario_acceptance_v2.py`
+  - `tests/integration/test_product_acceptance_scenarios.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/standard_scenario_acceptance_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\standard_scenario_acceptance.py examples\integration_demo\control_plane.py src\leo_twin\services\result_package_contract.py tests\unit\test_standard_scenario_acceptance_v2.py tests\unit\test_result_package_contract_v1.py tests\integration\test_product_acceptance_scenarios.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_standard_scenario_acceptance_v2.py -q`
+    - Result: passed, 5 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_result_package_contract_v1.py -q`
+    - Result: passed, 47 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_standard_scenario_acceptance_v2.py tests\unit\test_benchmark_scenario_matrix_v1.py -q`
+    - Result: passed, 15 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_product_acceptance_scenarios.py -q`
+    - Result: passed, 5 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_result_package_export_v1.py tests\integration\test_product_acceptance_scenarios.py -q`
+    - Result: passed, 7 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests\integration\test_live_runtime_streaming.py -q`
+    - Result: passed, 15 passed.
+- Problems encountered and handling:
+  - Result-package contract unit tests had static recommended-artifact
+    expectations from the previous package shape. They were updated to include
+    the runtime evidence files from T446 and the new
+    `standard_scenario_acceptance_v2.json` artifact, including artifact browser
+    category counts.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - After this task, the current industrial v2 demo-closure backend scope is
+    expected to be ready for a broader clean-worktree regression run or PR
+    review.
+
 ## 2026-07-09 - Runtime Evidence Result Export v1
 
 - Branch: `feature/T446-runtime-evidence-result-export-v1`

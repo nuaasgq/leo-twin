@@ -13,6 +13,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1_ID,
     RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID,
+    RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
@@ -99,6 +100,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "network_kpi_assurance_v2.json").exists()
     assert (package_dir / "compute_service_resource_evidence_v1.json").exists()
     assert (package_dir / "user_configuration_closure_v2.json").exists()
+    assert (package_dir / "standard_scenario_acceptance_v2.json").exists()
     assert (package_dir / "user_service_request_summary_v2.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
@@ -132,6 +134,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "network_kpi_assurance_v2.json" in filenames
     assert "compute_service_resource_evidence_v1.json" in filenames
     assert "user_configuration_closure_v2.json" in filenames
+    assert "standard_scenario_acceptance_v2.json" in filenames
     assert "user_service_request_summary_v2.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
@@ -261,6 +264,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     user_configuration_closure = json.loads(
         (package_dir / "user_configuration_closure_v2.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    standard_scenario_acceptance = json.loads(
+        (package_dir / "standard_scenario_acceptance_v2.json").read_text(
             encoding="utf-8"
         )
     )
@@ -1030,6 +1038,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
             "RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1",
             RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID,
         ),
+        (
+            standard_scenario_acceptance,
+            "standard_scenario_acceptance_v2",
+            "RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1",
+            RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1_ID,
+        ),
     )
     for artifact, field_name, artifact_type, artifact_id in (
         runtime_status_evidence_exports
@@ -1234,6 +1248,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "runtime_closure_readiness_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "standard_scenario_acceptance_v2.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert "runtime_dashboard_kpi_v1.json" in (

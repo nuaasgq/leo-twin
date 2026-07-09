@@ -120,6 +120,13 @@ _BENCHMARK_ACCEPTANCE_BINDING_FILENAME = "benchmark_acceptance_binding_v1.json"
 _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME = (
     "user_configuration_control_surface_evidence_v1.json"
 )
+_BUSINESS_REQUEST_LIFECYCLE_FILENAME = "business_request_lifecycle_v2.json"
+_NETWORK_KPI_ASSURANCE_FILENAME = "network_kpi_assurance_v2.json"
+_COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME = (
+    "compute_service_resource_evidence_v1.json"
+)
+_USER_CONFIGURATION_CLOSURE_FILENAME = "user_configuration_closure_v2.json"
+_STANDARD_SCENARIO_ACCEPTANCE_FILENAME = "standard_scenario_acceptance_v2.json"
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -167,6 +174,11 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+        _BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+        _NETWORK_KPI_ASSURANCE_FILENAME,
+        _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+        _USER_CONFIGURATION_CLOSURE_FILENAME,
+        _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -325,6 +337,11 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+        _BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+        _NETWORK_KPI_ASSURANCE_FILENAME,
+        _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+        _USER_CONFIGURATION_CLOSURE_FILENAME,
+        _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -432,6 +449,11 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+        _BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+        _NETWORK_KPI_ASSURANCE_FILENAME,
+        _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+        _USER_CONFIGURATION_CLOSURE_FILENAME,
+        _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
@@ -1490,6 +1512,11 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+        _BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+        _NETWORK_KPI_ASSURANCE_FILENAME,
+        _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+        _USER_CONFIGURATION_CLOSURE_FILENAME,
+        _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
@@ -1621,9 +1648,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["missing_required_count"] == 0
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
-    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 8
+    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 9
     assert categories["ROUTE_SERVICE_EVIDENCE"]["present_count"] == 5
-    assert categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
+    assert categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 2
     benchmark_acceptance_item = next(
         item
         for item in artifact_browser["items"]
@@ -1811,6 +1838,11 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+        _BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+        _NETWORK_KPI_ASSURANCE_FILENAME,
+        _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+        _USER_CONFIGURATION_CLOSURE_FILENAME,
+        _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
@@ -3998,6 +4030,11 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+        _BUSINESS_REQUEST_LIFECYCLE_FILENAME,
+        _NETWORK_KPI_ASSURANCE_FILENAME,
+        _COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME,
+        _USER_CONFIGURATION_CLOSURE_FILENAME,
+        _STANDARD_SCENARIO_ACCEPTANCE_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,

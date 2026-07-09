@@ -75,6 +75,19 @@ def test_product_acceptance_scenario_runtime_smoke(
     assert initialize_ack["generated_config"]["backend_summary"][
         "derived_constellation_summary"
     ] == summary["derived_constellation_summary"]
+    standard_acceptance = initialize_ack["status"]["standard_scenario_acceptance_v2"]
+    assert standard_acceptance["acceptance_id"] == (
+        "leo_twin.standard_scenario_acceptance.v2"
+    )
+    assert standard_acceptance["current_scenario_id"] == scenario_id
+    assert standard_acceptance["nearest_scenario_id"] == scenario_id
+    assert standard_acceptance["matched_standard_scenario"] is True
+    assert standard_acceptance["match_status"] == "EXACT_STANDARD_SCENARIO"
+    assert standard_acceptance["acceptance_status"] == "PASS"
+    assert standard_acceptance["missing_runtime_status_fields"] == ()
+    assert "standard_scenario_acceptance_v2.json" in (
+        standard_acceptance["result_package_evidence_filenames"]
+    )
     assert len(control_plane.visible_snapshot()["satellites"]) == satellite_count
 
     start_ack = control_plane.handle_raw_message(

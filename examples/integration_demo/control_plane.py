@@ -76,6 +76,9 @@ from leo_twin.services.network_kpi_dynamic_status import (
 from leo_twin.services.network_kpi_assurance import (
     build_network_kpi_assurance_v2,
 )
+from leo_twin.services.standard_scenario_acceptance import (
+    build_standard_scenario_acceptance_v2,
+)
 from leo_twin.services.network_kpi_formula_evidence import (
     build_network_kpi_formula_evidence_v1,
 )
@@ -127,6 +130,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_BUSINESS_REQUEST_LIFECYCLE_V1_ID,
     RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_ASSURANCE_V1_ID,
+    RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
@@ -284,6 +288,9 @@ _RUNTIME_EXPORT_COMPUTE_SERVICE_RESOURCE_EVIDENCE_FILENAME = (
 )
 _RUNTIME_EXPORT_USER_CONFIGURATION_CLOSURE_FILENAME = (
     "user_configuration_closure_v2.json"
+)
+_RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_FILENAME = (
+    "standard_scenario_acceptance_v2.json"
 )
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
@@ -1308,6 +1315,23 @@ class DemoControlPlane:
         )
         written_files["user_configuration_closure_v2"] = (
             user_configuration_closure_path
+        )
+        standard_scenario_acceptance_path = (
+            package_dir / _RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_FILENAME
+        )
+        standard_scenario_acceptance = _runtime_status_evidence_snapshot_export(
+            export_status,
+            runtime_status_field="standard_scenario_acceptance_v2",
+            artifact_type="RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1",
+            artifact_id=RUNTIME_EXPORT_STANDARD_SCENARIO_ACCEPTANCE_V1_ID,
+            evidence_label="standard scenario acceptance",
+        )
+        standard_scenario_acceptance_path.write_text(
+            stable_json_pretty(standard_scenario_acceptance),
+            encoding="utf-8",
+        )
+        written_files["standard_scenario_acceptance_v2"] = (
+            standard_scenario_acceptance_path
         )
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path
@@ -2909,6 +2933,13 @@ class DemoControlPlane:
         )
         status["runtime_closure_readiness_v1"] = build_runtime_closure_readiness_v1(
             status
+        )
+        status["standard_scenario_acceptance_v2"] = (
+            build_standard_scenario_acceptance_v2(
+                self._controller.config,
+                status,
+                generated_config=effective_generated_config,
+            )
         )
         return status
 
