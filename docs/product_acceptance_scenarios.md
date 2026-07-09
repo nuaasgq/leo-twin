@@ -84,6 +84,18 @@ When `-AcceptanceConfig` points to one of the shipped standard configs,
 backend benchmark matrix and requires runtime health smoke to pass
 `standard_scenario_acceptance_v2`.
 
+Disposable acceptance export gate:
+
+```powershell
+.\scripts\run_disposable_acceptance.ps1 -SkipBuild -ExportPackage
+```
+
+When `-ExportPackage` is set, the harness requires the backend export package
+to report core result files, benchmark acceptance binding, standard scenario
+acceptance evidence, audit index, and handoff report files. Missing package
+evidence fails the disposable acceptance run instead of being treated as a
+warning.
+
 ## Limitations
 
 - These scenarios are smoke/acceptance inputs, not high-fidelity orbital or RF

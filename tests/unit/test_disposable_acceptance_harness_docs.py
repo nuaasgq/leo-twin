@@ -147,6 +147,10 @@ def test_disposable_acceptance_scripts_are_documented_and_guard_runtime_configs(
     assert "$ControlUrl" in script_text
     assert "verify_product_acceptance.ps1" in script_text
     assert "/runtime/export" in script_text
+    assert "Assert-ExportPackageEvidence" in script_text
+    assert "Get-PlanExportEvidenceFiles" in script_text
+    assert "export_package_required_evidence_files" in script_text
+    assert "package_handoff_report_v1.md" in script_text
     assert "$PlanOnly" in script_text
     assert "benchmark_acceptance" in script_text
     assert "benchmark_matrix_id" in script_text
@@ -199,6 +203,8 @@ def test_disposable_acceptance_planonly_command_outputs_json() -> None:
     assert "benchmark_scenario_gate" in completed.stdout
     assert "leo_twin.standard_scenario_acceptance.v2" in completed.stdout
     assert "standard_scenario_acceptance_v2.json" in completed.stdout
+    assert "export_package_required_evidence_files" in completed.stdout
+    assert "package_handoff_report_v1.md" in completed.stdout
     assert "network.time_pressure_period_s" in completed.stdout
     assert "small_demo_72sat" in completed.stdout
     assert "scale_demo_1200sat_short" in completed.stdout

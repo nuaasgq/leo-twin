@@ -5,6 +5,55 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-09 - Disposable Export Package Gate v1
+
+- Branch: `feature/T449-disposable-export-package-gate-v1`
+- Commit: pending in this commit
+- Scope: make disposable acceptance with `-ExportPackage` fail when the backend
+  runtime export package is incomplete. The harness now validates the export
+  result, collects package filenames from `/runtime/export`, combines
+  backend benchmark evidence expectations with required handoff artifacts, and
+  records an `export_evidence` summary per scenario. No Event Kernel behavior,
+  simulation model, frontend architecture, packet-level simulation, or external
+  simulator integration was changed.
+- Changed files/modules:
+  - `scripts/run_disposable_acceptance.ps1`
+  - `tests/unit/test_disposable_acceptance_harness_docs.py`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/user_guide_v2.md`
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile tests\unit\test_disposable_acceptance_harness_docs.py`
+    - Result: passed.
+  - `powershell -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw 'scripts\run_disposable_acceptance.ps1')) | Out-Null"`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_disposable_acceptance_harness_docs.py -q`
+    - Result: passed, 4 passed.
+  - `$env:PYTHON=$((Get-Command python).Source); powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_disposable_acceptance.ps1 -PlanOnly -JsonSummary`
+    - Result: passed; output includes `export_package_required_evidence_files`,
+      `standard_scenario_acceptance_v2.json`, and
+      `package_handoff_report_v1.md`.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_disposable_acceptance.ps1 -SkipBuild -JsonSummary -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml -ExportPackage`
+    - Result: passed. The 72-satellite disposable export run reported
+      `ok=true`, `scenario_count=1`, `processed_event_count=5250`,
+      `runtime_config_restored=true`, `services_left_running=false`,
+      `export_evidence.file_count=38`, empty `missing_evidence_files`, and
+      `standard_scenario_acceptance_file_present=true`.
+- Problems encountered and handling:
+  - Before this task, `-ExportPackage` created a package but the disposable
+    acceptance script did not enforce that key evidence files such as
+    `standard_scenario_acceptance_v2.json`,
+    `export_package_audit_index_v1.json`, and
+    `package_handoff_report_v1.md` were present in the package file list. The
+    new gate turns missing evidence into a harness failure.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - Full disposable 72/300/1200 export acceptance remains an operator-level
+    local Windows validation because it restarts services and produces result
+    artifacts. This task adds the package gate used by that run.
+
 ## 2026-07-09 - Executable Standard Acceptance Gate v1
 
 - Branch: `feature/T448-executable-standard-acceptance-gate-v1`

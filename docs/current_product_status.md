@@ -333,8 +333,8 @@ report artifact in the browser.
 - Disposable acceptance harness prepares a clean temporary backend/frontend run,
   initializes each standard acceptance YAML through backend `/control`, starts
   and stops the runtime, reuses `verify_product_acceptance.ps1`, optionally
-  exports a runtime package, and restores local runtime config drift files after
-  execution.
+  exports a runtime package, verifies that required evidence files are listed in
+  the package, and restores local runtime config drift files after execution.
 - The Cesium control view disables Cesium's default render-loop error overlay
   and routes render errors into the existing local error state, so render errors
   no longer block runtime control buttons.
@@ -353,7 +353,8 @@ report artifact in the browser.
   although the dashboard now exposes detail coverage, cursor scope, and selected
   exact-detail evidence.
 - Disposable acceptance can launch selected acceptance YAML files from a clean
-  service restart, but it is still a local Windows harness rather than CI.
+  service restart and can gate exported result-package evidence, but it is still
+  a local Windows harness rather than CI.
 - Runtime config staging guard is script-enforced, not a Git hook.
 - Control-cycle smoke validates backend control protocol responsiveness; use
   browser smoke when the risk is browser button wiring or dashboard rendering.

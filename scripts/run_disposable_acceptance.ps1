@@ -27,6 +27,18 @@ $RuntimeConfigPaths = @(
     "configs\sees_control.yaml",
     "configs\generated_full_system_demo.json"
 )
+$ExportPackageRequiredEvidenceFiles = @(
+    "config_snapshot.json",
+    "events.jsonl",
+    "metrics.csv",
+    "summary.json",
+    "manifest.json",
+    "benchmark_acceptance_binding_v1.json",
+    "standard_scenario_acceptance_v2.json",
+    "scenario_review_bundle_v1.json",
+    "export_package_audit_index_v1.json",
+    "package_handoff_report_v1.md"
+)
 
 function Write-Status {
     param([string]$Message)
@@ -315,6 +327,112 @@ function Export-RuntimePackage {
     }
 }
 
+function Get-ExportPackageFilenames {
+    param([object]$ExportResult)
+
+    $filenames = @()
+    foreach ($record in @($ExportResult.files)) {
+        if ($null -eq $record) {
+            continue
+        }
+        $filename = $null
+        if ($record -is [System.Collections.IDictionary]) {
+            $filename = $record["filename"]
+        }
+        else {
+            $property = $record.PSObject.Properties["filename"]
+            if ($null -ne $property) {
+                $filename = $property.Value
+            }
+        }
+        if (-not [string]::IsNullOrWhiteSpace([string]$filename)) {
+            $filenames += [string]$filename
+        }
+    }
+    return @($filenames | Sort-Object -Unique)
+}
+
+function Get-PlanExportEvidenceFiles {
+    param([object]$Plan)
+
+    $required = @()
+    $required += $ExportPackageRequiredEvidenceFiles
+    foreach ($filename in @($Plan.benchmark_acceptance.result_package_evidence_files)) {
+        if (-not [string]::IsNullOrWhiteSpace([string]$filename)) {
+            $required += [string]$filename
+        }
+    }
+    $standardFile = [string]$Plan.benchmark_acceptance.standard_acceptance_result_package_file
+    if (-not [string]::IsNullOrWhiteSpace($standardFile)) {
+        $required += $standardFile
+    }
+    return @($required | Sort-Object -Unique)
+}
+
+function Get-ObjectFieldValue {
+    param(
+        [object]$Object,
+        [string]$Name
+    )
+
+    if ($null -eq $Object) {
+        return $null
+    }
+    if ($Object -is [System.Collections.IDictionary]) {
+        return $Object[$Name]
+    }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return $null
+    }
+    return $property.Value
+}
+
+function Assert-ExportPackageEvidence {
+    param(
+        [object]$ExportResult,
+        [object]$Plan
+    )
+
+    if ($null -eq $ExportResult) {
+        throw "Runtime export did not return a package for $($Plan.scenario_id)."
+    }
+    $ok = Get-ObjectFieldValue -Object $ExportResult -Name "ok"
+    if ($ok -ne $true) {
+        $errorMessage = Get-ObjectFieldValue -Object $ExportResult -Name "error"
+        if ([string]::IsNullOrWhiteSpace([string]$errorMessage)) {
+            $errorMessage = "backend returned ok=false"
+        }
+        throw "Runtime export failed for $($Plan.scenario_id): $errorMessage"
+    }
+
+    $filenames = @(Get-ExportPackageFilenames -ExportResult $ExportResult)
+    if ($filenames.Count -eq 0) {
+        throw "Runtime export package for $($Plan.scenario_id) did not list any files."
+    }
+    $required = @(Get-PlanExportEvidenceFiles -Plan $Plan)
+    $missing = @()
+    foreach ($filename in $required) {
+        if ($filenames -notcontains $filename) {
+            $missing += $filename
+        }
+    }
+    if ($missing.Count -gt 0) {
+        throw "Runtime export package for $($Plan.scenario_id) is missing required evidence files: $($missing -join ', ')"
+    }
+
+    $standardFile = [string]$Plan.benchmark_acceptance.standard_acceptance_result_package_file
+    return [ordered]@{
+        package_id = [string](Get-ObjectFieldValue -Object $ExportResult -Name "package_id")
+        package_dir = [string](Get-ObjectFieldValue -Object $ExportResult -Name "package_dir")
+        file_count = $filenames.Count
+        required_evidence_files = $required
+        present_evidence_files = @($required | Where-Object { $filenames -contains $_ })
+        missing_evidence_files = @()
+        standard_scenario_acceptance_file_present = ($filenames -contains $standardFile)
+    }
+}
+
 function Invoke-DisposableScenario {
     param([object]$Plan)
 
@@ -349,8 +467,12 @@ function Invoke-DisposableScenario {
 
     Invoke-ProductAcceptance -ConfigPath $configPath
     $exportResult = $null
+    $exportEvidence = $null
     if ($ExportPackage) {
         $exportResult = Export-RuntimePackage
+        $exportEvidence = Assert-ExportPackageEvidence `
+            -ExportResult $exportResult `
+            -Plan $Plan
     }
 
     return [ordered]@{
@@ -367,6 +489,7 @@ function Invoke-DisposableScenario {
         processed_event_count = $stoppedStatus.status.processed_event_count
         benchmark_acceptance = $Plan.benchmark_acceptance
         export_result = $exportResult
+        export_evidence = $exportEvidence
     }
 }
 
@@ -406,6 +529,7 @@ try {
             standard_scenario_acceptance_field = $benchmark.standard_acceptance_runtime_status_field
             standard_scenario_acceptance_file = $benchmark.standard_acceptance_result_package_file
             acceptance_gate_check_id = $benchmark.acceptance_gate_check_id
+            export_package_required_evidence_files = $ExportPackageRequiredEvidenceFiles
             scenario_count = $plans.Count
             scenarios = $plans
             runtime_config_drift_paths = $RuntimeConfigPaths
@@ -459,6 +583,7 @@ try {
         standard_scenario_acceptance_id = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.standard_acceptance_id } else { $null })
         standard_scenario_acceptance_field = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.standard_acceptance_runtime_status_field } else { $null })
         standard_scenario_acceptance_file = $(if ($plans.Count -gt 0) { $plans[0].benchmark_acceptance.standard_acceptance_result_package_file } else { $null })
+        export_package_required_evidence_files = $ExportPackageRequiredEvidenceFiles
         runtime_config_restored = $true
         services_left_running = [bool]$KeepServices
     }

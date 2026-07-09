@@ -572,10 +572,17 @@ through backend `/control`, starts and stops the runtime, reuses
 `configs\generated_full_system_demo.json` so local run state is not delivered as
 product source. Add `-KeepServices` when you want to inspect the final scenario
 after the run, or `-ExportPackage` when you want the backend to create a result
-package during the same acceptance pass. `-PlanOnly -JsonSummary` also includes
-the benchmark matrix id, benchmark acceptance binding id, package acceptance
-report id, `benchmark_scenario_gate`, expected range source paths, runtime
-status fields, and result-package evidence files for each selected scenario.
+package during the same acceptance pass. With `-ExportPackage`, the harness also
+checks that the exported package lists required handoff evidence files including
+`config_snapshot.json`, `manifest.json`,
+`benchmark_acceptance_binding_v1.json`,
+`standard_scenario_acceptance_v2.json`,
+`export_package_audit_index_v1.json`, and
+`package_handoff_report_v1.md`; missing evidence fails the run.
+`-PlanOnly -JsonSummary` also includes the benchmark matrix id, benchmark
+acceptance binding id, package acceptance report id, `benchmark_scenario_gate`,
+expected range source paths, runtime status fields, and result-package evidence
+files for each selected scenario.
 
 Benchmark contracts:
 
