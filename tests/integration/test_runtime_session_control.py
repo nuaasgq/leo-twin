@@ -361,7 +361,9 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert business_window["metric_model"] == "FLOW_LEVEL_BUSINESS_ACTIVITY_WINDOW"
     assert business_window["packet_level_simulation"] is False
     assert business_window["frontend_inference_required"] is False
-    assert business_window["current_sim_time"] == status_after_tick["current_sim_time"]
+    assert business_window["current_sim_time"] == status_after_tick[
+        "runtime_observation_sim_time"
+    ]
     assert business_window["request_count"] > 0
     assert business_window["item_count"] <= business_window["item_limit"]
     assert "ACTIVE_BUSINESS" in business_window["state_counts"]
@@ -376,10 +378,44 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     )
     assert business_lifecycle["packet_level_simulation"] is False
     assert business_lifecycle["frontend_inference_required"] is False
-    assert business_lifecycle["current_sim_time"] == status_after_tick["current_sim_time"]
+    assert business_lifecycle["current_sim_time"] == status_after_tick[
+        "runtime_observation_sim_time"
+    ]
     assert business_lifecycle["request_count"] == traffic_timeline["request_count"]
     assert business_lifecycle["item_count"] <= business_lifecycle["limit"]
     assert str(business_lifecycle["summary_hash"]).startswith("sha256:")
+    observation_consistency = status_after_tick["runtime_observation_consistency_v1"]
+    assert observation_consistency["version"] == "v1"
+    assert observation_consistency["summary_id"] == (
+        "leo_twin.runtime_observation_consistency.v1"
+    )
+    assert observation_consistency["source"] == "BACKEND_RUNTIME_STATUS"
+    assert observation_consistency["packet_level_simulation"] is False
+    assert observation_consistency["frontend_inference_required"] is False
+    assert observation_consistency["current_sim_time"] == status_after_tick[
+        "current_sim_time"
+    ]
+    assert observation_consistency["runtime_observation_sim_time"] == (
+        status_after_tick["runtime_observation_sim_time"]
+    )
+    assert observation_consistency["metrics_summary_observation_time_s"] == (
+        status_after_tick["runtime_observation_sim_time"]
+    )
+    assert observation_consistency["kpi_time_series_tail_sim_time_s"] == (
+        status_after_tick["runtime_observation_sim_time"]
+    )
+    assert observation_consistency["traffic_timeline_current_sim_time"] == (
+        status_after_tick["runtime_observation_sim_time"]
+    )
+    assert observation_consistency["traffic_business_window_current_sim_time"] == (
+        status_after_tick["runtime_observation_sim_time"]
+    )
+    assert observation_consistency["consistency_status"] == "CONSISTENT"
+    assert observation_consistency["failed_check_count"] == 0
+    assert observation_consistency["passed_check_count"] == (
+        observation_consistency["check_count"]
+    )
+    assert str(observation_consistency["consistency_hash"]).startswith("sha256:")
     compute_service_evidence = status_after_tick[
         "compute_service_resource_evidence_v1"
     ]

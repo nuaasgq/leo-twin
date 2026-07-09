@@ -288,6 +288,7 @@ def _runtime_status_expectation() -> dict[str, object]:
             "network_kpi_calibration_v1",
             "network_kpi_calibration_v1.temporal_pressure_calibration",
             "network_kpi_provenance_v2.temporal_pressure_evidence",
+            "runtime_observation_consistency_v1",
             "route_explanation_summary_v1",
             "route_provenance_trust_summary_v1",
             "reproducibility_manifest_v1",

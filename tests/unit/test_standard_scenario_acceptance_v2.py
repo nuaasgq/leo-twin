@@ -126,6 +126,7 @@ def _runtime_status_for(scenario: dict[str, object]) -> dict[str, object]:
         "network_kpi_assurance_v2": {},
         "runtime_dashboard_kpi_v1": {},
         "runtime_closure_readiness_v1": {},
+        "runtime_observation_consistency_v1": {},
         "business_request_lifecycle_v2": {},
         "compute_service_resource_evidence_v1": {},
         "user_configuration_closure_v2": {},

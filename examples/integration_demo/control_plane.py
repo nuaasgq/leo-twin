@@ -98,6 +98,9 @@ from leo_twin.services.network_flow_lifecycle_summary import (
 from leo_twin.services.runtime_kpi_movement import (
     build_runtime_kpi_movement_summary_v1,
 )
+from leo_twin.services.runtime_observation_consistency import (
+    build_runtime_observation_consistency_v1,
+)
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -2778,6 +2781,13 @@ class DemoControlPlane:
         if runtime_status["lifecycle_state"] in {"COMPLETED", "ERROR"}:
             status["status"] = runtime_status["status"]
         status["initialized"] = self._initialized
+        observation_sim_time = self._runtime_observation_sim_time()
+        status["runtime_observation_sim_time"] = observation_sim_time
+        status["runtime_observation_time_source"] = (
+            "RUNTIME_TARGET_SIM_TIME"
+            if observation_sim_time != float(status["current_sim_time"])
+            else "KERNEL_CURRENT_SIM_TIME"
+        )
         status["fidelity_summary"] = _fidelity_summary_from_sees_config(
             self._controller.config
         )
@@ -2803,7 +2813,7 @@ class DemoControlPlane:
                 ),
             )
         )
-        metrics_summary = self._metrics_summary_json()
+        metrics_summary = self._metrics_summary_json(observation_sim_time)
         status["metrics_summary"] = metrics_summary
         status["compute_resource_pool_summary_v1"] = (
             build_compute_resource_pool_summary_v1(metrics_summary)
@@ -2831,7 +2841,7 @@ class DemoControlPlane:
                 network_kpi_provenance_v2,
             )
         )
-        status["kpi_time_series_v1"] = self._kpi_time_series_json()
+        status["kpi_time_series_v1"] = self._kpi_time_series_json(observation_sim_time)
         status["runtime_kpi_movement_summary_v1"] = (
             build_runtime_kpi_movement_summary_v1(
                 status["kpi_time_series_v1"],
@@ -2901,18 +2911,18 @@ class DemoControlPlane:
             self._traffic_temporal_profile_summary_json()
         )
         status["traffic_request_timeline_v1"] = (
-            self._traffic_request_timeline_json(float(status["current_sim_time"]))
+            self._traffic_request_timeline_json(observation_sim_time)
         )
         status["traffic_business_activity_window_v1"] = (
             self._traffic_business_activity_window_json(
-                float(status["current_sim_time"])
+                observation_sim_time
             )
         )
         status["business_request_lifecycle_v2"] = (
             build_business_request_lifecycle_v2(
                 status["traffic_request_timeline_v1"],
                 status["service_latency_history_v1"],
-                current_sim_time=float(status["current_sim_time"]),
+                current_sim_time=observation_sim_time,
             )
         )
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
@@ -2933,6 +2943,9 @@ class DemoControlPlane:
         )
         status["runtime_closure_readiness_v1"] = build_runtime_closure_readiness_v1(
             status
+        )
+        status["runtime_observation_consistency_v1"] = (
+            build_runtime_observation_consistency_v1(status)
         )
         status["standard_scenario_acceptance_v2"] = (
             build_standard_scenario_acceptance_v2(
@@ -3057,18 +3070,21 @@ class DemoControlPlane:
             "generated_config": generated_config,
         }
 
-    def _metrics_summary_json(self) -> dict[str, Any]:
+    def _metrics_summary_json(self, sim_time: float | None = None) -> dict[str, Any]:
         if self._use_result_evidence_for_status:
             return dict(self._result.metrics_summary)
         if self._runtime_context is not None:
+            observation_time = (
+                self._runtime_observation_sim_time() if sim_time is None else sim_time
+            )
             return dict(
                 self._runtime_context.metrics.summary(
-                    sim_time=self._runtime_observation_sim_time()
+                    sim_time=observation_time
                 )
             )
         return dict(self._result.metrics_summary)
 
-    def _kpi_time_series_json(self) -> dict[str, Any]:
+    def _kpi_time_series_json(self, sim_time: float | None = None) -> dict[str, Any]:
         if self._use_result_evidence_for_status:
             return dict(self._result.kpi_time_series)
         if self._runtime_context is None:
@@ -3079,7 +3095,7 @@ class DemoControlPlane:
                 "tail_sample_source_label": "等待运行时指标",
                 "samples": (),
             }
-        sample_time = self._runtime_observation_sim_time()
+        sample_time = self._runtime_observation_sim_time() if sim_time is None else sim_time
         return dict(
             self._runtime_context.metrics.kpi_time_series(
                 sim_time=sample_time,

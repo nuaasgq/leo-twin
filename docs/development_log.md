@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-09 - Runtime Observation Consistency v1
+
+- Branch: `feature/T451-runtime-observation-consistency-v1`
+- Commit: pending in this commit
+- Scope: expose backend-owned observation consistency evidence in runtime
+  status so the product can prove whether runtime time, metrics summary, KPI
+  time-series tail, traffic timeline, business activity window, and closure
+  readiness describe the same simulation observation point. Runtime status now
+  carries `runtime_observation_sim_time`, `runtime_observation_time_source`,
+  and `runtime_observation_consistency_v1`. The consistency summary is derived
+  from backend runtime status fields, does not replay events, does not require
+  frontend inference, and does not change Event Kernel behavior.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/runtime_observation_consistency.py`
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `tests/unit/test_runtime_observation_consistency.py`
+  - `tests/unit/test_benchmark_scenario_matrix_v1.py`
+  - `tests/unit/test_standard_scenario_acceptance_v2.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_observation_consistency.py examples\integration_demo\control_plane.py tests\unit\test_runtime_observation_consistency.py tests\unit\test_benchmark_scenario_matrix_v1.py tests\unit\test_standard_scenario_acceptance_v2.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_runtime_observation_consistency.py tests\unit\test_benchmark_scenario_matrix_v1.py::test_benchmark_scenario_matrix_requires_runtime_observation_consistency tests\unit\test_standard_scenario_acceptance_v2.py -q`
+    - Result: passed, 8 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_disposable_acceptance_harness_docs.py tests\unit\test_benchmark_scenario_matrix_v1.py tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package -q`
+    - Result: passed, 17 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_live_runtime_streaming.py::test_demo_runtime_status_completes_at_configured_duration -q`
+    - Result: passed, 1 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_live_runtime_streaming.py::test_server_side_advance_loop_stops_at_configured_duration -q`
+    - Result: passed, 1 passed.
+- Problems encountered and handling:
+  - The first runtime-session integration run exposed a real consistency issue:
+    one `/runtime/status` response sampled runtime observation time once for
+    top-level status and then sampled it again while building metrics/KPI
+    evidence. That made metrics observation time and top-level observation time
+    diverge by a few milliseconds. `_status_json()` now captures one
+    observation time and reuses it for metrics, KPI, traffic timeline, business
+    window, lifecycle, and the consistency checker.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - This task proves backend observation consistency for live runtime status.
+    The next closure task should package final v2 demo evidence and audit the
+    remaining acceptance surfaces without adding new model behavior.
+
 ## 2026-07-09 - Runtime Traffic Schedule Semantics v1
 
 - Branch: `feature/T450-runtime-model-semantics-v1`

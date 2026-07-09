@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Branch: `feature/T448-executable-standard-acceptance-gate-v1`
+Branch: `feature/T451-runtime-observation-consistency-v1`
 
 ## Local Entry Points
 
@@ -72,6 +72,14 @@ The latest full local run passed:
 The latest fast local run with `-RunControlCycleSmoke` also passed for a
 1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
 START, PAUSE, RESUME, STOP, and RESET through the control websocket.
+The latest T451 validation adds backend-owned runtime observation consistency
+evidence to `/runtime/status`. Runtime status now exposes
+`runtime_observation_sim_time`, `runtime_observation_time_source`, and
+`runtime_observation_consistency_v1` so dashboard, exports, and acceptance
+checks can verify that metrics, KPI time series, traffic timeline, business
+activity window, and closure readiness are aligned to the same observation
+time. Targeted runtime/session, export-package, and live-completion tests
+passed.
 The latest T370 validation added result-package export checks for network KPI
 formula evidence, passed 35 targeted backend tests, passed 26 frontend test
 files / 456 tests, and completed a production build. Vite reported the
@@ -140,6 +148,12 @@ report artifact in the browser.
 ## Current Product Signals
 
 - Backend runtime status is the source of truth for generated product summary.
+- Runtime status now includes backend-owned
+  `runtime_observation_consistency_v1`, which checks one-status-response
+  alignment across runtime time, metrics summary observation time, KPI
+  time-series tail, traffic request timeline, business activity window, and
+  closure readiness. The dashboard no longer needs to infer whether those
+  views describe the same simulation observation point.
 - Dashboard service latency now uses backend-provided component summary,
   per-service trace rows, and visible `component_timeline` stage chips.
 - Runtime health smoke reports endpoint timings, orbit/protocol fields,

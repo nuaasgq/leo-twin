@@ -198,3 +198,11 @@ def test_benchmark_scenario_matrix_requires_temporal_pressure_evidence() -> None
             "packet_level_simulation": False,
             "frontend_inference_required": False,
         }
+
+
+def test_benchmark_scenario_matrix_requires_runtime_observation_consistency() -> None:
+    for scenario_id in benchmark_scenario_ids():
+        scenario = benchmark_scenario_by_id(scenario_id, PROJECT_ROOT)
+        expectation = scenario["runtime_status_expectation"]  # type: ignore[index]
+
+        assert "runtime_observation_consistency_v1" in expectation["required_fields"]
