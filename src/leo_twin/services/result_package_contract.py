@@ -143,6 +143,7 @@ USER_SERVICE_REQUEST_SUMMARY_FILENAME = "user_service_request_summary_v2.json"
 NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
     "network_kpi_benchmark_validation_v1.json"
 )
+BENCHMARK_ACCEPTANCE_BINDING_FILENAME = "benchmark_acceptance_binding_v1.json"
 NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = "network_kpi_formula_evidence_v1.json"
 NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
     "network_temporal_pressure_evidence_v1.json"
@@ -317,6 +318,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network KPI benchmark guardrail evidence exported "
                     "for offline review"
+                ),
+            },
+            {
+                "logical_name": "benchmark_acceptance_binding_v1",
+                "filename": "benchmark_acceptance_binding_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned benchmark scenario acceptance binding "
+                    "exported for offline gate review"
                 ),
             },
             {
@@ -712,6 +722,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "validation",
         },
         {
+            "logical_name": "benchmark_acceptance_binding_v1",
+            "filename": BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
+            "category": "AUDIT_HANDOFF",
+            "review_priority": 405,
+            "format": "json",
+            "review_role": "Benchmark scenario acceptance gate binding.",
+            "content": "Standard scenario match and benchmark gate result rows.",
+            "default_json_pointer": "/expected_range_results",
+            "filter_hint": "benchmark acceptance",
+        },
+        {
             "logical_name": "network_kpi_formula_evidence_v1",
             "filename": NETWORK_KPI_FORMULA_EVIDENCE_FILENAME,
             "category": "NETWORK_KPI_EVIDENCE",
@@ -976,6 +997,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "route_pressure_evidence_v1.json",
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
+            "benchmark_acceptance_binding_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
             "network_temporal_pressure_evidence_v1.json",
@@ -1689,6 +1711,9 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_benchmark_validation_exported": (
                 "network_kpi_benchmark_validation_v1.json" in artifacts
             ),
+            "benchmark_acceptance_binding_exported": (
+                BENCHMARK_ACCEPTANCE_BINDING_FILENAME in artifacts
+            ),
             "network_kpi_formula_evidence_exported": (
                 "network_kpi_formula_evidence_v1.json" in artifacts
             ),
@@ -1727,6 +1752,7 @@ def build_runtime_export_review_summary_v1(
             "Use node_network_pressure_summary_v1.json to review per-user and per-satellite network pressure evidence.",
             "Use compute_resource_pool_summary_v1.json to review per-dimension satellite compute resource pool evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
+            "Use benchmark_acceptance_binding_v1.json to review the standard scenario acceptance gate binding.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use network_temporal_pressure_evidence_v1.json to review deterministic temporal pressure evidence.",
             "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
@@ -2468,6 +2494,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "export_package_audit_index_v1.json",
                 "review_summary_v1.json",
                 "diagnostics_bundle_v1.json",
+                "benchmark_acceptance_binding_v1.json",
                 "network_kpi_benchmark_validation_v1.json",
                 "network_kpi_formula_evidence_v1.json",
                 "network_temporal_pressure_evidence_v1.json",
@@ -2501,6 +2528,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "export_package_audit_index_v1.json",
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
+            "benchmark_acceptance_binding_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
             "network_temporal_pressure_evidence_v1.json",
@@ -5147,11 +5175,11 @@ def _runtime_export_benchmark_expected_range_result(
         "metric": metric,
         "source": source,
         "status": status,
-        "evidence_artifact_filename": EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
-        "evidence_artifact_role": "benchmark_acceptance_audit_index",
+        "evidence_artifact_filename": BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
+        "evidence_artifact_role": "benchmark_acceptance_binding",
         "evidence_context_id": f"benchmark.expected_range.{metric}",
         "evidence_context_label": f"expected range metric {metric}",
-        "evidence_json_pointer": "/benchmark_acceptance_binding_v1/expected_range_results",
+        "evidence_json_pointer": "/expected_range_results",
         "observed_value": observed_value,
         "minimum": _number(expected_range.get("minimum")),
         "maximum": _number(expected_range.get("maximum")),
@@ -6480,6 +6508,8 @@ def _runtime_export_scenario_review_evidence_hash(
                 "",
             )
         )
+    if filename == "benchmark_acceptance_binding_v1.json":
+        return str(audit_index.get("benchmark_acceptance_binding_hash", ""))
     if filename == "network_kpi_benchmark_validation_v1.json":
         return str(
             _mapping(
@@ -6593,6 +6623,7 @@ def _runtime_export_scenario_review_step_label(
         "export_package_audit_index_v1.json": "audit index",
         "review_summary_v1.json": "review summary",
         "diagnostics_bundle_v1.json": "diagnostics",
+        "benchmark_acceptance_binding_v1.json": "benchmark acceptance",
         "network_kpi_benchmark_validation_v1.json": "network KPI benchmark",
         "network_kpi_formula_evidence_v1.json": "network KPI formula evidence",
         "network_temporal_pressure_evidence_v1.json": "network temporal pressure evidence",

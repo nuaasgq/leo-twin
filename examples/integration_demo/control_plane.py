@@ -104,6 +104,7 @@ from leo_twin.services.runtime_reproducibility import (
 )
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_network_temporal_pressure_evidence_v1,
@@ -192,6 +193,9 @@ _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 _RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
     "network_kpi_benchmark_validation_v1.json"
+)
+_RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_FILENAME = (
+    "benchmark_acceptance_binding_v1.json"
 )
 _RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = (
     "network_kpi_formula_evidence_v1.json"
@@ -841,6 +845,18 @@ class DemoControlPlane:
             stable_json_pretty(network_kpi_benchmark_validation),
             encoding="utf-8",
         )
+        benchmark_acceptance_binding_path = (
+            package_dir / _RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_FILENAME
+        )
+        benchmark_acceptance_binding = (
+            build_runtime_export_benchmark_acceptance_binding_v1(
+                config_snapshot=config_snapshot,
+            )
+        )
+        benchmark_acceptance_binding_path.write_text(
+            stable_json_pretty(benchmark_acceptance_binding),
+            encoding="utf-8",
+        )
         user_service_request_summary_path = (
             package_dir / _RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_FILENAME
         )
@@ -861,6 +877,9 @@ class DemoControlPlane:
         written_files["route_detail_index_v1"] = route_detail_index_path
         written_files["network_kpi_benchmark_validation_v1"] = (
             network_kpi_benchmark_validation_path
+        )
+        written_files["benchmark_acceptance_binding_v1"] = (
+            benchmark_acceptance_binding_path
         )
         network_kpi_formula_evidence_path = (
             package_dir / _RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_FILENAME

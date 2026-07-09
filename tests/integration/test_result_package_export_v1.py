@@ -9,6 +9,7 @@ from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
+    RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID,
@@ -67,6 +68,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "node_network_pressure_summary_v1.json").exists()
     assert (package_dir / "compute_resource_pool_summary_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
+    assert (package_dir / "benchmark_acceptance_binding_v1.json").exists()
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
     assert (package_dir / "network_temporal_pressure_evidence_v1.json").exists()
     assert (package_dir / "network_kpi_variation_explanation_v1.json").exists()
@@ -89,6 +91,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
+    assert "benchmark_acceptance_binding_v1.json" in filenames
     assert "network_kpi_formula_evidence_v1.json" in filenames
     assert "network_temporal_pressure_evidence_v1.json" in filenames
     assert "network_kpi_variation_explanation_v1.json" in filenames
@@ -133,6 +136,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     network_kpi_benchmark_validation = json.loads(
         (package_dir / "network_kpi_benchmark_validation_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    benchmark_acceptance_binding = json.loads(
+        (package_dir / "benchmark_acceptance_binding_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -409,6 +417,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "network_kpi_benchmark_validation_exported"
     ] is True
     assert review_summary["artifacts"][
+        "benchmark_acceptance_binding_exported"
+    ] is True
+    assert review_summary["artifacts"][
         "network_kpi_formula_evidence_exported"
     ] is True
     assert review_summary["artifacts"][
@@ -490,6 +501,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert variation_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
     assert variation_browser_item["present"] is True
     assert variation_browser_item["default_json_pointer"] == "/evidence"
+    benchmark_acceptance_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "benchmark_acceptance_binding_v1.json"
+    )
+    assert benchmark_acceptance_browser_item["category"] == "AUDIT_HANDOFF"
+    assert benchmark_acceptance_browser_item["present"] is True
+    assert benchmark_acceptance_browser_item["default_json_pointer"] == (
+        "/expected_range_results"
+    )
     control_surface_browser_item = next(
         item
         for item in artifact_browser["items"]
@@ -856,6 +877,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "network_temporal_pressure_evidence_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
+    assert "benchmark_acceptance_binding_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
     assert "network_kpi_variation_explanation_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
@@ -879,6 +903,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         reproducibility_boundary["boundary_hash"]
     )
     assert audit_index["boundary_alignment_status"] == "ALIGNED"
+    assert benchmark_acceptance_binding["binding_id"] == (
+        RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID
+    )
+    assert audit_index["benchmark_acceptance_binding_v1"] == (
+        benchmark_acceptance_binding
+    )
+    assert audit_index["benchmark_acceptance_binding_hash"] == (
+        benchmark_acceptance_binding["binding_hash"]
+    )
     user_config_export = control_plane.user_configuration_export()["summary"]
     assert audit_index["user_configuration_schema_id"] == "sees.user_configuration.v2"
     assert audit_index["user_configuration_config_hash"] == (
@@ -1528,6 +1561,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         str(record["filename"]) for record in latest["files"]
     }
     assert "network_kpi_benchmark_validation_v1.json" in {
+        str(record["filename"]) for record in latest["files"]
+    }
+    assert "benchmark_acceptance_binding_v1.json" in {
         str(record["filename"]) for record in latest["files"]
     }
 

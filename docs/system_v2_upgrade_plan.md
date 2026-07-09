@@ -1131,7 +1131,12 @@ Tasks:
     JSON pointer context where available. T359 extends the same inspector
     cross-link pattern to `user_service_request_summary_v2.json` rows so
     exported user-service requests can open package-owned JSON context without
-    event replay, service recomputation, or frontend business inference.
+    event replay, service recomputation, or frontend business inference. T420
+    persists `benchmark_acceptance_binding_v1.json` as a standalone result
+    package artifact, keeps the same binding embedded in the audit index for
+    compatibility, and points expected-range benchmark rows to
+    `/expected_range_results` in that artifact instead of requiring operators to
+    inspect the audit index embedding.
 
 ### WS9. Delivery and Operations v2
 

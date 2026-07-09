@@ -21431,3 +21431,48 @@ change.
     disposable run with live services and `-ExportPackage` is still a heavier
     operator gate and was not executed in this task.
 
+## 2026-07-09 - T420 benchmark acceptance binding artifact v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: persist the backend-owned benchmark acceptance binding as standalone
+  `benchmark_acceptance_binding_v1.json` in runtime result packages while
+  keeping the same object embedded in `export_package_audit_index_v1.json` for
+  compatibility and audit hashes. Result-package contract metadata,
+  artifact-browser specs, scenario-review entry points, review summary flags,
+  and benchmark expected-range evidence rows now point operators to the
+  standalone artifact root `/expected_range_results`. No Event Kernel,
+  simulation model, frontend rendering, packet-level, runtime generated config,
+  or external simulator behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct targeted test runner with `PYTHONPATH=src` for
+    `tests.unit.test_result_package_contract_v1`.
+    - Result: 41 direct test functions passed.
+  - Direct targeted integration invocation for
+    `tests.integration.test_result_package_export_v1::test_runtime_export_package_satisfies_result_package_contract_v1`.
+    - Result: passed.
+- Problems encountered:
+  - `apply_patch` still failed in the Windows sandbox with
+    `orchestrator_helper_launch_canceled`; exact UTF-8 replacement scripts were
+    used and the resulting diff was reviewed.
+  - The first replacement script detected an ambiguous repeated code fragment
+    and exited before writing. The script was narrowed to context-specific
+    replacements before any file write.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The standalone benchmark binding artifact improves reviewability, but a
+    full live-services disposable run with `-ExportPackage` is still a heavier
+    operator gate and was not executed in this task.

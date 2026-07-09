@@ -96,6 +96,7 @@ _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.js
 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
     "network_temporal_pressure_evidence_v1.json"
 )
+_BENCHMARK_ACCEPTANCE_BINDING_FILENAME = "benchmark_acceptance_binding_v1.json"
 _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME = (
     "user_configuration_control_surface_evidence_v1.json"
 )
@@ -131,6 +132,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
@@ -282,6 +284,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
@@ -375,6 +378,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "metrics.csv",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -500,6 +504,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["artifacts"][
         "network_kpi_benchmark_validation_exported"
     ] is True
+    assert first["artifacts"]["benchmark_acceptance_binding_exported"] is True
     assert first["artifacts"]["network_kpi_formula_evidence_exported"] is True
     assert first["artifacts"][
         "network_temporal_pressure_evidence_exported"
@@ -1173,6 +1178,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "manifest.json",
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
@@ -1294,6 +1300,17 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     categories = {item["category"]: item for item in artifact_browser["categories"]}
     assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 6
     assert categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
+    benchmark_acceptance_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _BENCHMARK_ACCEPTANCE_BINDING_FILENAME
+    )
+    assert benchmark_acceptance_item["category"] == "AUDIT_HANDOFF"
+    assert benchmark_acceptance_item["present"] is True
+    assert benchmark_acceptance_item["default_json_pointer"] == (
+        "/expected_range_results"
+    )
+    assert benchmark_acceptance_item["filter_hint"] == "benchmark acceptance"
     compute_item = next(
         item
         for item in artifact_browser["items"]
@@ -1412,6 +1429,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "manifest.json",
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
@@ -1570,6 +1588,14 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME in first[
         "recommended_review_order"
     ]
+    assert _BENCHMARK_ACCEPTANCE_BINDING_FILENAME in first[
+        "recommended_review_order"
+    ]
+    assert first["recommended_review_order"].index(
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME
+    ) < first["recommended_review_order"].index(
+        "network_kpi_benchmark_validation_v1.json"
+    )
     assert first["recommended_review_order"].index(
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME
     ) < first["recommended_review_order"].index(
@@ -1604,6 +1630,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME in first[
         "artifact_review"
     ]["entrypoint_filenames"]
+    assert _BENCHMARK_ACCEPTANCE_BINDING_FILENAME in first["artifact_review"][
+        "entrypoint_filenames"
+    ]
     assert first["scenario_review_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
         RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
@@ -2944,7 +2973,7 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
         assert {
             result["evidence_artifact_filename"]
             for result in binding["expected_range_results"]
-        } == {"export_package_audit_index_v1.json"}
+        } == {_BENCHMARK_ACCEPTANCE_BINDING_FILENAME}
         assert all(
             str(result["evidence_context_id"]).startswith("benchmark.expected_range.")
             for result in binding["expected_range_results"]
@@ -2952,7 +2981,7 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
         assert {
             result["evidence_json_pointer"]
             for result in binding["expected_range_results"]
-        } == {"/benchmark_acceptance_binding_v1/expected_range_results"}
+        } == {"/expected_range_results"}
         assert {
             result["evidence_artifact_filename"]
             for result in binding["fidelity_results"]
@@ -3311,6 +3340,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
             "sha256:traffic-demand-file",
         ),
+        _file(
+            "benchmark_acceptance_binding_v1",
+            _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
+            "sha256:benchmark-acceptance-file",
+        ),
     )
 
     first = build_runtime_export_package_audit_index_v1(
@@ -3417,6 +3451,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["package_review_completion_hash"] == completion["completion_hash"]
     assert first["self_artifact_excluded_from_hashes"] is True
     assert [item["filename"] for item in first["artifact_hashes"]] == [
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "config_snapshot.json",
         "events.jsonl",
         "manifest.json",
@@ -3469,6 +3504,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "manifest.json",
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
+        _BENCHMARK_ACCEPTANCE_BINDING_FILENAME,
         "network_kpi_formula_evidence_v1.json",
         _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",

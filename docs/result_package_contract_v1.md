@@ -528,7 +528,7 @@ evidence, and a deterministic `completion_hash`. It deliberately does not
 include `audit_hash`, so the audit index can hash the completion object without
 a self-reference.
 
-The audit index also embeds `benchmark_acceptance_binding_v1` with id:
+The audit index embeds `benchmark_acceptance_binding_v1`, and current runtime export packages also write the same object as standalone `benchmark_acceptance_binding_v1.json`, with id:
 
 ```text
 leo_twin.runtime_export_benchmark_acceptance_binding.v1
@@ -549,7 +549,8 @@ stable row-level pointer such as `benchmark.expected_range.<metric>`,
 `fidelity_summary.<field>`, `route_provenance_trust_summary_v1`, or
 `network_kpi_benchmark_validation_v1`. The row also records
 `evidence_json_pointer`, a JSON Pointer into the linked artifact such as
-`/status/fidelity_summary/<field>`, `/route_trust`, or `/validation`.
+`/expected_range_results`, `/status/fidelity_summary/<field>`, `/route_trust`, or `/validation`.
+Expected-range rows in current packages point to `benchmark_acceptance_binding_v1.json`; the audit index still embeds the same binding for compatibility and long-term audit hashes.
 Non-standard custom packages are not failed by this binding; they are reported
 as `NO_STANDARD_SCENARIO_MATCH` so the acceptance report can warn that
 benchmark-gated evidence is not attached.
@@ -608,7 +609,7 @@ including group, item name, status, expected value/range, observed value,
 issue labels, and result hash. These rows are display projections of the
 backend binding; they do not recompute KPI values or re-evaluate benchmark
 rules in the browser. Each row also links to the package artifact identified by
-the backend result row's `evidence_artifact_filename` field. For compatibility
+the backend result row's `evidence_artifact_filename` field. Current packages point expected-range rows to `benchmark_acceptance_binding_v1.json`. For compatibility
 with older packages that lack this field, the dashboard falls back to the
 previous deterministic mapping: expected-range rows use the audit index,
 fidelity rows use `config_snapshot.json`, route/trust rows use
