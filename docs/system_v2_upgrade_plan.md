@@ -1441,6 +1441,12 @@ Current Phase 3 progress:
   execution steps, and the explicit CONFIG_UPDATE command when validation
   passes.
 
+- T428 enriches `traffic_business_activity_window_v1` user rows with bounded
+  `window_requests` previews. Each active/recent/pending user row can now show
+  backend-owned request id, flow/task/output ids, target, selected satellite,
+  request state, service state, priority, data volume, and model join hints
+  without frontend inference or packet-level simulation.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

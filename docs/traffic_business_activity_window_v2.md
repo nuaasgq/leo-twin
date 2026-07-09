@@ -28,6 +28,7 @@ Important fields:
 - `recent_user_count`
 - `pending_user_count`
 - `window_user_count`
+- `per_user_request_preview_limit`
 - `state_counts`
 - `window_state_counts`
 - `items`
@@ -52,6 +53,39 @@ Each item includes:
 - `selected_satellite_id`
 - `next_arrival_time`
 - `time_to_next_request_s`
+- `window_requests`
+- `window_request_preview_count`
+- `hidden_window_request_preview_count`
+
+`window_requests` is a bounded backend-generated per-user preview of the
+requests in the current business window. Each row includes:
+
+- `request_id`
+- `input_flow_id`
+- `task_id`
+- `output_flow_id`
+- `source_id`
+- `target_id`
+- `selected_satellite_id`
+- `traffic_class`
+- `destination_type`
+- `priority`
+- `arrival_time`
+- `time_offset_s`
+- `request_state`
+- `service_state`
+- `has_compute_task`
+- `has_output_flow`
+- `input_data_mb`
+- `output_data_mb`
+- `estimated_service_end_time`
+- `estimated_active_remaining_s`
+- `network_queue_model`
+- `compute_execution_model`
+
+The preview is intentionally bounded by `per_user_request_preview_limit` so
+large scenarios can expose user business details without flooding runtime
+status or frontend tables.
 
 ## Model Boundary
 

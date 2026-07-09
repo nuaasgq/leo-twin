@@ -514,6 +514,7 @@ class TrafficDemandBatch:
         lookahead_window_s: float = 120.0,
         assumed_service_duration_s: float = 60.0,
         user_limit: int = 128,
+        per_user_request_limit: int = 8,
     ) -> dict[str, object]:
         """Return per-user business activity derived from request arrival time."""
 
@@ -525,6 +526,7 @@ class TrafficDemandBatch:
             "assumed_service_duration_s",
         )
         _require_positive_int(user_limit, "user_limit")
+        _require_positive_int(per_user_request_limit, "per_user_request_limit")
         current = float(sim_time)
         window_start = max(0.0, current - float(lookback_window_s))
         window_end = current + float(lookahead_window_s)
@@ -537,6 +539,7 @@ class TrafficDemandBatch:
                 window_start=window_start,
                 window_end=window_end,
                 assumed_service_duration_s=float(assumed_service_duration_s),
+                per_user_request_limit=int(per_user_request_limit),
             )
             for user_id in sorted(records_by_user, key=_entity_sort_key)
         )
@@ -576,6 +579,7 @@ class TrafficDemandBatch:
                 "assumed_service_duration_s": float(assumed_service_duration_s),
             },
             "item_limit": int(user_limit),
+            "per_user_request_preview_limit": int(per_user_request_limit),
             "item_count": len(limited_rows),
             "hidden_window_user_count": max(
                 0,
@@ -1174,6 +1178,7 @@ def _business_activity_user_row(
     window_start: float,
     window_end: float,
     assumed_service_duration_s: float,
+    per_user_request_limit: int,
 ) -> dict[str, object]:
     ordered_records = tuple(sorted(records, key=_traffic_record_sort_key))
     active_records = tuple(
@@ -1209,6 +1214,7 @@ def _business_activity_user_row(
             key=_traffic_record_sort_key,
         )
     )
+    limited_window_records = window_records[:per_user_request_limit]
     selected_record = _business_activity_selected_record(
         active_records,
         recent_records,
@@ -1269,11 +1275,112 @@ def _business_activity_user_row(
         "active_flow_ids": tuple(record.input_flow.flow_id for record in active_records[:8]),
         "recent_flow_ids": tuple(record.input_flow.flow_id for record in recent_records[:8]),
         "pending_flow_ids": tuple(record.input_flow.flow_id for record in pending_window_records[:8]),
+        "window_requests": tuple(
+            _business_activity_request_item(
+                record,
+                current=current,
+                window_start=window_start,
+                assumed_service_duration_s=assumed_service_duration_s,
+            )
+            for record in limited_window_records
+        ),
+        "window_request_preview_count": len(limited_window_records),
+        "hidden_window_request_preview_count": max(
+            0,
+            len(window_records) - len(limited_window_records),
+        ),
         "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
         "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
         "network_queue_model": "JOIN_RUNTIME_USER_REQUEST_SUMMARY_FOR_QUEUE_STATE",
         "compute_execution_model": "JOIN_SERVICE_LIFECYCLE_TRACE_FOR_EXECUTION_STATE",
     }
+
+
+def _business_activity_request_item(
+    record: TrafficDemandRecord,
+    *,
+    current: float,
+    window_start: float,
+    assumed_service_duration_s: float,
+) -> dict[str, object]:
+    request_state = _business_activity_request_state(
+        record,
+        current=current,
+        window_start=window_start,
+        assumed_service_duration_s=assumed_service_duration_s,
+    )
+    task_id = record.task.task_id if record.task is not None else ""
+    output_flow_id = record.output_flow.flow_id if record.output_flow is not None else ""
+    service_end_time = float(record.arrival_time + assumed_service_duration_s)
+    active_remaining_s = (
+        max(0.0, service_end_time - current)
+        if request_state == "ACTIVE_BUSINESS"
+        else None
+    )
+    return {
+        "request_id": _service_id_from_record(record),
+        "input_flow_id": record.input_flow.flow_id,
+        "task_id": task_id,
+        "output_flow_id": output_flow_id,
+        "source_id": record.input_flow.source_id,
+        "target_id": record.input_flow.target_id,
+        "selected_satellite_id": _selected_satellite_id_from_record(record),
+        "traffic_class": record.traffic_class.value,
+        "destination_type": record.destination_type.value,
+        "priority": int(record.input_flow.priority),
+        "arrival_time": float(record.arrival_time),
+        "time_offset_s": float(record.arrival_time - current),
+        "request_state": request_state,
+        "service_state": _business_activity_request_service_state(
+            record,
+            request_state,
+        ),
+        "has_compute_task": record.task is not None,
+        "has_output_flow": record.output_flow is not None,
+        "input_data_mb": float(record.input_data_size),
+        "output_data_mb": float(record.output_data_size),
+        "estimated_service_end_time": (
+            service_end_time if request_state == "ACTIVE_BUSINESS" else None
+        ),
+        "estimated_active_remaining_s": active_remaining_s,
+        "network_queue_model": "JOIN_RUNTIME_USER_REQUEST_SUMMARY_FOR_QUEUE_STATE",
+        "compute_execution_model": "JOIN_SERVICE_LIFECYCLE_TRACE_FOR_EXECUTION_STATE",
+    }
+
+
+def _business_activity_request_state(
+    record: TrafficDemandRecord,
+    *,
+    current: float,
+    window_start: float,
+    assumed_service_duration_s: float,
+) -> str:
+    if _business_record_active(
+        record,
+        current=current,
+        assumed_service_duration_s=assumed_service_duration_s,
+    ):
+        return "ACTIVE_BUSINESS"
+    if window_start <= record.arrival_time <= current:
+        return "RECENT_BUSINESS"
+    if record.arrival_time > current:
+        return "PENDING_BUSINESS"
+    return "PAST_BUSINESS"
+
+
+def _business_activity_request_service_state(
+    record: TrafficDemandRecord,
+    request_state: str,
+) -> str:
+    if request_state == "PENDING_BUSINESS":
+        return "SCHEDULED"
+    if request_state == "RECENT_BUSINESS":
+        return "RECENTLY_ARRIVED"
+    if request_state != "ACTIVE_BUSINESS":
+        return "PAST"
+    if record.traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return "COMPUTE_SERVICE_WINDOW"
+    return "FLOW_SERVICE_WINDOW"
 
 
 def _business_record_active(

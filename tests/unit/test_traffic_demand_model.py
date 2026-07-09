@@ -593,6 +593,7 @@ def test_runtime_business_activity_window_reports_time_varying_user_state() -> N
         lookahead_window_s=12.0,
         assumed_service_duration_s=5.0,
         user_limit=8,
+        per_user_request_limit=2,
     )
     second = batch.runtime_business_activity_window(
         sim_time=12.0,
@@ -600,6 +601,7 @@ def test_runtime_business_activity_window_reports_time_varying_user_state() -> N
         lookahead_window_s=12.0,
         assumed_service_duration_s=5.0,
         user_limit=8,
+        per_user_request_limit=2,
     )
 
     assert first == second
@@ -622,6 +624,7 @@ def test_runtime_business_activity_window_reports_time_varying_user_state() -> N
         "window_end_s": 24.0,
         "assumed_service_duration_s": 5.0,
     }
+    assert first["per_user_request_preview_limit"] == 2
     assert first["state_counts"] == {
         "ACTIVE_BUSINESS": 2,
         "RECENT_BUSINESS": 0,
@@ -647,6 +650,41 @@ def test_runtime_business_activity_window_reports_time_varying_user_state() -> N
     assert rows["user-001"]["pending_flow_ids"] == (
         "biz-00-compute_service-00002-input",
     )
+    assert rows["user-001"]["window_request_preview_count"] == 2
+    assert rows["user-001"]["hidden_window_request_preview_count"] == 0
+    user_001_requests = rows["user-001"]["window_requests"]
+    assert tuple(item["request_state"] for item in user_001_requests) == (
+        "ACTIVE_BUSINESS",
+        "PENDING_BUSINESS",
+    )
+    assert user_001_requests[0] == {
+        "request_id": "biz-00-compute_service-00001",
+        "input_flow_id": "biz-00-compute_service-00001-input",
+        "task_id": "biz-00-compute_service-00001-task",
+        "output_flow_id": "biz-00-compute_service-00001-output",
+        "source_id": "user-001",
+        "target_id": "sat-compute-001",
+        "selected_satellite_id": "sat-compute-001",
+        "traffic_class": "COMPUTE_SERVICE",
+        "destination_type": "COMPUTE_NODE",
+        "priority": 5,
+        "arrival_time": 10.0,
+        "time_offset_s": -2.0,
+        "request_state": "ACTIVE_BUSINESS",
+        "service_state": "COMPUTE_SERVICE_WINDOW",
+        "has_compute_task": True,
+        "has_output_flow": True,
+        "input_data_mb": 6.0,
+        "output_data_mb": 2.0,
+        "estimated_service_end_time": 15.0,
+        "estimated_active_remaining_s": 3.0,
+        "network_queue_model": "JOIN_RUNTIME_USER_REQUEST_SUMMARY_FOR_QUEUE_STATE",
+        "compute_execution_model": "JOIN_SERVICE_LIFECYCLE_TRACE_FOR_EXECUTION_STATE",
+    }
+    assert user_001_requests[1]["request_id"] == "biz-00-compute_service-00002"
+    assert user_001_requests[1]["request_state"] == "PENDING_BUSINESS"
+    assert user_001_requests[1]["service_state"] == "SCHEDULED"
+    assert user_001_requests[1]["estimated_service_end_time"] is None
 
     assert rows["user-002"]["business_state"] == "ACTIVE_BUSINESS"
     assert rows["user-002"]["platform_type"] == "GROUND_USER_TERMINAL"
@@ -654,6 +692,10 @@ def test_runtime_business_activity_window_reports_time_varying_user_state() -> N
     assert rows["user-002"]["primary_target_id"] == "gateway-001"
     assert rows["user-002"]["selected_satellite_id"] == ""
     assert rows["user-002"]["time_to_next_request_s"] == 26.0
+    assert rows["user-002"]["window_requests"][0]["service_state"] == (
+        "FLOW_SERVICE_WINDOW"
+    )
+    assert rows["user-002"]["window_requests"][0]["has_compute_task"] is False
     assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
         "leo_twin.traffic_business_activity_window.v1"
     )
@@ -687,6 +729,44 @@ def test_runtime_business_activity_window_limits_window_rows() -> None:
 
     with pytest.raises(ValueError, match="user_limit"):
         batch.runtime_business_activity_window(sim_time=1.0, user_limit=0)
+
+    with pytest.raises(ValueError, match="per_user_request_limit"):
+        batch.runtime_business_activity_window(
+            sim_time=1.0,
+            per_user_request_limit=0,
+        )
+
+
+def test_runtime_business_activity_window_limits_per_user_request_preview() -> None:
+    profile = TrafficDemandProfile(
+        traffic_class=TrafficClass.DATA_TRANSFER,
+        source_ids=("user-001",),
+        destination_ids=("gateway-001",),
+        request_count=4,
+        arrival_interval=1.0,
+        input_data_size=1.0,
+        priority=1,
+        id_prefix="preview",
+    )
+    batch = generate_traffic_demand((profile,))
+
+    window = batch.runtime_business_activity_window(
+        sim_time=2.0,
+        lookback_window_s=3.0,
+        lookahead_window_s=3.0,
+        assumed_service_duration_s=5.0,
+        user_limit=4,
+        per_user_request_limit=2,
+    )
+    row = window["items"][0]
+
+    assert row["window_request_count"] == 4
+    assert row["window_request_preview_count"] == 2
+    assert row["hidden_window_request_preview_count"] == 2
+    assert tuple(item["request_id"] for item in row["window_requests"]) == (
+        "preview-00-data_transfer-00000",
+        "preview-00-data_transfer-00001",
+    )
 
 
 def test_burst_arrival_profile_groups_requests_deterministically() -> None:

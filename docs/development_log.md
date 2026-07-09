@@ -21792,3 +21792,46 @@ change.
   - The frontend has not yet been rebound to prefer `apply_plan_v1`; this task
     only adds and verifies the backend contract. Full 72/300/1200 acceptance
     remains a separate executable-loop verification task.
+
+
+## 2026-07-09 - T428 traffic business window request preview v1
+
+- Branch: `feature/T428-traffic-business-window-v2`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: enrich backend `TrafficDemandBatch.runtime_business_activity_window`
+  rows with bounded per-user `window_requests` previews. Each preview row
+  exposes backend-owned request id, input flow id, task id, output flow id,
+  source, target, selected satellite, traffic class, destination type,
+  priority, arrival time, time offset, request state, service state, compute
+  flags, data volume, estimated active-service window, and runtime join hints
+  for network queue and compute execution state. This is a traffic demand
+  observability task. No Event Kernel behavior, runtime progression behavior,
+  network routing logic, compute scheduling logic, frontend rendering, external
+  simulator integration, packet-level simulation, or runtime generated config
+  behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `docs/traffic_business_activity_window_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/models/traffic/demand.py tests/unit/test_traffic_demand_model.py`
+    - Result: passed.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_traffic_demand_model.py`
+    - Result: 17 passed in the first target run.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_traffic_demand_model.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer`
+    - Result: 18 passed.
+- Problems encountered:
+  - The existing business activity summary already exposed per-user active,
+    recent, pending, and idle counts. This task kept that contract compatible
+    and added bounded request previews instead of changing state semantics.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The frontend has not yet been rebound to render `window_requests` in the
+    standalone data panel. Actual network queue and compute execution details
+    still come from joined runtime observability summaries rather than this
+    demand schedule alone.
