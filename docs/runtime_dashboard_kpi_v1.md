@@ -29,6 +29,28 @@ The object id is:
 
 - `leo_twin.runtime_dashboard_kpi.v1`
 
+## Result Package Binding
+
+Runtime export packages persist the same backend-owned dashboard KPI object as:
+
+- `runtime_dashboard_kpi_v1.json`
+
+The result-package artifact id is:
+
+- `leo_twin.runtime_export_runtime_dashboard_kpi.v1`
+
+The artifact is also referenced from:
+
+- `review_summary_v1.json`
+- `diagnostics_bundle_v1.json`
+- `scenario_review_bundle_v1.json`
+- `export_package_audit_index_v1.json`
+- checklist templates derived from `scenario_review_bundle_v1.json`
+
+The export binding reads `config_snapshot.status.runtime_dashboard_kpi_v1`
+only. It does not recompute KPI formulas, replay events, or infer dashboard
+semantics from frontend state during export.
+
 ## KPI Rows
 
 The v1 row set matches the backend KPI movement contract:

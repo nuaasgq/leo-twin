@@ -28,6 +28,29 @@ The object id is:
 
 - `leo_twin.runtime_closure_readiness.v1`
 
+## Result Package Binding
+
+Runtime export packages persist the same backend-owned status object as:
+
+- `runtime_closure_readiness_v1.json`
+
+The result-package artifact id is:
+
+- `leo_twin.runtime_export_runtime_closure_readiness.v1`
+
+The artifact is also referenced from:
+
+- `review_summary_v1.json`
+- `diagnostics_bundle_v1.json`
+- `scenario_review_bundle_v1.json`
+- `export_package_audit_index_v1.json`
+- checklist templates derived from `scenario_review_bundle_v1.json`
+
+The export binding reads `config_snapshot.status.runtime_closure_readiness_v1`
+only. It does not recompute closure gates during export. A non-ready closure
+state remains visible as evidence and diagnostics/audit data, but it does not by
+itself change the result package's required-artifact completeness.
+
 ## Gates
 
 Closure readiness checks these gates:

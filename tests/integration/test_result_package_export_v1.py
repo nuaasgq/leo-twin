@@ -16,6 +16,8 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID,
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID,
+    RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
@@ -79,6 +81,8 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "network_kpi_variation_explanation_v1.json").exists()
     assert (package_dir / "network_kpi_dynamic_status_v1.json").exists()
     assert (package_dir / "runtime_kpi_movement_summary_v1.json").exists()
+    assert (package_dir / "runtime_closure_readiness_v1.json").exists()
+    assert (package_dir / "runtime_dashboard_kpi_v1.json").exists()
     assert (package_dir / "network_flow_lifecycle_summary_v1.json").exists()
     assert (package_dir / "service_lifecycle_stage_summary_v1.json").exists()
     assert (package_dir / "user_configuration_template_validation_v1.json").exists()
@@ -106,6 +110,8 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "network_kpi_variation_explanation_v1.json" in filenames
     assert "network_kpi_dynamic_status_v1.json" in filenames
     assert "runtime_kpi_movement_summary_v1.json" in filenames
+    assert "runtime_closure_readiness_v1.json" in filenames
+    assert "runtime_dashboard_kpi_v1.json" in filenames
     assert "network_flow_lifecycle_summary_v1.json" in filenames
     assert "service_lifecycle_stage_summary_v1.json" in filenames
     assert "user_configuration_template_validation_v1.json" in filenames
@@ -183,6 +189,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     runtime_kpi_movement_summary = json.loads(
         (package_dir / "runtime_kpi_movement_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    runtime_closure_readiness = json.loads(
+        (package_dir / "runtime_closure_readiness_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    runtime_dashboard_kpi = json.loads(
+        (package_dir / "runtime_dashboard_kpi_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -492,6 +508,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "network_kpi_dynamic_status_exported"
     ] is True
     assert review_summary["artifacts"]["runtime_kpi_movement_summary_exported"] is True
+    assert review_summary["artifacts"]["runtime_closure_readiness_exported"] is True
+    assert review_summary["artifacts"]["runtime_dashboard_kpi_exported"] is True
+    assert review_summary["runtime_closure_readiness"]["evidence_present"] is True
+    assert review_summary["runtime_dashboard_kpi"]["evidence_present"] is True
     assert review_summary["network_flow_lifecycle_summary"]["evidence_present"] is True
     assert review_summary["network_flow_lifecycle_summary"]["evidence_hash"] == (
         network_flow_lifecycle_summary["evidence"]["evidence_hash"]
@@ -601,6 +621,22 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert dynamic_status_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
     assert dynamic_status_browser_item["present"] is True
     assert dynamic_status_browser_item["default_json_pointer"] == "/dynamic_status"
+    closure_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "runtime_closure_readiness_v1.json"
+    )
+    assert closure_browser_item["category"] == "OPERATOR_REVIEW"
+    assert closure_browser_item["present"] is True
+    assert closure_browser_item["filter_hint"] == "closure readiness"
+    dashboard_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "runtime_dashboard_kpi_v1.json"
+    )
+    assert dashboard_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert dashboard_browser_item["present"] is True
+    assert dashboard_browser_item["default_json_pointer"] == "/dashboard_kpi/items"
     benchmark_acceptance_browser_item = next(
         item
         for item in artifact_browser["items"]
@@ -700,6 +736,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["runtime_kpi_movement_summary"]["evidence_hash"] == (
         review_summary["runtime_kpi_movement_summary"]["evidence_hash"]
     )
+    assert diagnostics_bundle["runtime_closure_readiness"]["evidence_hash"] == (
+        review_summary["runtime_closure_readiness"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["runtime_closure_readiness"]["evidence_present"] is True
+    assert diagnostics_bundle["runtime_dashboard_kpi"]["evidence_hash"] == (
+        review_summary["runtime_dashboard_kpi"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["runtime_dashboard_kpi"]["evidence_present"] is True
     assert diagnostics_bundle["network_kpi_variation_explanation"][
         "evidence_present"
     ] is True
@@ -790,6 +834,30 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert runtime_kpi_movement_summary["evidence"]["evidence_hash"] == (
         review_summary["runtime_kpi_movement_summary"]["evidence_hash"]
     )
+    assert runtime_closure_readiness["artifact_id"] == (
+        RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID
+    )
+    assert runtime_closure_readiness["closure_readiness"] == (
+        config_snapshot["status"]["runtime_closure_readiness_v1"]
+    )
+    assert runtime_closure_readiness["evidence"]["evidence_hash"] == (
+        review_summary["runtime_closure_readiness"]["evidence_hash"]
+    )
+    assert "NO_CLOSURE_RECOMPUTE" in runtime_closure_readiness[
+        "boundary_conditions"
+    ]
+    assert runtime_dashboard_kpi["artifact_id"] == (
+        RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID
+    )
+    assert runtime_dashboard_kpi["dashboard_kpi"] == (
+        config_snapshot["status"]["runtime_dashboard_kpi_v1"]
+    )
+    assert runtime_dashboard_kpi["evidence"]["evidence_hash"] == (
+        review_summary["runtime_dashboard_kpi"]["evidence_hash"]
+    )
+    assert "NO_DASHBOARD_KPI_RECOMPUTE" in runtime_dashboard_kpi[
+        "boundary_conditions"
+    ]
     assert network_flow_lifecycle_summary["artifact_id"] == (
         RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID
     )
@@ -993,6 +1061,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["runtime_kpi_movement_summary"]["evidence_hash"] == (
         runtime_kpi_movement_summary["evidence"]["evidence_hash"]
     )
+    assert scenario_review_bundle["runtime_closure_readiness"]["evidence_hash"] == (
+        runtime_closure_readiness["evidence"]["evidence_hash"]
+    )
+    assert scenario_review_bundle["runtime_closure_readiness"][
+        "evidence_present"
+    ] is True
+    assert scenario_review_bundle["runtime_dashboard_kpi"]["evidence_hash"] == (
+        runtime_dashboard_kpi["evidence"]["evidence_hash"]
+    )
+    assert scenario_review_bundle["runtime_dashboard_kpi"]["evidence_present"] is True
     assert scenario_review_bundle["network_kpi_variation_explanation"][
         "evidence_present"
     ] is True
@@ -1060,6 +1138,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "network_kpi_dynamic_status_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "runtime_closure_readiness_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "runtime_dashboard_kpi_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert "network_flow_lifecycle_summary_v1.json" in (
@@ -1165,6 +1249,19 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert audit_index["runtime_kpi_movement_summary_hash"] == (
         runtime_kpi_movement_summary["evidence"]["evidence_hash"]
     )
+    assert audit_index["runtime_closure_readiness_present"] is True
+    assert audit_index["runtime_closure_readiness_hash"] == (
+        runtime_closure_readiness["evidence"]["evidence_hash"]
+    )
+    assert audit_index["runtime_closure_readiness_result_ready"] in {True, False}
+    assert audit_index["runtime_closure_readiness_failed_gate_count"] >= 0
+    assert audit_index["runtime_dashboard_kpi_present"] is True
+    assert audit_index["runtime_dashboard_kpi_hash"] == (
+        runtime_dashboard_kpi["evidence"]["evidence_hash"]
+    )
+    assert audit_index["runtime_dashboard_kpi_metric_count"] >= 0
+    assert audit_index["runtime_dashboard_kpi_observed_metric_count"] >= 0
+    assert audit_index["runtime_dashboard_kpi_time_varying_metric_count"] >= 0
     assert audit_index["network_flow_lifecycle_summary_present"] is True
     assert audit_index["network_flow_lifecycle_summary_hash"] == (
         network_flow_lifecycle_summary["evidence"]["evidence_hash"]

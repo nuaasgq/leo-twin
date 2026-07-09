@@ -1532,6 +1532,13 @@ Current Phase 3 progress:
   evidence and fallback. This reduces frontend inference from static snapshots
   without changing metrics formulas or packet-level boundaries.
 
+- T440 persists `runtime_closure_readiness_v1` and `runtime_dashboard_kpi_v1`
+  into runtime result packages as standalone review artifacts. Offline packages
+  now carry backend-owned result-closure and dashboard-KPI evidence through
+  review summary, diagnostics, scenario review bundles, artifact browser,
+  checklist templates, and audit index fields without recomputing gates or KPI
+  formulas during export.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

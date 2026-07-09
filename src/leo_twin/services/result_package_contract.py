@@ -110,6 +110,12 @@ RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_V1_ID = (
 RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID = (
     "leo_twin.runtime_export_runtime_kpi_movement_summary.v1"
 )
+RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID = (
+    "leo_twin.runtime_export_runtime_closure_readiness.v1"
+)
+RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID = (
+    "leo_twin.runtime_export_runtime_dashboard_kpi.v1"
+)
 RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID = (
     "leo_twin.runtime_export_network_flow_lifecycle_summary.v1"
 )
@@ -167,6 +173,8 @@ NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
 )
 NETWORK_KPI_DYNAMIC_STATUS_FILENAME = "network_kpi_dynamic_status_v1.json"
 RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
+RUNTIME_CLOSURE_READINESS_FILENAME = "runtime_closure_readiness_v1.json"
+RUNTIME_DASHBOARD_KPI_FILENAME = "runtime_dashboard_kpi_v1.json"
 NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME = "service_lifecycle_stage_summary_v1.json"
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
@@ -397,6 +405,24 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network and compute KPI movement evidence "
                     "exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "runtime_closure_readiness_v1",
+                "filename": "runtime_closure_readiness_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned runtime closure readiness evidence "
+                    "exported for offline result-completion review"
+                ),
+            },
+            {
+                "logical_name": "runtime_dashboard_kpi_v1",
+                "filename": "runtime_dashboard_kpi_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned dashboard KPI contract exported for "
+                    "offline frontend/backend semantic review"
                 ),
             },
             {
@@ -851,6 +877,28 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "movement",
         },
         {
+            "logical_name": "runtime_dashboard_kpi_v1",
+            "filename": RUNTIME_DASHBOARD_KPI_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 132,
+            "format": "json",
+            "review_role": "Backend-owned dashboard KPI values.",
+            "content": "Audits dashboard KPI values and backend semantic sources.",
+            "default_json_pointer": "/dashboard_kpi/items",
+            "filter_hint": "dashboard kpi",
+        },
+        {
+            "logical_name": "runtime_closure_readiness_v1",
+            "filename": RUNTIME_CLOSURE_READINESS_FILENAME,
+            "category": "OPERATOR_REVIEW",
+            "review_priority": 36,
+            "format": "json",
+            "review_role": "Runtime result-closure readiness gates.",
+            "content": "Backend-owned result-ready gates and operator next action.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "closure readiness",
+        },
+        {
             "logical_name": "network_flow_lifecycle_summary_v1",
             "filename": NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
             "category": "NETWORK_KPI_EVIDENCE",
@@ -1100,6 +1148,8 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_kpi_variation_explanation_v1.json",
             "network_kpi_dynamic_status_v1.json",
             "runtime_kpi_movement_summary_v1.json",
+            "runtime_closure_readiness_v1.json",
+            "runtime_dashboard_kpi_v1.json",
             "network_flow_lifecycle_summary_v1.json",
             "service_lifecycle_stage_summary_v1.json",
             "route_pressure_evidence_v1.json",
@@ -1394,6 +1444,84 @@ def build_runtime_export_runtime_kpi_movement_summary_v1(
             "NO_METRIC_RECOMPUTE",
             "NO_EVENT_REPLAY",
             "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
+def build_runtime_export_runtime_closure_readiness_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build a standalone export artifact for runtime closure readiness."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    closure = _mapping(status.get("runtime_closure_readiness_v1"))
+    evidence = _runtime_export_runtime_closure_readiness(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID,
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_scope": "RUNTIME_RESULT_CLOSURE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "runtime_closure_readiness_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "closure_readiness": dict(closure),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_CLOSURE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_FRONTEND_INFERENCE",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
+def build_runtime_export_runtime_dashboard_kpi_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build a standalone export artifact for backend-owned dashboard KPIs."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    dashboard_kpi = _mapping(status.get("runtime_dashboard_kpi_v1"))
+    evidence = _runtime_export_runtime_dashboard_kpi(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID,
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_scope": "RUNTIME_DASHBOARD_KPI_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "runtime_dashboard_kpi_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "dashboard_kpi": dict(dashboard_kpi),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_DASHBOARD_KPI_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_FRONTEND_INFERENCE",
             "NO_EXTERNAL_SIMULATOR_ARTIFACT",
         ),
     }
@@ -1860,6 +1988,8 @@ def build_runtime_export_review_summary_v1(
     )
     network_kpi_dynamic_status = _runtime_export_network_kpi_dynamic_status(status)
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
+    runtime_closure_readiness = _runtime_export_runtime_closure_readiness(status)
+    runtime_dashboard_kpi = _runtime_export_runtime_dashboard_kpi(status)
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
     )
@@ -1935,6 +2065,8 @@ def build_runtime_export_review_summary_v1(
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "network_kpi_dynamic_status": network_kpi_dynamic_status,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
+        "runtime_closure_readiness": runtime_closure_readiness,
+        "runtime_dashboard_kpi": runtime_dashboard_kpi,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "service_lifecycle_stage_summary": service_lifecycle_stage_summary,
         "user_configuration_template_validation": user_config_template_validation,
@@ -1996,6 +2128,12 @@ def build_runtime_export_review_summary_v1(
             "runtime_kpi_movement_summary_exported": (
                 "runtime_kpi_movement_summary_v1.json" in artifacts
             ),
+            "runtime_closure_readiness_exported": (
+                RUNTIME_CLOSURE_READINESS_FILENAME in artifacts
+            ),
+            "runtime_dashboard_kpi_exported": (
+                RUNTIME_DASHBOARD_KPI_FILENAME in artifacts
+            ),
             "network_flow_lifecycle_summary_exported": (
                 "network_flow_lifecycle_summary_v1.json" in artifacts
             ),
@@ -2035,6 +2173,8 @@ def build_runtime_export_review_summary_v1(
             "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
             "Use network_kpi_dynamic_status_v1.json to review whether network KPIs are dynamic, flat, or sample-limited.",
             "Use runtime_kpi_movement_summary_v1.json to review network and compute KPI movement over simulation time.",
+            "Use runtime_closure_readiness_v1.json to review backend-owned result-closure gates.",
+            "Use runtime_dashboard_kpi_v1.json to review backend-owned dashboard KPI values.",
             "Use network_flow_lifecycle_summary_v1.json to review active, blocked, completed, and failed flow lifecycle state.",
             "Use service_lifecycle_stage_summary_v1.json to review communication-compute service stage completeness.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
@@ -2110,6 +2250,8 @@ def build_runtime_export_diagnostics_bundle_v1(
     )
     network_kpi_dynamic_status = _runtime_export_network_kpi_dynamic_status(status)
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
+    runtime_closure_readiness = _runtime_export_runtime_closure_readiness(status)
+    runtime_dashboard_kpi = _runtime_export_runtime_dashboard_kpi(status)
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
     )
@@ -2158,6 +2300,9 @@ def build_runtime_export_diagnostics_bundle_v1(
         network_temporal_pressure_evidence=network_temporal_pressure_evidence,
         network_kpi_variation_explanation=network_kpi_variation_explanation,
         network_kpi_dynamic_status=network_kpi_dynamic_status,
+        runtime_kpi_movement_summary=runtime_kpi_movement_summary,
+        runtime_closure_readiness=runtime_closure_readiness,
+        runtime_dashboard_kpi=runtime_dashboard_kpi,
         user_config_template_validation=user_config_template_validation,
         user_config_control_surface=user_config_control_surface,
         traffic_demand_explanation=traffic_demand_explanation,
@@ -2194,6 +2339,8 @@ def build_runtime_export_diagnostics_bundle_v1(
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "network_kpi_dynamic_status": network_kpi_dynamic_status,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
+        "runtime_closure_readiness": runtime_closure_readiness,
+        "runtime_dashboard_kpi": runtime_dashboard_kpi,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "service_lifecycle_stage_summary": service_lifecycle_stage_summary,
         "user_configuration_template_validation": user_config_template_validation,
@@ -2322,6 +2469,10 @@ def build_runtime_export_scenario_review_bundle_v1(
     runtime_kpi_movement_summary = _mapping(
         review_summary.get("runtime_kpi_movement_summary")
     )
+    runtime_closure_readiness = _mapping(
+        review_summary.get("runtime_closure_readiness")
+    )
+    runtime_dashboard_kpi = _mapping(review_summary.get("runtime_dashboard_kpi"))
     network_flow_lifecycle_summary = _mapping(
         review_summary.get("network_flow_lifecycle_summary")
     )
@@ -2365,6 +2516,10 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("NETWORK_KPI_DYNAMIC_STATUS_MISSING")
     if runtime_kpi_movement_summary.get("evidence_present") is not True:
         scenario_review_warnings.append("RUNTIME_KPI_MOVEMENT_SUMMARY_MISSING")
+    if runtime_closure_readiness.get("evidence_present") is not True:
+        scenario_review_warnings.append("RUNTIME_CLOSURE_READINESS_MISSING")
+    if runtime_dashboard_kpi.get("evidence_present") is not True:
+        scenario_review_warnings.append("RUNTIME_DASHBOARD_KPI_MISSING")
     if network_flow_lifecycle_summary.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_FLOW_LIFECYCLE_SUMMARY_MISSING")
     if service_lifecycle_stage_summary.get("evidence_present") is not True:
@@ -2711,6 +2866,75 @@ def build_runtime_export_scenario_review_bundle_v1(
                 runtime_kpi_movement_summary.get("evidence_present") is True
             ),
         },
+        "runtime_closure_readiness": {
+            "evidence_id": str(runtime_closure_readiness.get("evidence_id", "")),
+            "closure_status": str(
+                runtime_closure_readiness.get("closure_status", "")
+            ),
+            "result_ready": runtime_closure_readiness.get("result_ready") is True,
+            "lifecycle_state": str(
+                runtime_closure_readiness.get("lifecycle_state", "")
+            ),
+            "current_sim_time": _number(
+                runtime_closure_readiness.get("current_sim_time")
+            ),
+            "runtime_duration_seconds": _number(
+                runtime_closure_readiness.get("runtime_duration_seconds")
+            ),
+            "runtime_duration_reached": (
+                runtime_closure_readiness.get("runtime_duration_reached") is True
+            ),
+            "gate_count": _integer(runtime_closure_readiness.get("gate_count")),
+            "passed_gate_count": _integer(
+                runtime_closure_readiness.get("passed_gate_count")
+            ),
+            "failed_gate_count": _integer(
+                runtime_closure_readiness.get("failed_gate_count")
+            ),
+            "blocking_gate_ids": _string_tuple(
+                runtime_closure_readiness.get("blocking_gate_ids")
+            ),
+            "operator_next_action": str(
+                runtime_closure_readiness.get("operator_next_action", "")
+            ),
+            "closure_hash": str(runtime_closure_readiness.get("closure_hash", "")),
+            "evidence_hash": str(
+                runtime_closure_readiness.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                runtime_closure_readiness.get("evidence_present") is True
+            ),
+        },
+        "runtime_dashboard_kpi": {
+            "evidence_id": str(runtime_dashboard_kpi.get("evidence_id", "")),
+            "metric_model": str(runtime_dashboard_kpi.get("metric_model", "")),
+            "movement_status": str(runtime_dashboard_kpi.get("movement_status", "")),
+            "network_dynamic_status": str(
+                runtime_dashboard_kpi.get("network_dynamic_status", "")
+            ),
+            "sample_count": _integer(runtime_dashboard_kpi.get("sample_count")),
+            "metric_count": _integer(runtime_dashboard_kpi.get("metric_count")),
+            "observed_metric_count": _integer(
+                runtime_dashboard_kpi.get("observed_metric_count")
+            ),
+            "zero_current_metric_count": _integer(
+                runtime_dashboard_kpi.get("zero_current_metric_count")
+            ),
+            "time_varying_metric_count": _integer(
+                runtime_dashboard_kpi.get("time_varying_metric_count")
+            ),
+            "network_metric_count": _integer(
+                runtime_dashboard_kpi.get("network_metric_count")
+            ),
+            "compute_metric_count": _integer(
+                runtime_dashboard_kpi.get("compute_metric_count")
+            ),
+            "summary_hash": str(runtime_dashboard_kpi.get("summary_hash", "")),
+            "evidence_hash": str(runtime_dashboard_kpi.get("evidence_hash", "")),
+            "evidence_present": (
+                runtime_dashboard_kpi.get("evidence_present") is True
+            ),
+        },
         "network_flow_lifecycle_summary": {
             "summary_id": str(network_flow_lifecycle_summary.get("summary_id", "")),
             "lifecycle_model": str(
@@ -2943,6 +3167,8 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "network_kpi_variation_explanation_v1.json",
                 "network_kpi_dynamic_status_v1.json",
                 "runtime_kpi_movement_summary_v1.json",
+                "runtime_closure_readiness_v1.json",
+                "runtime_dashboard_kpi_v1.json",
                 "network_flow_lifecycle_summary_v1.json",
                 "service_lifecycle_stage_summary_v1.json",
                 "user_configuration_template_validation_v1.json",
@@ -2981,6 +3207,8 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_kpi_variation_explanation_v1.json",
             "network_kpi_dynamic_status_v1.json",
             "runtime_kpi_movement_summary_v1.json",
+            "runtime_closure_readiness_v1.json",
+            "runtime_dashboard_kpi_v1.json",
             "network_flow_lifecycle_summary_v1.json",
             "service_lifecycle_stage_summary_v1.json",
             "route_pressure_evidence_v1.json",
@@ -4443,6 +4671,8 @@ def build_runtime_export_package_audit_index_v1(
     )
     network_kpi_dynamic_status = _runtime_export_network_kpi_dynamic_status(status)
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
+    runtime_closure_readiness = _runtime_export_runtime_closure_readiness(status)
+    runtime_dashboard_kpi = _runtime_export_runtime_dashboard_kpi(status)
     network_flow_lifecycle_summary = (
         _runtime_export_network_flow_lifecycle_summary(status)
     )
@@ -4763,6 +4993,42 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "runtime_kpi_movement_summary_compute_moving_metric_count": _integer(
             runtime_kpi_movement_summary.get("compute_moving_metric_count")
+        ),
+        "runtime_closure_readiness_hash": str(
+            runtime_closure_readiness.get("evidence_hash", "")
+        ),
+        "runtime_closure_readiness_present": (
+            runtime_closure_readiness.get("evidence_present") is True
+        ),
+        "runtime_closure_readiness_status": str(
+            runtime_closure_readiness.get("closure_status", "")
+        ),
+        "runtime_closure_readiness_result_ready": (
+            runtime_closure_readiness.get("result_ready") is True
+        ),
+        "runtime_closure_readiness_failed_gate_count": _integer(
+            runtime_closure_readiness.get("failed_gate_count")
+        ),
+        "runtime_closure_readiness_blocking_gate_ids": _string_tuple(
+            runtime_closure_readiness.get("blocking_gate_ids")
+        ),
+        "runtime_dashboard_kpi_hash": str(
+            runtime_dashboard_kpi.get("evidence_hash", "")
+        ),
+        "runtime_dashboard_kpi_present": (
+            runtime_dashboard_kpi.get("evidence_present") is True
+        ),
+        "runtime_dashboard_kpi_metric_count": _integer(
+            runtime_dashboard_kpi.get("metric_count")
+        ),
+        "runtime_dashboard_kpi_observed_metric_count": _integer(
+            runtime_dashboard_kpi.get("observed_metric_count")
+        ),
+        "runtime_dashboard_kpi_zero_current_metric_count": _integer(
+            runtime_dashboard_kpi.get("zero_current_metric_count")
+        ),
+        "runtime_dashboard_kpi_time_varying_metric_count": _integer(
+            runtime_dashboard_kpi.get("time_varying_metric_count")
         ),
         "user_configuration_template_validation_hash": str(
             user_config_template_validation.get("evidence_hash", "")
@@ -6258,6 +6524,9 @@ def _runtime_export_diagnostic_findings(
     network_temporal_pressure_evidence: Mapping[str, Any],
     network_kpi_variation_explanation: Mapping[str, Any],
     network_kpi_dynamic_status: Mapping[str, Any],
+    runtime_kpi_movement_summary: Mapping[str, Any],
+    runtime_closure_readiness: Mapping[str, Any],
+    runtime_dashboard_kpi: Mapping[str, Any],
     user_config_template_validation: Mapping[str, Any],
     user_config_control_surface: Mapping[str, Any],
     traffic_demand_explanation: Mapping[str, Any],
@@ -6654,6 +6923,81 @@ def _runtime_export_diagnostic_findings(
                     "network KPI dynamic status requires operator review: "
                     f"{network_kpi_dynamic_status.get('dynamic_status', '')}."
                 ),
+            )
+        )
+    if runtime_kpi_movement_summary.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "RUNTIME_KPI_MOVEMENT_SUMMARY_MISSING",
+                "config_snapshot.status does not include runtime_kpi_movement_summary_v1.",
+            )
+        )
+    if runtime_kpi_movement_summary.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "RUNTIME_KPI_MOVEMENT_PACKET_LEVEL_DECLARED",
+                "runtime KPI movement summary declares packet-level simulation.",
+            )
+        )
+    if runtime_closure_readiness.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "RUNTIME_CLOSURE_READINESS_MISSING",
+                "config_snapshot.status does not include runtime_closure_readiness_v1.",
+            )
+        )
+    elif runtime_closure_readiness.get("result_ready") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "RUNTIME_CLOSURE_READINESS_NOT_READY",
+                (
+                    "runtime closure gates are not all ready; operator review "
+                    "should inspect runtime_closure_readiness_v1.json."
+                ),
+            )
+        )
+    if runtime_closure_readiness.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "RUNTIME_CLOSURE_PACKET_LEVEL_DECLARED",
+                "runtime closure readiness declares packet-level simulation.",
+            )
+        )
+    if runtime_closure_readiness.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "RUNTIME_CLOSURE_FRONTEND_INFERENCE_REQUIRED",
+                "runtime closure readiness should be backend-owned and not require frontend inference.",
+            )
+        )
+    if runtime_dashboard_kpi.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "RUNTIME_DASHBOARD_KPI_MISSING",
+                "config_snapshot.status does not include runtime_dashboard_kpi_v1.",
+            )
+        )
+    if runtime_dashboard_kpi.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "RUNTIME_DASHBOARD_KPI_PACKET_LEVEL_DECLARED",
+                "runtime dashboard KPI evidence declares packet-level simulation.",
+            )
+        )
+    if runtime_dashboard_kpi.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "RUNTIME_DASHBOARD_KPI_FRONTEND_INFERENCE_REQUIRED",
+                "runtime dashboard KPI evidence should be backend-owned and not require frontend inference.",
             )
         )
     if user_config_template_validation.get("evidence_present") is not True:
@@ -7222,6 +7566,25 @@ def _runtime_export_scenario_review_evidence_hash(
                 scenario_review_bundle.get("network_kpi_dynamic_status")
             ).get("evidence_hash", "")
         )
+    if filename == "runtime_kpi_movement_summary_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("runtime_kpi_movement_summary")
+            ).get("evidence_hash", "")
+        )
+    if filename == "runtime_closure_readiness_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("runtime_closure_readiness")
+            ).get("evidence_hash", "")
+        )
+    if filename == "runtime_dashboard_kpi_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("runtime_dashboard_kpi")).get(
+                "evidence_hash",
+                "",
+            )
+        )
     if filename == "user_service_request_summary_v2.json":
         return str(
             _mapping(scenario_review_bundle.get("user_service_requests")).get(
@@ -7339,6 +7702,8 @@ def _runtime_export_scenario_review_step_label(
         "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
         "network_kpi_dynamic_status_v1.json": "network KPI dynamic status",
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
+        "runtime_closure_readiness_v1.json": "runtime closure readiness",
+        "runtime_dashboard_kpi_v1.json": "runtime dashboard KPI",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "traffic_business_activity_window_v1.json": "business activity",
         "service_lifecycle_stage_summary_v1.json": "service stage summary",
@@ -8327,6 +8692,181 @@ def _runtime_export_runtime_kpi_movement_summary(
         "acceptable_for_demo_review": acceptable,
         "model_assumptions": _string_tuple(movement.get("model_assumptions")),
         "caveats": _string_tuple(movement.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_runtime_closure_readiness(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    closure = _mapping(status.get("runtime_closure_readiness_v1"))
+    evidence_present = bool(closure)
+    source = "config_snapshot.status.runtime_closure_readiness_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID,
+            "source": source,
+            "artifact_filename": RUNTIME_CLOSURE_READINESS_FILENAME,
+            "evidence_present": False,
+            "closure_status": "MISSING_RUNTIME_CLOSURE_READINESS",
+            "result_ready": False,
+            "lifecycle_state": "",
+            "current_sim_time": 0.0,
+            "runtime_duration_seconds": 0.0,
+            "runtime_duration_reached": False,
+            "runtime_completion_reason": "",
+            "gate_count": 0,
+            "passed_gate_count": 0,
+            "waiting_gate_count": 0,
+            "failed_gate_count": 0,
+            "blocking_gate_ids": (),
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "operator_next_action": "CHECK_RUNTIME_STATUS",
+            "closure_hash": "",
+            "caveats": (
+                "Runtime status did not expose runtime_closure_readiness_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    gates = _records(closure.get("gates"))
+    blocking_gate_ids = _string_tuple(closure.get("blocking_gate_ids"))
+    if not blocking_gate_ids:
+        blocking_gate_ids = tuple(
+            str(gate.get("gate_id", ""))
+            for gate in gates
+            if str(gate.get("status", "")).upper() not in {"PASS", "READY"}
+        )
+    packet_level = closure.get("packet_level_simulation") is True
+    frontend_inference = closure.get("frontend_inference_required") is True
+    result_ready = closure.get("result_ready") is True
+    evidence = {
+        "version": "v1",
+        "evidence_id": RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID,
+        "source": source,
+        "runtime_status_source": str(closure.get("source", "")),
+        "artifact_filename": RUNTIME_CLOSURE_READINESS_FILENAME,
+        "evidence_present": True,
+        "target": str(closure.get("target", "")),
+        "lifecycle_state": str(closure.get("lifecycle_state", "")),
+        "current_sim_time": _number(closure.get("current_sim_time")),
+        "runtime_duration_seconds": _number(
+            closure.get("runtime_duration_seconds")
+        ),
+        "runtime_duration_reached": (
+            closure.get("runtime_duration_reached") is True
+        ),
+        "runtime_completion_reason": str(
+            closure.get("runtime_completion_reason", "")
+        ),
+        "closure_status": str(closure.get("closure_status", "")),
+        "result_ready": result_ready,
+        "gate_count": _integer(closure.get("gate_count", len(gates))),
+        "passed_gate_count": _integer(closure.get("passed_gate_count")),
+        "waiting_gate_count": _integer(closure.get("waiting_gate_count")),
+        "failed_gate_count": _integer(closure.get("failed_gate_count")),
+        "blocking_gate_ids": blocking_gate_ids,
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": (
+            result_ready and not packet_level and not frontend_inference
+        ),
+        "operator_next_action": str(closure.get("operator_next_action", "")),
+        "closure_hash": str(
+            closure.get("closure_hash", stable_hash_payload(closure))
+        ),
+        "model_assumptions": _string_tuple(closure.get("model_assumptions")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_runtime_dashboard_kpi(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    dashboard = _mapping(status.get("runtime_dashboard_kpi_v1"))
+    evidence_present = bool(dashboard)
+    source = "config_snapshot.status.runtime_dashboard_kpi_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID,
+            "source": source,
+            "artifact_filename": RUNTIME_DASHBOARD_KPI_FILENAME,
+            "evidence_present": False,
+            "metric_model": "UNKNOWN",
+            "sample_count": 0,
+            "tail_sample_time_s": 0.0,
+            "metric_count": 0,
+            "observed_metric_count": 0,
+            "zero_current_metric_count": 0,
+            "time_varying_metric_count": 0,
+            "network_metric_count": 0,
+            "compute_metric_count": 0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "movement_status": "UNKNOWN",
+            "network_dynamic_status": "UNKNOWN",
+            "summary_hash": "",
+            "caveats": (
+                "Runtime status did not expose runtime_dashboard_kpi_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    packet_level = dashboard.get("packet_level_simulation") is True
+    frontend_inference = dashboard.get("frontend_inference_required") is True
+    metric_count = _integer(dashboard.get("metric_count"))
+    evidence = {
+        "version": "v1",
+        "evidence_id": RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID,
+        "source": source,
+        "runtime_status_source": str(dashboard.get("source", "")),
+        "artifact_filename": RUNTIME_DASHBOARD_KPI_FILENAME,
+        "evidence_present": True,
+        "metric_model": str(dashboard.get("metric_model", "")),
+        "sample_count": _integer(dashboard.get("sample_count")),
+        "tail_sample_time_s": _number(dashboard.get("tail_sample_time_s")),
+        "metrics_summary_event_time_s": _number(
+            dashboard.get("metrics_summary_event_time_s")
+        ),
+        "metrics_summary_observation_time_s": _number(
+            dashboard.get("metrics_summary_observation_time_s")
+        ),
+        "metrics_summary_time_source": str(
+            dashboard.get("metrics_summary_time_source", "")
+        ),
+        "movement_status": str(dashboard.get("runtime_movement_status", "")),
+        "network_dynamic_status": str(
+            dashboard.get("network_dynamic_status", "")
+        ),
+        "metric_count": metric_count,
+        "observed_metric_count": _integer(dashboard.get("observed_metric_count")),
+        "zero_current_metric_count": _integer(
+            dashboard.get("zero_current_metric_count")
+        ),
+        "time_varying_metric_count": _integer(
+            dashboard.get("time_varying_metric_count")
+        ),
+        "network_metric_count": _integer(dashboard.get("network_metric_count")),
+        "compute_metric_count": _integer(dashboard.get("compute_metric_count")),
+        "item_count": len(_records(dashboard.get("items"))),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": (
+            metric_count > 0 and not packet_level and not frontend_inference
+        ),
+        "model_assumptions": _string_tuple(dashboard.get("model_assumptions")),
+        "summary_hash": str(
+            dashboard.get("summary_hash", stable_hash_payload(dashboard))
+        ),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence

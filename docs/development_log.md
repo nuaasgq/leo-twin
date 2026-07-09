@@ -22435,3 +22435,33 @@ change.
 - Known remaining issues:
   - Frontend panels are not yet bound to `runtime_dashboard_kpi_v1`; a follow-on frontend task should prefer this field when present.
   - The summary is not yet persisted into result packages. A later export task can add `runtime_dashboard_kpi_v1.json` if offline dashboard KPI review is needed.
+
+## 2026-07-09 - T440 runtime result package bindings v1
+
+- Branch: `feature/T440-runtime-result-package-bindings-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: persist backend-owned `runtime_closure_readiness_v1` and `runtime_dashboard_kpi_v1` into runtime result packages as standalone artifacts. The new files are `runtime_closure_readiness_v1.json` and `runtime_dashboard_kpi_v1.json`. Review summary, diagnostics bundle, artifact browser, scenario review bundle, checklist evidence hashing, and audit index now reference these fields. This reads existing runtime status only and does not change Event Kernel behavior, metrics formulas, closure gates, frontend rendering, packet-level boundaries, external simulator policy, or runtime generated config behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/runtime_closure_readiness_v1.md`
+  - `docs/runtime_dashboard_kpi_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_runtime_closure_readiness_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_runtime_dashboard_kpi_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_review_summary_v1_is_deterministic_and_review_ready tests\unit\test_result_package_contract_v1.py::test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_bundle_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic`
+    - Result: 6 passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py`
+    - Result: 47 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py`
+    - Result: 1 passed after the scenario-review policy adjustment noted below.
+- Problems encountered:
+  - The first integration export run failed because `runtime_closure_readiness_v1` can legitimately report result gaps in the current demo, and the initial scenario review binding treated a non-ready closure as a scenario-level warning. This changed existing package-review semantics. The binding was adjusted so missing closure evidence is a scenario warning, while non-ready closure remains visible in diagnostics and audit fields without downgrading the scenario review entry point.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - `runtime_closure_readiness_v1` may still report service lifecycle result gaps in standard demo exports. This task makes the evidence reviewable; it does not fix the underlying communication-compute lifecycle completeness.
+  - Frontend panels still need a follow-on binding task to prefer `runtime_dashboard_kpi_v1` and display closure-readiness evidence from exported packages or live status where appropriate.

@@ -20,6 +20,8 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID,
+    RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_SERVICE_LIFECYCLE_STAGE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
@@ -59,6 +61,8 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_compute_resource_pool_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
+    build_runtime_export_runtime_closure_readiness_v1,
+    build_runtime_export_runtime_dashboard_kpi_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
     build_runtime_export_service_lifecycle_stage_summary_v1,
     build_runtime_export_traffic_demand_explanation_v1,
@@ -104,6 +108,8 @@ _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME = (
     "traffic_business_activity_window_v1.json"
 )
 _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
+_RUNTIME_CLOSURE_READINESS_FILENAME = "runtime_closure_readiness_v1.json"
+_RUNTIME_DASHBOARD_KPI_FILENAME = "runtime_dashboard_kpi_v1.json"
 _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME = "service_lifecycle_stage_summary_v1.json"
 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
@@ -153,6 +159,8 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "network_kpi_variation_explanation_v1.json",
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _RUNTIME_CLOSURE_READINESS_FILENAME,
+        _RUNTIME_DASHBOARD_KPI_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -309,6 +317,8 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "network_kpi_variation_explanation_v1.json",
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _RUNTIME_CLOSURE_READINESS_FILENAME,
+        _RUNTIME_DASHBOARD_KPI_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -373,6 +383,8 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             ),
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "runtime_closure_readiness_v1": _runtime_closure_readiness(),
+            "runtime_dashboard_kpi_v1": _runtime_dashboard_kpi(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "service_lifecycle_stage_summary_v1": (
                 _service_lifecycle_stage_summary()
@@ -412,6 +424,8 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "network_kpi_variation_explanation_v1.json",
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _RUNTIME_CLOSURE_READINESS_FILENAME,
+        _RUNTIME_DASHBOARD_KPI_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -512,6 +526,12 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "TIME_VARYING_OBSERVED"
     )
     assert first["runtime_kpi_movement_summary"]["moving_metric_count"] == 3
+    assert first["runtime_closure_readiness"]["evidence_present"] is True
+    assert first["runtime_closure_readiness"]["closure_status"] == "RESULT_READY"
+    assert first["runtime_closure_readiness"]["result_ready"] is True
+    assert first["runtime_dashboard_kpi"]["evidence_present"] is True
+    assert first["runtime_dashboard_kpi"]["metric_count"] == 5
+    assert first["runtime_dashboard_kpi"]["time_varying_metric_count"] == 3
     assert first["network_flow_lifecycle_summary"]["evidence_present"] is True
     assert first["network_flow_lifecycle_summary"]["active_flow_count"] == 2
     assert first["service_lifecycle_stage_summary"]["evidence_present"] is True
@@ -557,6 +577,8 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     ] is True
     assert first["artifacts"]["network_kpi_dynamic_status_exported"] is True
     assert first["artifacts"]["runtime_kpi_movement_summary_exported"] is True
+    assert first["artifacts"]["runtime_closure_readiness_exported"] is True
+    assert first["artifacts"]["runtime_dashboard_kpi_exported"] is True
     assert first["artifacts"]["network_flow_lifecycle_summary_exported"] is True
     assert first["artifacts"]["service_lifecycle_stage_summary_exported"] is True
     assert first["artifacts"][
@@ -783,6 +805,76 @@ def test_runtime_export_runtime_kpi_movement_summary_v1_is_deterministic() -> No
     assert first["evidence"]["evidence_present"] is True
     assert first["evidence"]["movement_status"] == "TIME_VARYING_OBSERVED"
     assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
+def test_runtime_export_runtime_closure_readiness_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "runtime_closure_readiness_v1": _runtime_closure_readiness(),
+        }
+    }
+
+    first = build_runtime_export_runtime_closure_readiness_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_runtime_closure_readiness_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_V1_ID
+    assert first["source"] == "BACKEND_RUNTIME_STATUS"
+    assert first["runtime_status_field"] == "runtime_closure_readiness_v1"
+    assert first["closure_readiness"] == _runtime_closure_readiness()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["closure_status"] == "RESULT_READY"
+    assert first["evidence"]["result_ready"] is True
+    assert first["evidence"]["failed_gate_count"] == 0
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert "NO_CLOSURE_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
+def test_runtime_export_runtime_dashboard_kpi_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "runtime_dashboard_kpi_v1": _runtime_dashboard_kpi(),
+        }
+    }
+
+    first = build_runtime_export_runtime_dashboard_kpi_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_runtime_dashboard_kpi_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_V1_ID
+    assert first["source"] == "BACKEND_RUNTIME_STATUS"
+    assert first["runtime_status_field"] == "runtime_dashboard_kpi_v1"
+    assert first["dashboard_kpi"] == _runtime_dashboard_kpi()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["metric_model"] == "FLOW_LEVEL_PROXY"
+    assert first["evidence"]["metric_count"] == 5
+    assert first["evidence"]["time_varying_metric_count"] == 3
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert "NO_DASHBOARD_KPI_RECOMPUTE" in first["boundary_conditions"]
     assert first["artifact_hash"].startswith("sha256:")
 
 
@@ -1347,6 +1439,8 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             ),
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "runtime_closure_readiness_v1": _runtime_closure_readiness(),
+            "runtime_dashboard_kpi_v1": _runtime_dashboard_kpi(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "service_lifecycle_stage_summary_v1": (
                 _service_lifecycle_stage_summary()
@@ -1388,6 +1482,8 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "network_kpi_variation_explanation_v1.json",
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _RUNTIME_CLOSURE_READINESS_FILENAME,
+        _RUNTIME_DASHBOARD_KPI_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -1476,6 +1572,12 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["network_kpi_dynamic_status"]["dynamic_status"] == "DYNAMIC"
     assert first["network_kpi_dynamic_status"]["acceptable_for_demo_review"] is True
     assert first["runtime_kpi_movement_summary"]["evidence_present"] is True
+    assert first["runtime_closure_readiness"]["evidence_present"] is True
+    assert first["runtime_closure_readiness"]["closure_status"] == "RESULT_READY"
+    assert first["runtime_closure_readiness"]["result_ready"] is True
+    assert first["runtime_dashboard_kpi"]["evidence_present"] is True
+    assert first["runtime_dashboard_kpi"]["metric_count"] == 5
+    assert first["runtime_dashboard_kpi"]["time_varying_metric_count"] == 3
     assert first["network_flow_lifecycle_summary"]["evidence_present"] is True
     assert first["service_lifecycle_stage_summary"]["evidence_present"] is True
     assert first["service_lifecycle_stage_summary"]["service_count"] == 2
@@ -1519,7 +1621,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["missing_required_count"] == 0
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
-    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 7
+    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 8
     assert categories["ROUTE_SERVICE_EVIDENCE"]["present_count"] == 5
     assert categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
     benchmark_acceptance_item = next(
@@ -1571,6 +1673,24 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert movement_item["present"] is True
     assert movement_item["default_json_pointer"] == "/evidence"
     assert movement_item["filter_hint"] == "movement"
+    closure_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _RUNTIME_CLOSURE_READINESS_FILENAME
+    )
+    assert closure_item["category"] == "OPERATOR_REVIEW"
+    assert closure_item["present"] is True
+    assert closure_item["default_json_pointer"] == "/evidence"
+    assert closure_item["filter_hint"] == "closure readiness"
+    dashboard_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _RUNTIME_DASHBOARD_KPI_FILENAME
+    )
+    assert dashboard_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert dashboard_item["present"] is True
+    assert dashboard_item["default_json_pointer"] == "/dashboard_kpi/items"
+    assert dashboard_item["filter_hint"] == "dashboard kpi"
     temporal_pressure_item = next(
         item
         for item in artifact_browser["items"]
@@ -1638,6 +1758,8 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             ),
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "runtime_closure_readiness_v1": _runtime_closure_readiness(),
+            "runtime_dashboard_kpi_v1": _runtime_dashboard_kpi(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "service_lifecycle_stage_summary_v1": (
                 _service_lifecycle_stage_summary()
@@ -1681,6 +1803,8 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "network_kpi_variation_explanation_v1.json",
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _RUNTIME_CLOSURE_READINESS_FILENAME,
+        _RUNTIME_DASHBOARD_KPI_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -1805,6 +1929,16 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     )
     assert first["network_kpi_dynamic_status"]["dynamic_status"] == "DYNAMIC"
     assert first["network_kpi_dynamic_status"]["evidence_present"] is True
+    assert first["runtime_closure_readiness"]["evidence_hash"] == (
+        review_summary["runtime_closure_readiness"]["evidence_hash"]
+    )
+    assert first["runtime_closure_readiness"]["closure_status"] == "RESULT_READY"
+    assert first["runtime_closure_readiness"]["result_ready"] is True
+    assert first["runtime_dashboard_kpi"]["evidence_hash"] == (
+        review_summary["runtime_dashboard_kpi"]["evidence_hash"]
+    )
+    assert first["runtime_dashboard_kpi"]["metric_count"] == 5
+    assert first["runtime_dashboard_kpi"]["time_varying_metric_count"] == 3
     assert first["service_lifecycle_stage_summary"]["evidence_present"] is True
     assert first["service_lifecycle_stage_summary"]["service_count"] == 2
     assert first["service_lifecycle_stage_summary"]["dominant_stage_kind"] == (
@@ -1852,6 +1986,8 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "recommended_review_order"
     ]
     assert _NETWORK_KPI_DYNAMIC_STATUS_FILENAME in first["recommended_review_order"]
+    assert _RUNTIME_CLOSURE_READINESS_FILENAME in first["recommended_review_order"]
+    assert _RUNTIME_DASHBOARD_KPI_FILENAME in first["recommended_review_order"]
     assert _BENCHMARK_ACCEPTANCE_BINDING_FILENAME in first[
         "recommended_review_order"
     ]
@@ -1886,6 +2022,12 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "entrypoint_filenames"
     ]
     assert _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME in first["artifact_review"][
+        "entrypoint_filenames"
+    ]
+    assert _RUNTIME_CLOSURE_READINESS_FILENAME in first["artifact_review"][
+        "entrypoint_filenames"
+    ]
+    assert _RUNTIME_DASHBOARD_KPI_FILENAME in first["artifact_review"][
         "entrypoint_filenames"
     ]
     assert _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME in first[
@@ -3547,6 +3689,9 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "status": {
             "runtime_export_reproducibility_boundary_v1": boundary,
             "network_kpi_dynamic_status_v1": _network_kpi_dynamic_status(),
+            "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "runtime_closure_readiness_v1": _runtime_closure_readiness(),
+            "runtime_dashboard_kpi_v1": _runtime_dashboard_kpi(),
             "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "service_lifecycle_stage_summary_v1": (
                 _service_lifecycle_stage_summary()
@@ -3714,6 +3859,22 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["network_kpi_dynamic_status_time_varying_kpi_count"] == 1
     assert first["network_kpi_dynamic_status_flat_kpi_count"] == 1
     assert first["network_kpi_dynamic_status_hash"].startswith("sha256:")
+    assert first["runtime_kpi_movement_summary_present"] is True
+    assert first["runtime_kpi_movement_summary_status"] == "TIME_VARYING_OBSERVED"
+    assert first["runtime_kpi_movement_summary_moving_metric_count"] == 3
+    assert first["runtime_kpi_movement_summary_compute_moving_metric_count"] == 1
+    assert first["runtime_kpi_movement_summary_hash"].startswith("sha256:")
+    assert first["runtime_closure_readiness_present"] is True
+    assert first["runtime_closure_readiness_status"] == "RESULT_READY"
+    assert first["runtime_closure_readiness_result_ready"] is True
+    assert first["runtime_closure_readiness_failed_gate_count"] == 0
+    assert first["runtime_closure_readiness_hash"].startswith("sha256:")
+    assert first["runtime_dashboard_kpi_present"] is True
+    assert first["runtime_dashboard_kpi_metric_count"] == 5
+    assert first["runtime_dashboard_kpi_observed_metric_count"] == 5
+    assert first["runtime_dashboard_kpi_zero_current_metric_count"] == 1
+    assert first["runtime_dashboard_kpi_time_varying_metric_count"] == 3
+    assert first["runtime_dashboard_kpi_hash"].startswith("sha256:")
     assert first["service_lifecycle_stage_summary_present"] is True
     assert first["service_lifecycle_stage_summary_service_count"] == 2
     assert first["service_lifecycle_stage_summary_observed_stage_count"] == 5
@@ -3794,6 +3955,9 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "processed_event_count": 4200,
             "queued_event_count": 0,
             "v2_executable_readiness_v1": _v2_executable_readiness(),
+            "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "runtime_closure_readiness_v1": _runtime_closure_readiness(),
+            "runtime_dashboard_kpi_v1": _runtime_dashboard_kpi(),
             "traffic_business_activity_window_v1": _traffic_business_activity_window(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
@@ -3826,6 +3990,8 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "network_kpi_variation_explanation_v1.json",
         _NETWORK_KPI_DYNAMIC_STATUS_FILENAME,
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _RUNTIME_CLOSURE_READINESS_FILENAME,
+        _RUNTIME_DASHBOARD_KPI_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         _SERVICE_LIFECYCLE_STAGE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
@@ -4410,6 +4576,111 @@ def _runtime_kpi_movement_summary() -> dict[str, object]:
                 "absolute_delta": 20.0,
             },
         ),
+    }
+
+
+def _runtime_closure_readiness() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.runtime_closure_readiness.v1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "target": "industrial-v2-demo-result-loop",
+        "lifecycle_state": "STOPPED",
+        "current_sim_time": 120.0,
+        "runtime_duration_seconds": 120.0,
+        "runtime_duration_reached": True,
+        "runtime_completion_reason": "DURATION_REACHED",
+        "closure_status": "RESULT_READY",
+        "result_ready": True,
+        "gate_count": 3,
+        "passed_gate_count": 3,
+        "waiting_gate_count": 0,
+        "failed_gate_count": 0,
+        "blocking_gate_ids": (),
+        "gates": (
+            {
+                "gate_id": "runtime_duration",
+                "label": "runtime duration",
+                "status": "PASS",
+                "required_paths": ("runtime.current_sim_time",),
+                "missing_paths": (),
+                "issue_count": 0,
+                "issues": (),
+            },
+            {
+                "gate_id": "kpi_series",
+                "label": "KPI series",
+                "status": "PASS",
+                "required_paths": ("runtime_kpi_movement_summary_v1",),
+                "missing_paths": (),
+                "issue_count": 0,
+                "issues": (),
+            },
+            {
+                "gate_id": "business_requests",
+                "label": "business requests",
+                "status": "PASS",
+                "required_paths": ("traffic_business_activity_window_v1",),
+                "missing_paths": (),
+                "issue_count": 0,
+                "issues": (),
+            },
+        ),
+        "frontend_inference_required": False,
+        "packet_level_simulation": False,
+        "model_assumptions": (
+            "Runtime closure is derived from backend status gates.",
+        ),
+        "operator_next_action": "EXPORT_RESULT_PACKAGE",
+        "closure_hash": "sha256:runtime-closure",
+    }
+
+
+def _runtime_dashboard_kpi() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.runtime_dashboard_kpi.v1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "metric_model": "FLOW_LEVEL_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "sample_count": 6,
+        "tail_sample_time_s": 120.0,
+        "metrics_summary_event_time_s": 120.0,
+        "metrics_summary_observation_time_s": 120.0,
+        "metrics_summary_time_source": "RUNTIME_KPI_TAIL",
+        "runtime_movement_status": "TIME_VARYING_OBSERVED",
+        "network_dynamic_status": "DYNAMIC",
+        "metric_count": 5,
+        "observed_metric_count": 5,
+        "zero_current_metric_count": 1,
+        "time_varying_metric_count": 3,
+        "network_metric_count": 4,
+        "compute_metric_count": 1,
+        "items": (
+            {
+                "metric": "NETWORK_EFFECTIVE_THROUGHPUT",
+                "label": "全网平均吞吐量",
+                "category": "NETWORK",
+                "current_value": 120.5,
+                "unit": "Mbps",
+                "value_source": "KPI_TIME_SERIES_TAIL",
+                "movement_status": "TIME_VARYING",
+            },
+            {
+                "metric": "COMPUTE_RESOURCE_UTILIZATION",
+                "label": "算力资源消耗",
+                "category": "COMPUTE",
+                "current_value": 0.42,
+                "unit": "ratio",
+                "value_source": "KPI_TIME_SERIES_TAIL",
+                "movement_status": "TIME_VARYING",
+            },
+        ),
+        "model_assumptions": (
+            "Dashboard KPI values are backend-owned status fields.",
+        ),
+        "summary_hash": "sha256:runtime-dashboard-kpi",
     }
 
 

@@ -124,6 +124,8 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_v2_executable_readiness_v1,
     build_runtime_export_traffic_business_activity_window_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
+    build_runtime_export_runtime_closure_readiness_v1,
+    build_runtime_export_runtime_dashboard_kpi_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
     build_runtime_export_service_lifecycle_stage_summary_v1,
     build_runtime_export_package_acceptance_report_v1,
@@ -225,6 +227,10 @@ _RUNTIME_EXPORT_NETWORK_KPI_DYNAMIC_STATUS_FILENAME = (
 _RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = (
     "runtime_kpi_movement_summary_v1.json"
 )
+_RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_FILENAME = (
+    "runtime_closure_readiness_v1.json"
+)
+_RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_FILENAME = "runtime_dashboard_kpi_v1.json"
 _RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = (
     "network_flow_lifecycle_summary_v1.json"
 )
@@ -1003,6 +1009,36 @@ class DemoControlPlane:
         written_files["runtime_kpi_movement_summary_v1"] = (
             runtime_kpi_movement_summary_path
         )
+        runtime_closure_readiness_path = (
+            package_dir / _RUNTIME_EXPORT_RUNTIME_CLOSURE_READINESS_FILENAME
+        )
+        runtime_closure_readiness = (
+            build_runtime_export_runtime_closure_readiness_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        runtime_closure_readiness_path.write_text(
+            stable_json_pretty(runtime_closure_readiness),
+            encoding="utf-8",
+        )
+        written_files["runtime_closure_readiness_v1"] = (
+            runtime_closure_readiness_path
+        )
+        runtime_dashboard_kpi_path = (
+            package_dir / _RUNTIME_EXPORT_RUNTIME_DASHBOARD_KPI_FILENAME
+        )
+        runtime_dashboard_kpi = build_runtime_export_runtime_dashboard_kpi_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            config_snapshot=config_snapshot,
+        )
+        runtime_dashboard_kpi_path.write_text(
+            stable_json_pretty(runtime_dashboard_kpi),
+            encoding="utf-8",
+        )
+        written_files["runtime_dashboard_kpi_v1"] = runtime_dashboard_kpi_path
         network_flow_lifecycle_summary_path = (
             package_dir / _RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME
         )
