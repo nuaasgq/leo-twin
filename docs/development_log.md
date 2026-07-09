@@ -21476,3 +21476,51 @@ change.
   - The standalone benchmark binding artifact improves reviewability, but a
     full live-services disposable run with `-ExportPackage` is still a heavier
     operator gate and was not executed in this task.
+
+## 2026-07-09 - T421 network quality proxy model v2
+
+- Branch: `feature/T421-network-kpi-model-v2`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: move the effective network quality combination formula for throughput,
+  latency, loss proxy, and delay-variation proxy from collector-local logic into
+  `leo_twin.network_quality_proxy_model.v2` under `models/network/quality.py`.
+  `MetricsCollector` still owns event observation and state aggregation, but now
+  calls the model-layer estimate for deterministic KPI semantics. Runtime field
+  names and frontend/export contracts remain compatible. No Event Kernel,
+  packet-level, RF propagation, external simulator, frontend rendering, or
+  runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/models/network/quality.py`
+  - `src/leo_twin/models/network/__init__.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_network_quality_model_v2.py`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct targeted test runner with `PYTHONPATH=src` and a minimal pytest shim
+    for the bundled Python environment.
+    - Result: `tests.unit.test_network_quality_model_v2` 4 direct tests passed.
+    - Result: `tests.unit.test_network_pressure_model_v2` 8 direct tests passed.
+    - Result: `tests.unit.test_network_temporal_pressure_profile_v1` 3 direct
+      tests passed.
+    - Result: `tests.unit.test_metrics_module` 25 direct tests passed, 1
+      parameterized/temp-path test skipped by the direct runner.
+- Problems encountered:
+  - Creating the new task branch required elevated Git ref write access because
+    the sandbox initially denied `.git/refs` writes.
+  - `apply_patch` remains unavailable in this Windows sandbox, so exact UTF-8
+    replacement/write scripts were used and diffs were reviewed.
+  - The first collector refactor accidentally removed the offered/requested
+    route demand inputs before the model call. The metrics direct tests caught
+    the `NameError`, and the inputs were restored before commit.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The model is still a deterministic flow-level proxy. It improves ownership
+    and explainability, but it is not packet-level loss/jitter, RF channel
+    fidelity, or external network-simulator calibration.

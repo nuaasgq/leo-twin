@@ -471,6 +471,11 @@ Tasks:
     exposing the backend-owned time-pressure model id, source-field coverage,
     dominant load component, phase/factor/loss/delay values, and throughput
     adjustment evidence for frontend consumption without local inference.
+    T421 adds `leo_twin.network_quality_proxy_model.v2` in
+    `models/network/quality.py`, moving the effective throughput, latency,
+    loss-proxy, and delay-variation combination formula from metrics collector
+    local logic into a deterministic model-layer estimate while preserving the
+    existing runtime status fields and Event Kernel boundary.
     The export-binding increment persists the same evidence as
     `runtime_kpi_movement_summary_v1.json` and surfaces compact movement status
     and hash fields through result-package review, diagnostics, scenario review,

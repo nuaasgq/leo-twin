@@ -96,6 +96,19 @@ simulation. The pressure fields are included in Network Model Contract v2 source
 fields for effective throughput, effective loss proxy, and effective
 delay-variation proxy.
 
+## Network Quality Proxy Model v2
+
+`leo_twin.network_quality_proxy_model.v2` centralizes the deterministic
+flow-level KPI estimate that combines route latency/variation, route blocking,
+failed-flow ratio, route loss proxy, congestion pressure, offered capacity,
+requested demand, completed-flow capacity, completed-flow latency, and temporal
+pressure. `MetricsCollector` now supplies collected state to this model and
+publishes the same runtime fields as before. The model does not collect events,
+read wall-clock time, replay packets, or call external simulators.
+
+Frontend and export layers should continue to consume backend runtime fields and
+provenance rows; they should not reimplement this quality estimate locally.
+
 Frontend surfaces should use v2 provenance for product explanations once the
 dashboard migrates away from the v1 helper fields.
 

@@ -13,10 +13,12 @@ from pathlib import Path
 from threading import RLock
 from typing import Any, Protocol
 
+from leo_twin.models.network.quality import (
+    NetworkQualityInputs,
+    estimate_network_quality,
+)
 from leo_twin.models.network.pressure import (
     NETWORK_TIME_PRESSURE_PERIOD_S,
-    time_varying_pressure_delay_variation,
-    time_varying_pressure_loss_rate,
     time_varying_pressure_state,
 )
 from leo_twin.models.orbit import ground_track_point
@@ -1481,15 +1483,6 @@ class MetricsCollector:
         )
         route_loss_proxy_rate = _average(route_loss_values)
         max_route_pressure_loss_rate = max(route_loss_values, default=0.0)
-        congestion_loss_proxy_rate = _congestion_loss_proxy_rate(congestion_proxy)
-        loss_proxy_rate = _clamp_probability(
-            max(
-                route_blocking_ratio,
-                failed_flow_ratio,
-                route_loss_proxy_rate,
-                congestion_loss_proxy_rate,
-            )
-        )
         offered_route_capacity = float(sum(route.capacity for route in available_routes))
         requested_route_demand = float(
             sum(_route_demand_capacity(route) for route in self._routes.values())
@@ -1497,14 +1490,39 @@ class MetricsCollector:
         available_route_demand = float(
             sum(_route_demand_capacity(route) for route in available_routes)
         )
-        demand_pressure_proxy = _clamp_probability(
-            requested_route_demand / offered_route_capacity
-            if offered_route_capacity > 0.0
-            else 1.0
-            if requested_route_demand > 0.0
-            else 0.0
+        flow_quality = self._completed_flow_quality()
+        completed_route_capacity = flow_quality["capacity_sum"]
+        flow_latency_avg = _average(flow_quality["latencies"])
+        flow_latency_variation_proxy = _standard_deviation(flow_quality["latencies"])
+        quality_estimate = estimate_network_quality(
+            NetworkQualityInputs(
+                sim_time=summary_time,
+                route_latency_avg_s=route_latency_avg,
+                route_delay_variation_proxy_s=delay_variation_proxy,
+                route_blocking_ratio=route_blocking_ratio,
+                failed_flow_ratio=failed_flow_ratio,
+                route_loss_proxy_rate=route_loss_proxy_rate,
+                congestion_proxy=congestion_proxy,
+                offered_route_capacity_mbps=offered_route_capacity,
+                requested_route_demand_mbps=requested_route_demand,
+                completed_flow_capacity_mbps=completed_route_capacity,
+                successful_flow_count=int(flow_quality["successful_count"]),
+                flow_latency_avg_s=flow_latency_avg,
+                flow_latency_variation_proxy_s=flow_latency_variation_proxy,
+                time_pressure_period_s=self._time_pressure_period_s,
+                time_pressure_burst_center_phase=(
+                    self._time_pressure_burst_center_phase
+                ),
+                time_pressure_burst_width_phase=(
+                    self._time_pressure_burst_width_phase
+                ),
+                time_pressure_burst_amplitude=self._time_pressure_burst_amplitude,
+            )
         )
-        demand_loss_proxy_rate = _congestion_loss_proxy_rate(demand_pressure_proxy)
+        congestion_loss_proxy_rate = quality_estimate.congestion_loss_proxy_rate
+        loss_proxy_rate = quality_estimate.base_loss_proxy_rate
+        demand_pressure_proxy = quality_estimate.demand_pressure_proxy
+        demand_loss_proxy_rate = quality_estimate.demand_loss_proxy_rate
         queue_pressure_routes = tuple(
             route
             for route in available_routes
@@ -1519,106 +1537,31 @@ class MetricsCollector:
         queue_pressure_proxy = _clamp_probability(
             max(demand_pressure_proxy, congestion_proxy, max_route_pressure_loss_rate)
         )
-        flow_quality = self._completed_flow_quality()
-        completed_route_capacity = flow_quality["capacity_sum"]
-        throughput_pressure_proxy = _clamp_probability(
-            completed_route_capacity / offered_route_capacity
-            if offered_route_capacity > 0.0
-            else 0.0
+        throughput_pressure_proxy = quality_estimate.throughput_pressure_proxy
+        temporal_pressure = quality_estimate.temporal_pressure
+        time_pressure_factor = quality_estimate.time_pressure_factor
+        time_pressure_loss_proxy_rate = quality_estimate.time_pressure_loss_proxy_rate
+        pressure_loss_proxy_rate = quality_estimate.pressure_loss_proxy_rate
+        effective_loss_proxy_rate = quality_estimate.effective_loss_proxy_rate
+        effective_latency_avg = quality_estimate.effective_latency_avg_s
+        time_pressure_delay_variation_proxy = (
+            quality_estimate.time_pressure_delay_variation_proxy_s
         )
-        flow_pressure_proxy = (
-            throughput_pressure_proxy if flow_quality["successful_count"] > 1 else 0.0
+        pressure_delay_variation_proxy = quality_estimate.pressure_delay_variation_proxy_s
+        effective_delay_variation_proxy = (
+            quality_estimate.effective_delay_variation_proxy_s
         )
-        time_pressure_load_proxy = max(
-            demand_pressure_proxy,
-            flow_pressure_proxy,
-            congestion_proxy,
+        effective_available_throughput = (
+            quality_estimate.effective_available_throughput_mbps
         )
-        temporal_pressure = time_varying_pressure_state(
-            summary_time,
-            time_pressure_load_proxy,
-            period_s=self._time_pressure_period_s,
-            burst_center_phase=self._time_pressure_burst_center_phase,
-            burst_width_phase=self._time_pressure_burst_width_phase,
-            burst_amplitude=self._time_pressure_burst_amplitude,
+        time_adjusted_completed_throughput = (
+            quality_estimate.time_adjusted_completed_throughput_mbps
         )
-        time_pressure_factor = temporal_pressure.factor
-        time_pressure_loss_proxy_rate = time_varying_pressure_loss_rate(
-            time_pressure_factor
-        )
-        pressure_loss_proxy_rate = (
-            _congestion_loss_proxy_rate(throughput_pressure_proxy)
-            if flow_quality["successful_count"] > 1
-            else 0.0
-        )
-        pressure_loss_proxy_rate = max(
-            pressure_loss_proxy_rate,
-            demand_loss_proxy_rate,
-            time_pressure_loss_proxy_rate,
-        )
-        effective_loss_proxy_rate = _clamp_probability(
-            max(loss_proxy_rate, pressure_loss_proxy_rate)
-        )
-        flow_latency_avg = _average(flow_quality["latencies"])
-        effective_latency_avg = flow_latency_avg or route_latency_avg
-        time_pressure_delay_variation_proxy = time_varying_pressure_delay_variation(
-            effective_latency_avg,
-            time_pressure_factor,
-        )
-        pressure_delay_variation_proxy = (
-            effective_latency_avg * max(0.0, throughput_pressure_proxy - 0.75) * 0.1
-            if flow_quality["successful_count"] > 1
-            else 0.0
-        )
-        pressure_delay_variation_proxy = max(
-            pressure_delay_variation_proxy,
-            time_pressure_delay_variation_proxy,
-        )
-        flow_latency_variation_proxy = _standard_deviation(flow_quality["latencies"])
-        effective_delay_variation_proxy = max(
-            delay_variation_proxy,
-            flow_latency_variation_proxy,
-            pressure_delay_variation_proxy,
-        )
-        effective_available_throughput = offered_route_capacity * (
-            1.0 - effective_loss_proxy_rate
-        )
-        time_adjusted_completed_throughput = completed_route_capacity * (
-            1.0 - time_pressure_loss_proxy_rate
-        )
-        effective_throughput = (
-            time_adjusted_completed_throughput
-            if completed_route_capacity > 0.0
-            else effective_available_throughput
-        )
-        throughput_source = (
-            "COMPLETED_FLOW_CAPACITY"
-            if completed_route_capacity > 0.0
-            else "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS"
-        )
-        latency_source = (
-            "COMPLETED_FLOW_LATENCY"
-            if flow_latency_avg > 0.0
-            else "AVAILABLE_ROUTE_LATENCY"
-        )
-        loss_source = _dominant_proxy_source(
-            (
-                ("ROUTE_BLOCKING_RATIO", route_blocking_ratio),
-                ("FAILED_FLOW_RATIO", failed_flow_ratio),
-                ("ROUTE_LOSS_RATE", route_loss_proxy_rate),
-                ("CONGESTION_LOSS_PROXY", congestion_loss_proxy_rate),
-                ("PRESSURE_LOSS_PROXY", pressure_loss_proxy_rate),
-                ("TIME_PRESSURE_LOSS_PROXY", time_pressure_loss_proxy_rate),
-            )
-        )
-        delay_variation_source = _dominant_proxy_source(
-            (
-                ("ROUTE_LATENCY_VARIATION", delay_variation_proxy),
-                ("FLOW_LATENCY_VARIATION", flow_latency_variation_proxy),
-                ("PRESSURE_DELAY_VARIATION", pressure_delay_variation_proxy),
-                ("TIME_PRESSURE_DELAY_VARIATION", time_pressure_delay_variation_proxy),
-            )
-        )
+        effective_throughput = quality_estimate.effective_throughput_mbps
+        throughput_source = quality_estimate.throughput_source
+        latency_source = quality_estimate.latency_source
+        loss_source = quality_estimate.loss_source
+        delay_variation_source = quality_estimate.delay_variation_source
         loss_zero_reason = _network_quality_loss_zero_reason(
             effective_loss_proxy_rate,
             route_count=len(self._routes),
@@ -2899,22 +2842,6 @@ def _standard_deviation(values: tuple[float, ...]) -> float:
     variance = _average(tuple((value - mean) ** 2 for value in values))
     return float(variance**0.5)
 
-
-def _congestion_loss_proxy_rate(utilization: float) -> float:
-    if utilization <= 0.8:
-        return 0.0
-    return _clamp_probability((utilization - 0.8) * 0.5)
-
-
-def _dominant_proxy_source(sources: tuple[tuple[str, float], ...]) -> str:
-    selected_name = ""
-    selected_value = -1.0
-    for name, value in sources:
-        numeric_value = float(value)
-        if numeric_value > selected_value:
-            selected_name = name
-            selected_value = numeric_value
-    return selected_name
 
 
 def _network_quality_source_label(source: str) -> str:
