@@ -112,6 +112,8 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_kpi_variation_explanation_v1,
     build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_compute_resource_pool_summary_v1,
+    build_runtime_export_v2_executable_readiness_v1,
+    build_runtime_export_traffic_business_activity_window_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
     build_runtime_export_package_acceptance_report_v1,
@@ -228,6 +230,12 @@ _RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = (
 )
 _RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME = (
     "compute_resource_pool_summary_v1.json"
+)
+_RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_FILENAME = (
+    "v2_executable_readiness_v1.json"
+)
+_RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME = (
+    "traffic_business_activity_window_v1.json"
 )
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
@@ -1064,6 +1072,36 @@ class DemoControlPlane:
         )
         written_files["compute_resource_pool_summary_v1"] = (
             compute_resource_pool_summary_path
+        )
+        v2_executable_readiness_path = (
+            package_dir / _RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_FILENAME
+        )
+        v2_executable_readiness = build_runtime_export_v2_executable_readiness_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            config_snapshot=config_snapshot,
+        )
+        v2_executable_readiness_path.write_text(
+            stable_json_pretty(v2_executable_readiness),
+            encoding="utf-8",
+        )
+        written_files["v2_executable_readiness_v1"] = v2_executable_readiness_path
+        traffic_business_activity_window_path = (
+            package_dir / _RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME
+        )
+        traffic_business_activity_window = (
+            build_runtime_export_traffic_business_activity_window_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        traffic_business_activity_window_path.write_text(
+            stable_json_pretty(traffic_business_activity_window),
+            encoding="utf-8",
+        )
+        written_files["traffic_business_activity_window_v1"] = (
+            traffic_business_activity_window_path
         )
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path

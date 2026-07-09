@@ -21660,3 +21660,48 @@ change.
     status, but readiness is not yet persisted into every result-package audit
     surface. Standard 72/300/1200 acceptance scenarios still need a final
     executable-loop verification pass.
+
+
+## 2026-07-09 - T425 readiness export audit v1
+
+- Branch: `feature/T425-readiness-export-audit-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: persist backend-owned `v2_executable_readiness_v1` and
+  `traffic_business_activity_window_v1` into runtime result packages as
+  standalone audit artifacts. The result package contract, artifact browser,
+  review summary, diagnostics bundle, scenario review bundle, scenario review
+  hash binding, and long-term audit index now expose the same readiness and
+  business activity evidence used by the live dashboard. This is a backend
+  export/audit binding task. No Event Kernel behavior, simulation model formula,
+  runtime progression, frontend rendering, external simulator integration,
+  packet-level simulation, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/readiness_export_audit_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples/integration_demo/control_plane.py src/leo_twin/services/result_package_contract.py`
+    - Result: passed.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py`
+    - Result: 44 passed.
+  - `PYTHONPATH=src python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts`
+    - Result: 2 passed.
+- Problems encountered:
+  - Existing result-package unit fixtures treated the old recommended artifact
+    set as complete. They were updated to include the new readiness and traffic
+    business activity artifacts where the test scenario is meant to represent a
+    complete package.
+  - The first runtime-session targeted test command used an outdated test name;
+    it was rerun with the actual test function names.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - Readiness and business activity evidence are now exported and audited, but
+    the final 72/300/1200 standard scenario acceptance pass still needs to be
+    run as a separate task.

@@ -21,7 +21,9 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
+    RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
+    RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
@@ -56,7 +58,9 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
     build_runtime_export_traffic_demand_explanation_v1,
+    build_runtime_export_traffic_business_activity_window_v1,
     build_runtime_export_traffic_demand_user_page_v1,
+    build_runtime_export_v2_executable_readiness_v1,
     build_runtime_export_user_configuration_template_validation_v1,
     build_runtime_export_user_configuration_control_surface_evidence_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
@@ -91,6 +95,10 @@ _TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 _ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
 _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME = "compute_resource_pool_summary_v1.json"
+_V2_EXECUTABLE_READINESS_FILENAME = "v2_executable_readiness_v1.json"
+_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME = (
+    "traffic_business_activity_window_v1.json"
+)
 _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
@@ -129,6 +137,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+        _V2_EXECUTABLE_READINESS_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -141,6 +150,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+        _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -281,6 +291,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+        _V2_EXECUTABLE_READINESS_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -293,6 +304,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+        _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -336,6 +348,8 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "route_pressure_evidence_v1": _route_pressure_evidence(),
             "node_network_pressure_summary_v1": _node_network_pressure_summary(),
             "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
+            "v2_executable_readiness_v1": _v2_executable_readiness(),
+            "traffic_business_activity_window_v1": _traffic_business_activity_window(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -384,11 +398,13 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+        _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+        _V2_EXECUTABLE_READINESS_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -768,6 +784,80 @@ def test_runtime_export_compute_resource_pool_summary_v1_is_deterministic() -> N
     assert first["artifact_hash"].startswith("sha256:")
 
 
+def test_runtime_export_v2_executable_readiness_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "v2_executable_readiness_v1": _v2_executable_readiness(),
+        }
+    }
+
+    first = build_runtime_export_v2_executable_readiness_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_v2_executable_readiness_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID
+    assert first["source"] == "BACKEND_RUNTIME_STATUS"
+    assert first["runtime_status_field"] == "v2_executable_readiness_v1"
+    assert first["readiness"] == _v2_executable_readiness()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["executable_ready"] is True
+    assert first["evidence"]["failed_gate_count"] == 0
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert "NO_READINESS_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
+def test_runtime_export_traffic_business_activity_window_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "traffic_business_activity_window_v1": (
+                _traffic_business_activity_window()
+            ),
+        }
+    }
+
+    first = build_runtime_export_traffic_business_activity_window_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_traffic_business_activity_window_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1"
+    assert first["artifact_id"] == (
+        RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID
+    )
+    assert first["source"] == "BACKEND_RUNTIME_STATUS"
+    assert first["runtime_status_field"] == "traffic_business_activity_window_v1"
+    assert first["activity_window"] == _traffic_business_activity_window()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["request_count"] == 2
+    assert first["evidence"]["active_user_count"] == 1
+    assert first["evidence"]["pending_user_count"] == 1
+    assert first["evidence"]["artifact_window_only"] is True
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert "NO_TRAFFIC_REGENERATION" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
 def test_runtime_export_node_network_pressure_summary_v1_is_deterministic() -> None:
     config_snapshot = {
         "status": {
@@ -1134,6 +1224,8 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "route_pressure_evidence_v1": _route_pressure_evidence(),
             "node_network_pressure_summary_v1": _node_network_pressure_summary(),
             "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
+            "v2_executable_readiness_v1": _v2_executable_readiness(),
+            "traffic_business_activity_window_v1": _traffic_business_activity_window(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -1187,11 +1279,13 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+        _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+        _V2_EXECUTABLE_READINESS_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -1386,6 +1480,8 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "route_pressure_evidence_v1": _route_pressure_evidence(),
             "node_network_pressure_summary_v1": _node_network_pressure_summary(),
             "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
+            "v2_executable_readiness_v1": _v2_executable_readiness(),
+            "traffic_business_activity_window_v1": _traffic_business_activity_window(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -1438,11 +1534,13 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+        _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+        _V2_EXECUTABLE_READINESS_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -3479,6 +3577,8 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "current_sim_time": 120,
             "processed_event_count": 4200,
             "queued_event_count": 0,
+            "v2_executable_readiness_v1": _v2_executable_readiness(),
+            "traffic_business_activity_window_v1": _traffic_business_activity_window(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
         "generated_config": {
@@ -3513,11 +3613,13 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "user_configuration_template_validation_v1.json",
         _USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_FILENAME,
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+        _TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+        _V2_EXECUTABLE_READINESS_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -4140,6 +4242,164 @@ def _compute_resource_pool_summary() -> dict[str, object]:
             "Resource pool values are derived from ComputeNodeState metrics.",
         ),
         "summary_hash": "sha256:compute-pool",
+    }
+
+
+def _v2_executable_readiness() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "readiness_id": "leo_twin.v2_executable_readiness.v1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "target": "industrial-v2-demo-loop",
+        "readiness_status": "READY",
+        "executable_ready": True,
+        "gate_count": 2,
+        "passed_gate_count": 2,
+        "failed_gate_count": 0,
+        "gates": (
+            {
+                "gate_id": "runtime",
+                "label": "runtime session",
+                "status": "PASS",
+                "required_paths": ("runtime.status",),
+                "missing_paths": (),
+                "issue_count": 0,
+                "issues": (),
+                "evidence": (
+                    {
+                        "path": "runtime.status",
+                        "present": True,
+                        "value_summary": "RUNNING",
+                    },
+                ),
+            },
+            {
+                "gate_id": "traffic_business",
+                "label": "traffic business",
+                "status": "PASS",
+                "required_paths": ("traffic_business_activity_window_v1",),
+                "missing_paths": (),
+                "issue_count": 0,
+                "issues": (),
+                "evidence": (
+                    {
+                        "path": "traffic_business_activity_window_v1",
+                        "present": True,
+                        "value_summary": "2 users",
+                    },
+                ),
+            },
+        ),
+        "missing_required_gate_ids": (),
+        "frontend_inference_required": False,
+        "packet_level_simulation": False,
+        "operator_next_action": "Run standard 72/300/1200 acceptance scenarios.",
+        "readiness_hash": "sha256:readiness",
+    }
+
+
+def _traffic_business_activity_window() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.traffic_business_activity_window.v1",
+        "source": "TrafficDemandBatch.records",
+        "metric_model": "FLOW_LEVEL_BUSINESS_ACTIVITY_WINDOW",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "current_sim_time": 12.0,
+        "request_count": 2,
+        "user_count": 2,
+        "active_user_count": 1,
+        "recent_user_count": 0,
+        "pending_user_count": 1,
+        "idle_user_count": 0,
+        "window_user_count": 2,
+        "window_active_user_count": 1,
+        "window_recent_user_count": 0,
+        "window_pending_user_count": 1,
+        "window_idle_user_count": 0,
+        "window": {
+            "lookback_window_s": 10.0,
+            "lookahead_window_s": 20.0,
+            "window_start_s": 2.0,
+            "window_end_s": 32.0,
+            "assumed_service_duration_s": 5.0,
+        },
+        "item_limit": 2,
+        "item_count": 2,
+        "hidden_window_user_count": 0,
+        "state_counts": {"ACTIVE_BUSINESS": 1, "PENDING_BUSINESS": 1},
+        "window_state_counts": {"ACTIVE_BUSINESS": 1, "PENDING_BUSINESS": 1},
+        "items": (
+            {
+                "user_id": "user-0",
+                "platform_type": "GROUND_USER",
+                "business_state": "ACTIVE_BUSINESS",
+                "request_count": 1,
+                "active_request_count": 1,
+                "recent_request_count": 0,
+                "pending_request_count": 0,
+                "past_request_count": 0,
+                "window_request_count": 1,
+                "communication_request_count": 1,
+                "compute_request_count": 0,
+                "service_classes": ("DATA_TRANSFER",),
+                "active_business_types": ("DATA_TRANSFER",),
+                "window_business_types": ("DATA_TRANSFER",),
+                "current_or_next_business_type": "DATA_TRANSFER",
+                "primary_request_id": "req-0",
+                "primary_flow_id": "flow-0",
+                "primary_target_id": "sat-0",
+                "selected_satellite_id": "sat-0",
+                "current_or_next_arrival_time": 12.0,
+                "last_arrival_time": 12.0,
+                "next_arrival_time": None,
+                "time_to_next_request_s": None,
+                "active_flow_ids": ("flow-0",),
+                "recent_flow_ids": (),
+                "pending_flow_ids": (),
+                "total_input_data_mb": 8.0,
+                "total_output_data_mb": 0.0,
+                "network_queue_model": "flow-level-queue",
+                "compute_execution_model": "none",
+            },
+            {
+                "user_id": "user-1",
+                "platform_type": "GROUND_USER",
+                "business_state": "PENDING_BUSINESS",
+                "request_count": 1,
+                "active_request_count": 0,
+                "recent_request_count": 0,
+                "pending_request_count": 1,
+                "past_request_count": 0,
+                "window_request_count": 1,
+                "communication_request_count": 0,
+                "compute_request_count": 1,
+                "service_classes": ("COMPUTE_SERVICE",),
+                "active_business_types": (),
+                "window_business_types": ("COMPUTE_SERVICE",),
+                "current_or_next_business_type": "COMPUTE_SERVICE",
+                "primary_request_id": "req-1",
+                "primary_flow_id": "flow-1",
+                "primary_target_id": "sat-1",
+                "selected_satellite_id": "sat-1",
+                "current_or_next_arrival_time": 18.0,
+                "last_arrival_time": None,
+                "next_arrival_time": 18.0,
+                "time_to_next_request_s": 6.0,
+                "active_flow_ids": (),
+                "recent_flow_ids": (),
+                "pending_flow_ids": ("flow-1",),
+                "total_input_data_mb": 64.0,
+                "total_output_data_mb": 8.0,
+                "network_queue_model": "flow-level-queue",
+                "compute_execution_model": "resource-vector-estimator",
+            },
+        ),
+        "model_assumptions": (
+            "Business activity is derived from flow-level request arrival records.",
+        ),
+        "summary_hash": "sha256:traffic-business-activity",
     }
 
 

@@ -1424,6 +1424,12 @@ Current Phase 3 progress:
   bounded user business activity samples from runtime status instead of
   deriving those product semantics locally.
 
+- T425 persists `v2_executable_readiness_v1` and
+  `traffic_business_activity_window_v1` into runtime result packages as
+  standalone backend-owned audit artifacts. Review summary, diagnostics,
+  scenario review, artifact browser, and long-term audit index now carry the
+  same readiness and business-activity evidence used by the live dashboard.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

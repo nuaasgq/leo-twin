@@ -17,6 +17,8 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
+    RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID,
+    RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
@@ -67,6 +69,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "route_pressure_evidence_v1.json").exists()
     assert (package_dir / "node_network_pressure_summary_v1.json").exists()
     assert (package_dir / "compute_resource_pool_summary_v1.json").exists()
+    assert (package_dir / "v2_executable_readiness_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
     assert (package_dir / "benchmark_acceptance_binding_v1.json").exists()
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
@@ -77,6 +80,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "user_configuration_template_validation_v1.json").exists()
     assert (package_dir / "user_configuration_control_surface_evidence_v1.json").exists()
     assert (package_dir / "traffic_demand_explanation_v1.json").exists()
+    assert (package_dir / "traffic_business_activity_window_v1.json").exists()
     assert (package_dir / "user_service_request_summary_v2.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
@@ -88,6 +92,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "route_pressure_evidence_v1.json" in filenames
     assert "node_network_pressure_summary_v1.json" in filenames
     assert "compute_resource_pool_summary_v1.json" in filenames
+    assert "v2_executable_readiness_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
@@ -100,6 +105,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "user_configuration_template_validation_v1.json" in filenames
     assert "user_configuration_control_surface_evidence_v1.json" in filenames
     assert "traffic_demand_explanation_v1.json" in filenames
+    assert "traffic_business_activity_window_v1.json" in filenames
     assert "user_service_request_summary_v2.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
@@ -125,6 +131,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     compute_resource_pool_summary = json.loads(
         (package_dir / "compute_resource_pool_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    v2_executable_readiness = json.loads(
+        (package_dir / "v2_executable_readiness_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -181,6 +192,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     traffic_demand_explanation = json.loads(
         (package_dir / "traffic_demand_explanation_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    traffic_business_activity_window = json.loads(
+        (package_dir / "traffic_business_activity_window_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -413,6 +429,24 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_summary["artifacts"][
         "compute_resource_pool_summary_exported"
     ] is True
+    assert v2_executable_readiness["artifact_id"] == (
+        RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID
+    )
+    assert v2_executable_readiness["readiness"] == (
+        config_snapshot["status"]["v2_executable_readiness_v1"]
+    )
+    assert v2_executable_readiness["evidence"]["evidence_present"] is True
+    assert v2_executable_readiness["evidence"]["packet_level_simulation"] is False
+    assert "NO_READINESS_RECOMPUTE" in v2_executable_readiness[
+        "boundary_conditions"
+    ]
+    assert review_summary["v2_executable_readiness"]["evidence_hash"] == (
+        v2_executable_readiness["evidence"]["evidence_hash"]
+    )
+    assert review_summary["v2_executable_readiness"]["failed_gate_count"] == (
+        v2_executable_readiness["evidence"]["failed_gate_count"]
+    )
+    assert review_summary["artifacts"]["v2_executable_readiness_exported"] is True
     assert review_summary["artifacts"][
         "network_kpi_benchmark_validation_exported"
     ] is True
@@ -466,6 +500,28 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     ] is False
     assert review_summary["artifacts"][
         "traffic_demand_explanation_exported"
+    ] is True
+    assert traffic_business_activity_window["artifact_id"] == (
+        RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID
+    )
+    assert traffic_business_activity_window["activity_window"] == (
+        config_snapshot["status"]["traffic_business_activity_window_v1"]
+    )
+    assert traffic_business_activity_window["evidence"]["evidence_present"] is True
+    assert traffic_business_activity_window["evidence"][
+        "packet_level_simulation"
+    ] is False
+    assert "NO_TRAFFIC_REGENERATION" in traffic_business_activity_window[
+        "boundary_conditions"
+    ]
+    assert review_summary["traffic_business_activity_window"]["evidence_hash"] == (
+        traffic_business_activity_window["evidence"]["evidence_hash"]
+    )
+    assert review_summary["traffic_business_activity_window"]["request_count"] == (
+        traffic_business_activity_window["evidence"]["request_count"]
+    )
+    assert review_summary["artifacts"][
+        "traffic_business_activity_window_exported"
     ] is True
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
@@ -614,6 +670,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["traffic_demand_explanation"][
         "evidence_present"
     ] is True
+    assert diagnostics_bundle["traffic_business_activity_window"]["evidence_hash"] == (
+        review_summary["traffic_business_activity_window"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["traffic_business_activity_window"][
+        "evidence_present"
+    ] is True
+    assert diagnostics_bundle["v2_executable_readiness"]["evidence_hash"] == (
+        review_summary["v2_executable_readiness"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["v2_executable_readiness"]["evidence_present"] is True
     assert diagnostics_bundle["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -798,6 +864,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["compute_resource_pool_summary"][
         "evidence_present"
     ] is True
+    assert scenario_review_bundle["v2_executable_readiness"][
+        "evidence_hash"
+    ] == v2_executable_readiness["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["v2_executable_readiness"][
+        "failed_gate_count"
+    ] == v2_executable_readiness["evidence"]["failed_gate_count"]
+    assert scenario_review_bundle["v2_executable_readiness"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["network_kpi_benchmark_validation"][
         "validation_hash"
     ] == network_kpi_benchmark_validation["evidence"]["validation_hash"]
@@ -848,6 +923,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "evidence_hash"
     ] == traffic_demand_explanation["evidence"]["evidence_hash"]
     assert scenario_review_bundle["traffic_demand_explanation"][
+        "evidence_present"
+    ] is True
+    assert scenario_review_bundle["traffic_business_activity_window"][
+        "evidence_hash"
+    ] == traffic_business_activity_window["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["traffic_business_activity_window"][
+        "request_count"
+    ] == traffic_business_activity_window["evidence"]["request_count"]
+    assert scenario_review_bundle["traffic_business_activity_window"][
         "evidence_present"
     ] is True
     assert scenario_review_bundle["user_service_requests"][
@@ -999,6 +1083,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert audit_index["traffic_demand_explanation_request_count"] == (
         traffic_demand_explanation["evidence"]["request_count"]
     )
+    assert audit_index["traffic_business_activity_window_present"] is True
+    assert audit_index["traffic_business_activity_window_hash"] == (
+        traffic_business_activity_window["evidence"]["evidence_hash"]
+    )
+    assert audit_index["traffic_business_activity_window_request_count"] == (
+        traffic_business_activity_window["evidence"]["request_count"]
+    )
+    assert audit_index["traffic_business_activity_window_active_user_count"] == (
+        traffic_business_activity_window["evidence"]["active_user_count"]
+    )
     assert audit_index["route_pressure_evidence_present"] is True
     assert audit_index["route_pressure_evidence_hash"] == (
         review_summary["route_pressure_evidence"]["evidence_hash"]
@@ -1036,6 +1130,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         review_summary["compute_resource_pool_summary"][
             "saturated_dimension_count"
         ]
+    )
+    assert audit_index["v2_executable_readiness_present"] is True
+    assert audit_index["v2_executable_readiness_hash"] == (
+        v2_executable_readiness["evidence"]["evidence_hash"]
+    )
+    assert audit_index["v2_executable_readiness_failed_gate_count"] == (
+        v2_executable_readiness["evidence"]["failed_gate_count"]
     )
     assert audit_index["user_service_request_summary_present"] is True
     assert audit_index["user_service_request_summary_hash"] == (

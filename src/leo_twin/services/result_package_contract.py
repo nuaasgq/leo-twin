@@ -44,6 +44,12 @@ RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID = (
 RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID = (
     "leo_twin.runtime_export_compute_resource_pool_summary.v1"
 )
+RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID = (
+    "leo_twin.runtime_export_v2_executable_readiness.v1"
+)
+RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID = (
+    "leo_twin.runtime_export_traffic_business_activity_window.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
     "leo_twin.runtime_export_route_detail_page.v1"
 )
@@ -138,6 +144,8 @@ ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
 ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
 COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME = "compute_resource_pool_summary_v1.json"
+V2_EXECUTABLE_READINESS_FILENAME = "v2_executable_readiness_v1.json"
+TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME = "traffic_business_activity_window_v1.json"
 SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json"
 USER_SERVICE_REQUEST_SUMMARY_FILENAME = "user_service_request_summary_v2.json"
 NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
@@ -297,6 +305,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 ),
             },
             {
+                "logical_name": "v2_executable_readiness_v1",
+                "filename": "v2_executable_readiness_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned v2 executable readiness gates exported for "
+                    "offline operator review"
+                ),
+            },
+            {
                 "logical_name": "review_summary_v1",
                 "filename": "review_summary_v1.json",
                 "format": "json",
@@ -399,6 +416,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "backend-owned generated traffic-demand explanation "
                     "exported for offline business-request review"
+                ),
+            },
+            {
+                "logical_name": "traffic_business_activity_window_v1",
+                "filename": "traffic_business_activity_window_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned runtime business activity window exported "
+                    "for offline user-state review"
                 ),
             },
             {
@@ -656,6 +682,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "artifacts",
         },
         {
+            "logical_name": "v2_executable_readiness_v1",
+            "filename": V2_EXECUTABLE_READINESS_FILENAME,
+            "category": "OPERATOR_REVIEW",
+            "review_priority": 35,
+            "format": "json",
+            "review_role": "Executable v2 demo-loop readiness gates.",
+            "content": "Backend-owned gate evidence and operator next action.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "readiness",
+        },
+        {
             "logical_name": "manifest",
             "filename": MANIFEST_FILENAME,
             "category": "CORE_REPRODUCIBILITY",
@@ -797,6 +834,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "content": "Backend-owned traffic-demand semantics for offline review.",
             "default_json_pointer": "/traffic_demand_explanation",
             "filter_hint": "traffic_demand",
+        },
+        {
+            "logical_name": "traffic_business_activity_window_v1",
+            "filename": TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+            "category": "TRAFFIC_BUSINESS",
+            "review_priority": 205,
+            "format": "json",
+            "review_role": "Runtime user business activity window.",
+            "content": "Active, recent, pending, and idle user business states.",
+            "default_json_pointer": "/activity_window/items",
+            "filter_hint": "business activity",
         },
         {
             "logical_name": "user_service_request_summary_v2",
@@ -1007,9 +1055,11 @@ def build_runtime_export_reproducibility_boundary_v1(
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
+            "v2_executable_readiness_v1.json",
             "user_configuration_template_validation_v1.json",
             "user_configuration_control_surface_evidence_v1.json",
             "traffic_demand_explanation_v1.json",
+            "traffic_business_activity_window_v1.json",
             "user_service_request_summary_v2.json",
             "scenario_review_bundle_v1.json",
         ),
@@ -1346,6 +1396,83 @@ def build_runtime_export_compute_resource_pool_summary_v1(
     return artifact
 
 
+def build_runtime_export_v2_executable_readiness_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for backend v2 executable readiness."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    readiness = _mapping(status.get("v2_executable_readiness_v1"))
+    evidence = _runtime_export_v2_executable_readiness(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID,
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_scope": "V2_EXECUTABLE_DEMO_LOOP_READINESS_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "v2_executable_readiness_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "readiness": dict(readiness),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_READINESS_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
+def build_runtime_export_traffic_business_activity_window_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime business activity windows."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    activity_window = _mapping(status.get("traffic_business_activity_window_v1"))
+    evidence = _runtime_export_traffic_business_activity_window(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID,
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_scope": "TRAFFIC_BUSINESS_ACTIVITY_WINDOW_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "traffic_business_activity_window_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "artifact_window_only": True,
+        "activity_window": dict(activity_window),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_TRAFFIC_REGENERATION",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_node_network_pressure_summary_v1(
     *,
     package_id: str,
@@ -1595,6 +1722,7 @@ def build_runtime_export_review_summary_v1(
     compute_resource_pool_summary = _runtime_export_compute_resource_pool_summary(
         status
     )
+    v2_executable_readiness = _runtime_export_v2_executable_readiness(status)
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -1619,6 +1747,9 @@ def build_runtime_export_review_summary_v1(
     )
     traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
         config_snapshot
+    )
+    traffic_business_activity_window = (
+        _runtime_export_traffic_business_activity_window(status)
     )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
@@ -1668,6 +1799,7 @@ def build_runtime_export_review_summary_v1(
         "route_pressure_evidence": route_pressure_evidence,
         "node_network_pressure_summary": node_network_pressure_summary,
         "compute_resource_pool_summary": compute_resource_pool_summary,
+        "v2_executable_readiness": v2_executable_readiness,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
@@ -1677,6 +1809,7 @@ def build_runtime_export_review_summary_v1(
         "user_configuration_template_validation": user_config_template_validation,
         "user_configuration_control_surface_evidence": user_config_control_surface,
         "traffic_demand_explanation": traffic_demand_explanation,
+        "traffic_business_activity_window": traffic_business_activity_window,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -1706,6 +1839,9 @@ def build_runtime_export_review_summary_v1(
             ),
             "compute_resource_pool_summary_exported": (
                 "compute_resource_pool_summary_v1.json" in artifacts
+            ),
+            "v2_executable_readiness_exported": (
+                "v2_executable_readiness_v1.json" in artifacts
             ),
             "review_summary_exported": "review_summary_v1.json" in artifacts,
             "network_kpi_benchmark_validation_exported": (
@@ -1738,6 +1874,9 @@ def build_runtime_export_review_summary_v1(
             "traffic_demand_explanation_exported": (
                 "traffic_demand_explanation_v1.json" in artifacts
             ),
+            "traffic_business_activity_window_exported": (
+                "traffic_business_activity_window_v1.json" in artifacts
+            ),
             "user_service_request_summary_exported": (
                 "user_service_request_summary_v2.json" in artifacts
             ),
@@ -1751,6 +1890,7 @@ def build_runtime_export_review_summary_v1(
             "Use route_pressure_evidence_v1.json to review route admission, queue, saturation, and topology block evidence.",
             "Use node_network_pressure_summary_v1.json to review per-user and per-satellite network pressure evidence.",
             "Use compute_resource_pool_summary_v1.json to review per-dimension satellite compute resource pool evidence.",
+            "Use v2_executable_readiness_v1.json to review backend-owned executable demo-loop gates.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use benchmark_acceptance_binding_v1.json to review the standard scenario acceptance gate binding.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
@@ -1761,6 +1901,7 @@ def build_runtime_export_review_summary_v1(
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
             "Use user_configuration_control_surface_evidence_v1.json to review which user configuration fields are backend-backed and editable.",
             "Use traffic_demand_explanation_v1.json to review backend-owned business request generation semantics.",
+            "Use traffic_business_activity_window_v1.json to review active, recent, pending, and idle user business states.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
             "Use route_comparison_review to compare exported route rows with the current live runtime when available.",
             "This package does not contain packet captures or external simulator artifacts.",
@@ -1817,6 +1958,7 @@ def build_runtime_export_diagnostics_bundle_v1(
     compute_resource_pool_summary = _runtime_export_compute_resource_pool_summary(
         status
     )
+    v2_executable_readiness = _runtime_export_v2_executable_readiness(status)
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -1842,6 +1984,9 @@ def build_runtime_export_diagnostics_bundle_v1(
     traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
         config_snapshot
     )
+    traffic_business_activity_window = (
+        _runtime_export_traffic_business_activity_window(status)
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
@@ -1862,6 +2007,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         route_pressure_evidence=route_pressure_evidence,
         node_network_pressure_summary=node_network_pressure_summary,
         compute_resource_pool_summary=compute_resource_pool_summary,
+        v2_executable_readiness=v2_executable_readiness,
         network_flow_lifecycle_summary=network_flow_lifecycle_summary,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
@@ -1870,6 +2016,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         user_config_template_validation=user_config_template_validation,
         user_config_control_surface=user_config_control_surface,
         traffic_demand_explanation=traffic_demand_explanation,
+        traffic_business_activity_window=traffic_business_activity_window,
         user_service_requests=user_service_requests,
     )
     diagnostics: dict[str, object] = {
@@ -1895,6 +2042,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "route_pressure_evidence": route_pressure_evidence,
         "node_network_pressure_summary": node_network_pressure_summary,
         "compute_resource_pool_summary": compute_resource_pool_summary,
+        "v2_executable_readiness": v2_executable_readiness,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
@@ -1904,6 +2052,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "user_configuration_template_validation": user_config_template_validation,
         "user_configuration_control_surface_evidence": user_config_control_surface,
         "traffic_demand_explanation": traffic_demand_explanation,
+        "traffic_business_activity_window": traffic_business_activity_window,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -2005,6 +2154,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     compute_resource_pool_summary = _mapping(
         review_summary.get("compute_resource_pool_summary")
     )
+    v2_executable_readiness = _mapping(
+        review_summary.get("v2_executable_readiness")
+    )
     network_kpi_validation = _mapping(
         review_summary.get("network_kpi_benchmark_validation")
     )
@@ -2032,6 +2184,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     traffic_demand_explanation = _mapping(
         review_summary.get("traffic_demand_explanation")
     )
+    traffic_business_activity_window = _mapping(
+        review_summary.get("traffic_business_activity_window")
+    )
     user_service_requests = _mapping(review_summary.get("user_service_requests"))
     if user_service_requests.get("evidence_present") is not True:
         scenario_review_warnings.append("USER_SERVICE_REQUEST_SUMMARY_MISSING")
@@ -2041,6 +2196,10 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("NODE_NETWORK_PRESSURE_SUMMARY_MISSING")
     if compute_resource_pool_summary.get("evidence_present") is not True:
         scenario_review_warnings.append("COMPUTE_RESOURCE_POOL_SUMMARY_MISSING")
+    if v2_executable_readiness.get("evidence_present") is not True:
+        scenario_review_warnings.append("V2_EXECUTABLE_READINESS_MISSING")
+    elif v2_executable_readiness.get("executable_ready") is not True:
+        scenario_review_warnings.append("V2_EXECUTABLE_READINESS_NOT_READY")
     if network_kpi_formula_evidence.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_KPI_FORMULA_EVIDENCE_MISSING")
     if network_temporal_pressure_evidence.get("evidence_present") is not True:
@@ -2067,6 +2226,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         )
     if traffic_demand_explanation.get("evidence_present") is not True:
         scenario_review_warnings.append("TRAFFIC_DEMAND_EXPLANATION_MISSING")
+    if traffic_business_activity_window.get("evidence_present") is not True:
+        scenario_review_warnings.append("TRAFFIC_BUSINESS_ACTIVITY_WINDOW_MISSING")
 
     bundle: dict[str, object] = {
         "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
@@ -2214,6 +2375,30 @@ def build_runtime_export_scenario_review_bundle_v1(
             ),
             "evidence_present": (
                 compute_resource_pool_summary.get("evidence_present") is True
+            ),
+        },
+        "v2_executable_readiness": {
+            "evidence_id": str(v2_executable_readiness.get("evidence_id", "")),
+            "readiness_status": str(
+                v2_executable_readiness.get("readiness_status", "")
+            ),
+            "executable_ready": (
+                v2_executable_readiness.get("executable_ready") is True
+            ),
+            "gate_count": _integer(v2_executable_readiness.get("gate_count")),
+            "passed_gate_count": _integer(
+                v2_executable_readiness.get("passed_gate_count")
+            ),
+            "failed_gate_count": _integer(
+                v2_executable_readiness.get("failed_gate_count")
+            ),
+            "operator_next_action": str(
+                v2_executable_readiness.get("operator_next_action", "")
+            ),
+            "readiness_hash": str(v2_executable_readiness.get("readiness_hash", "")),
+            "evidence_hash": str(v2_executable_readiness.get("evidence_hash", "")),
+            "evidence_present": (
+                v2_executable_readiness.get("evidence_present") is True
             ),
         },
         "network_kpi_benchmark_validation": {
@@ -2457,6 +2642,37 @@ def build_runtime_export_scenario_review_bundle_v1(
                 traffic_demand_explanation.get("evidence_present") is True
             ),
         },
+        "traffic_business_activity_window": {
+            "evidence_id": str(
+                traffic_business_activity_window.get("evidence_id", "")
+            ),
+            "current_sim_time": _number(
+                traffic_business_activity_window.get("current_sim_time")
+            ),
+            "request_count": _integer(
+                traffic_business_activity_window.get("request_count")
+            ),
+            "user_count": _integer(traffic_business_activity_window.get("user_count")),
+            "active_user_count": _integer(
+                traffic_business_activity_window.get("active_user_count")
+            ),
+            "pending_user_count": _integer(
+                traffic_business_activity_window.get("pending_user_count")
+            ),
+            "window_user_count": _integer(
+                traffic_business_activity_window.get("window_user_count")
+            ),
+            "item_count": _integer(traffic_business_activity_window.get("item_count")),
+            "summary_hash": str(
+                traffic_business_activity_window.get("summary_hash", "")
+            ),
+            "evidence_hash": str(
+                traffic_business_activity_window.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                traffic_business_activity_window.get("evidence_present") is True
+            ),
+        },
         "user_service_requests": {
             "evidence_id": str(user_service_requests.get("evidence_id", "")),
             "request_model": str(user_service_requests.get("request_model", "")),
@@ -2507,7 +2723,9 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "route_pressure_evidence_v1.json",
                 "node_network_pressure_summary_v1.json",
                 "compute_resource_pool_summary_v1.json",
+                "v2_executable_readiness_v1.json",
                 "user_service_request_summary_v2.json",
+                "traffic_business_activity_window_v1.json",
                 "manifest.json",
                 "config_snapshot.json",
             ),
@@ -2538,9 +2756,11 @@ def build_runtime_export_scenario_review_bundle_v1(
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "compute_resource_pool_summary_v1.json",
+            "v2_executable_readiness_v1.json",
             "user_configuration_template_validation_v1.json",
             "user_configuration_control_surface_evidence_v1.json",
             "traffic_demand_explanation_v1.json",
+            "traffic_business_activity_window_v1.json",
             "user_service_request_summary_v2.json",
             "service_lifecycle_trace_v2.json",
             "service_trace_comparison_review_report_v1.json",
@@ -3980,6 +4200,7 @@ def build_runtime_export_package_audit_index_v1(
     compute_resource_pool_summary = _runtime_export_compute_resource_pool_summary(
         status
     )
+    v2_executable_readiness = _runtime_export_v2_executable_readiness(status)
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -4004,6 +4225,9 @@ def build_runtime_export_package_audit_index_v1(
     )
     traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
         config_snapshot
+    )
+    traffic_business_activity_window = (
+        _runtime_export_traffic_business_activity_window(status)
     )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     normalized_artifacts = tuple(
@@ -4222,6 +4446,21 @@ def build_runtime_export_package_audit_index_v1(
         "compute_resource_pool_summary_saturated_dimension_count": _integer(
             compute_resource_pool_summary.get("saturated_dimension_count")
         ),
+        "v2_executable_readiness_hash": str(
+            v2_executable_readiness.get("evidence_hash", "")
+        ),
+        "v2_executable_readiness_present": (
+            v2_executable_readiness.get("evidence_present") is True
+        ),
+        "v2_executable_readiness_status": str(
+            v2_executable_readiness.get("readiness_status", "")
+        ),
+        "v2_executable_readiness_executable_ready": (
+            v2_executable_readiness.get("executable_ready") is True
+        ),
+        "v2_executable_readiness_failed_gate_count": _integer(
+            v2_executable_readiness.get("failed_gate_count")
+        ),
         "network_flow_lifecycle_summary_hash": str(
             network_flow_lifecycle_summary.get("evidence_hash", "")
         ),
@@ -4308,6 +4547,24 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "traffic_demand_explanation_frontend_inference_required": (
             traffic_demand_explanation.get("frontend_inference_required") is True
+        ),
+        "traffic_business_activity_window_hash": str(
+            traffic_business_activity_window.get("evidence_hash", "")
+        ),
+        "traffic_business_activity_window_present": (
+            traffic_business_activity_window.get("evidence_present") is True
+        ),
+        "traffic_business_activity_window_request_count": _integer(
+            traffic_business_activity_window.get("request_count")
+        ),
+        "traffic_business_activity_window_active_user_count": _integer(
+            traffic_business_activity_window.get("active_user_count")
+        ),
+        "traffic_business_activity_window_pending_user_count": _integer(
+            traffic_business_activity_window.get("pending_user_count")
+        ),
+        "traffic_business_activity_window_item_count": _integer(
+            traffic_business_activity_window.get("item_count")
         ),
         "user_service_request_summary_hash": str(
             user_service_requests.get("summary_hash", "")
@@ -5698,6 +5955,7 @@ def _runtime_export_diagnostic_findings(
     route_pressure_evidence: Mapping[str, Any],
     node_network_pressure_summary: Mapping[str, Any],
     compute_resource_pool_summary: Mapping[str, Any],
+    v2_executable_readiness: Mapping[str, Any],
     network_flow_lifecycle_summary: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
@@ -5706,6 +5964,7 @@ def _runtime_export_diagnostic_findings(
     user_config_template_validation: Mapping[str, Any],
     user_config_control_surface: Mapping[str, Any],
     traffic_demand_explanation: Mapping[str, Any],
+    traffic_business_activity_window: Mapping[str, Any],
     user_service_requests: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
     findings: list[dict[str, object]] = []
@@ -5835,6 +6094,41 @@ def _runtime_export_diagnostic_findings(
                 "WARN",
                 "COMPUTE_RESOURCE_POOL_FRONTEND_INFERENCE_DECLARED",
                 "compute resource pool summary should be backend-owned and not require frontend inference.",
+            )
+        )
+    if v2_executable_readiness.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "V2_EXECUTABLE_READINESS_MISSING",
+                "config_snapshot.status does not include v2_executable_readiness_v1.",
+            )
+        )
+    elif v2_executable_readiness.get("executable_ready") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "V2_EXECUTABLE_READINESS_NOT_READY",
+                (
+                    "v2 readiness gates are not all passing; operator review "
+                    "should inspect v2_executable_readiness_v1.json."
+                ),
+            )
+        )
+    if v2_executable_readiness.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "V2_EXECUTABLE_READINESS_PACKET_LEVEL_DECLARED",
+                "v2 executable readiness evidence declares packet-level simulation.",
+            )
+        )
+    if v2_executable_readiness.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "V2_EXECUTABLE_READINESS_FRONTEND_INFERENCE_DECLARED",
+                "v2 executable readiness should be backend-owned and not require frontend inference.",
             )
         )
     if network_flow_lifecycle_summary.get("evidence_present") is not True:
@@ -6100,6 +6394,33 @@ def _runtime_export_diagnostic_findings(
                 "WARN",
                 "TRAFFIC_DEMAND_EXPLANATION_FRONTEND_INFERENCE_REQUIRED",
                 "traffic demand explanation still requires frontend semantic inference.",
+            )
+        )
+    if traffic_business_activity_window.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "TRAFFIC_BUSINESS_ACTIVITY_WINDOW_MISSING",
+                (
+                    "config_snapshot.status does not include "
+                    "traffic_business_activity_window_v1."
+                ),
+            )
+        )
+    if traffic_business_activity_window.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "TRAFFIC_BUSINESS_ACTIVITY_PACKET_LEVEL_DECLARED",
+                "traffic business activity evidence declares packet-level simulation.",
+            )
+        )
+    if traffic_business_activity_window.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "TRAFFIC_BUSINESS_ACTIVITY_FRONTEND_INFERENCE_DECLARED",
+                "traffic business activity should be backend-owned and not require frontend inference.",
             )
         )
     if user_service_requests.get("evidence_present") is not True:
@@ -6548,6 +6869,13 @@ def _runtime_export_scenario_review_evidence_hash(
                 "",
             )
         )
+    if filename == "traffic_business_activity_window_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("traffic_business_activity_window")).get(
+                "evidence_hash",
+                "",
+            )
+        )
     if filename == "user_configuration_control_surface_evidence_v1.json":
         return str(
             _mapping(
@@ -6571,6 +6899,13 @@ def _runtime_export_scenario_review_evidence_hash(
     if filename == "compute_resource_pool_summary_v1.json":
         return str(
             _mapping(scenario_review_bundle.get("compute_resource_pool_summary")).get(
+                "evidence_hash",
+                "",
+            )
+        )
+    if filename == "v2_executable_readiness_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("v2_executable_readiness")).get(
                 "evidence_hash",
                 "",
             )
@@ -6630,10 +6965,12 @@ def _runtime_export_scenario_review_step_label(
         "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "traffic_demand_explanation_v1.json": "traffic demand",
+        "traffic_business_activity_window_v1.json": "business activity",
         "user_configuration_control_surface_evidence_v1.json": "configuration control surface",
         "route_pressure_evidence_v1.json": "route pressure",
         "node_network_pressure_summary_v1.json": "node pressure",
         "compute_resource_pool_summary_v1.json": "compute resource pool",
+        "v2_executable_readiness_v1.json": "v2 readiness",
         "user_service_request_summary_v2.json": "user services",
         "service_lifecycle_trace_v2.json": "service trace",
         "service_trace_comparison_review_report_v1.json": "service trace review",
@@ -6924,6 +7261,173 @@ def _runtime_export_compute_resource_pool_summary(
         "caveats": _string_tuple(summary.get("caveats")),
     }
     evidence["evidence_hash"] = stable_hash_payload(summary)
+    return evidence
+
+
+def _runtime_export_v2_executable_readiness(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    readiness = _mapping(status.get("v2_executable_readiness_v1"))
+    evidence_present = bool(readiness)
+    source = "config_snapshot.status.v2_executable_readiness_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID,
+            "source": source,
+            "artifact_filename": V2_EXECUTABLE_READINESS_FILENAME,
+            "evidence_present": False,
+            "readiness_status": "MISSING",
+            "executable_ready": False,
+            "gate_count": 0,
+            "passed_gate_count": 0,
+            "failed_gate_count": 0,
+            "failed_gate_ids": (),
+            "missing_required_gate_count": 0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "operator_next_action": "Export package does not include v2 readiness.",
+            "readiness_hash": "",
+            "caveats": (
+                "Runtime status did not expose v2_executable_readiness_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    gates = _records(readiness.get("gates"))
+    failed_gate_ids = tuple(
+        str(gate.get("gate_id", ""))
+        for gate in gates
+        if str(gate.get("status", "")).upper() != "PASS"
+    )
+    packet_level = readiness.get("packet_level_simulation") is True
+    frontend_inference = readiness.get("frontend_inference_required") is True
+    executable_ready = readiness.get("executable_ready") is True
+    evidence = {
+        "version": "v1",
+        "evidence_id": RUNTIME_EXPORT_V2_EXECUTABLE_READINESS_V1_ID,
+        "source": source,
+        "runtime_status_source": str(readiness.get("source", "")),
+        "artifact_filename": V2_EXECUTABLE_READINESS_FILENAME,
+        "evidence_present": True,
+        "target": str(readiness.get("target", "")),
+        "readiness_status": str(readiness.get("readiness_status", "")),
+        "executable_ready": executable_ready,
+        "gate_count": _integer(readiness.get("gate_count", len(gates))),
+        "passed_gate_count": _integer(readiness.get("passed_gate_count")),
+        "failed_gate_count": _integer(readiness.get("failed_gate_count")),
+        "failed_gate_ids": failed_gate_ids,
+        "missing_required_gate_count": len(
+            _string_tuple(readiness.get("missing_required_gate_ids"))
+        ),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": (
+            executable_ready and not packet_level and not frontend_inference
+        ),
+        "operator_next_action": str(readiness.get("operator_next_action", "")),
+        "readiness_hash": str(
+            readiness.get("readiness_hash", stable_hash_payload(readiness))
+        ),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_traffic_business_activity_window(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    activity_window = _mapping(status.get("traffic_business_activity_window_v1"))
+    evidence_present = bool(activity_window)
+    source = "config_snapshot.status.traffic_business_activity_window_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID,
+            "source": source,
+            "artifact_filename": TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+            "evidence_present": False,
+            "current_sim_time": 0.0,
+            "request_count": 0,
+            "user_count": 0,
+            "active_user_count": 0,
+            "recent_user_count": 0,
+            "pending_user_count": 0,
+            "idle_user_count": 0,
+            "window_user_count": 0,
+            "item_count": 0,
+            "hidden_window_user_count": 0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "artifact_window_only": True,
+            "acceptable_for_demo_review": False,
+            "state_counts": (),
+            "window_state_counts": (),
+            "summary_hash": "",
+            "caveats": (
+                "Runtime status did not expose traffic_business_activity_window_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    state_counts = tuple(
+        {
+            "state": str(key),
+            "count": _integer(value),
+        }
+        for key, value in sorted(_mapping(activity_window.get("state_counts")).items())
+    )
+    window_state_counts = tuple(
+        {
+            "state": str(key),
+            "count": _integer(value),
+        }
+        for key, value in sorted(
+            _mapping(activity_window.get("window_state_counts")).items()
+        )
+    )
+    packet_level = activity_window.get("packet_level_simulation") is True
+    frontend_inference = activity_window.get("frontend_inference_required") is True
+    evidence = {
+        "version": "v1",
+        "evidence_id": RUNTIME_EXPORT_TRAFFIC_BUSINESS_ACTIVITY_WINDOW_V1_ID,
+        "source": source,
+        "runtime_status_source": str(activity_window.get("source", "")),
+        "artifact_filename": TRAFFIC_BUSINESS_ACTIVITY_WINDOW_FILENAME,
+        "evidence_present": True,
+        "current_sim_time": _number(activity_window.get("current_sim_time")),
+        "request_count": _integer(activity_window.get("request_count")),
+        "user_count": _integer(activity_window.get("user_count")),
+        "active_user_count": _integer(activity_window.get("active_user_count")),
+        "recent_user_count": _integer(activity_window.get("recent_user_count")),
+        "pending_user_count": _integer(activity_window.get("pending_user_count")),
+        "idle_user_count": _integer(activity_window.get("idle_user_count")),
+        "window_user_count": _integer(activity_window.get("window_user_count")),
+        "window_active_user_count": _integer(
+            activity_window.get("window_active_user_count")
+        ),
+        "window_pending_user_count": _integer(
+            activity_window.get("window_pending_user_count")
+        ),
+        "item_count": _integer(activity_window.get("item_count")),
+        "hidden_window_user_count": _integer(
+            activity_window.get("hidden_window_user_count")
+        ),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "artifact_window_only": True,
+        "acceptable_for_demo_review": not packet_level and not frontend_inference,
+        "state_counts": state_counts,
+        "window_state_counts": window_state_counts,
+        "model_assumptions": _string_tuple(activity_window.get("model_assumptions")),
+        "summary_hash": str(
+            activity_window.get("summary_hash", stable_hash_payload(activity_window))
+        ),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence
 
 
