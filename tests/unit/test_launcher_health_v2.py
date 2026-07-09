@@ -4,6 +4,7 @@ import json
 
 from leo_twin.services.launcher_health import (
     LAUNCHER_HEALTH_V2_ID,
+    LAUNCHER_ONE_CLICK_ACCEPTANCE_V1_ID,
     LauncherServiceProbe,
     build_launcher_health_summary_v2,
 )
@@ -55,6 +56,23 @@ def test_launcher_health_summary_reports_healthy_services() -> None:
     assert summary["recommended_actions"] == (
         "Open frontend URL or run smoke_runtime_health.ps1.",
     )
+    assert summary["one_click_acceptance_v1"] == {
+        "acceptance_id": LAUNCHER_ONE_CLICK_ACCEPTANCE_V1_ID,
+        "status": "PASS",
+        "ready": True,
+        "required_service_count": 2,
+        "ready_service_count": 2,
+        "blocked_service_count": 0,
+        "blocking_services": (),
+        "smoke_command": "scripts\\smoke_runtime_health.ps1",
+        "next_action": "Open the console or dashboard and run the smoke check.",
+        "criteria": (
+            "backend HTTP health READY",
+            "frontend HTTP health READY",
+            "launcher logs captured",
+            "read-only smoke command available",
+        ),
+    }
     assert json.loads(json.dumps(summary, sort_keys=True))["health_id"] == (
         LAUNCHER_HEALTH_V2_ID
     )
@@ -98,6 +116,16 @@ def test_launcher_health_summary_reports_degraded_port_only_service() -> None:
     assert "frontend is not listening on its configured port." in summary[
         "recommended_actions"
     ]
+    assert summary["one_click_acceptance_v1"]["status"] == "BLOCKED"
+    assert summary["one_click_acceptance_v1"]["ready"] is False
+    assert summary["one_click_acceptance_v1"]["blocked_service_count"] == 2
+    assert summary["one_click_acceptance_v1"]["blocking_services"] == (
+        "backend",
+        "frontend",
+    )
+    assert summary["one_click_acceptance_v1"]["next_action"] == (
+        "Inspect launcher logs and restart unhealthy services."
+    )
 
 
 def test_launcher_health_summary_reports_all_services_stopped() -> None:
@@ -130,6 +158,12 @@ def test_launcher_health_summary_reports_all_services_stopped() -> None:
     assert summary["overall_status"] == "STOPPED"
     assert summary["recommended_actions"] == (
         "Run scripts\\sees_launcher.ps1 start.",
+    )
+    assert summary["one_click_acceptance_v1"]["status"] == "STOPPED"
+    assert summary["one_click_acceptance_v1"]["ready"] is False
+    assert summary["one_click_acceptance_v1"]["blocked_service_count"] == 2
+    assert summary["one_click_acceptance_v1"]["next_action"] == (
+        "Run scripts\\sees_launcher.ps1 start."
     )
     assert summary["paths"]["control_config_path"] == "configs\\sees_control.yaml"
     assert summary["constraints"]["forbidden_integrations"] == (

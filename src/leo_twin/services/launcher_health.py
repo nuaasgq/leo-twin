@@ -7,6 +7,9 @@ from pathlib import Path
 
 
 LAUNCHER_HEALTH_V2_ID = "leo_twin.launcher_health.v2"
+LAUNCHER_ONE_CLICK_ACCEPTANCE_V1_ID = (
+    "leo_twin.launcher_one_click_acceptance.v1"
+)
 
 
 @dataclass(frozen=True)
@@ -92,6 +95,11 @@ def build_launcher_health_summary_v2(
     ready_count = sum(1 for service in services if service["readiness"] == "READY")
     stopped_count = sum(1 for service in services if service["readiness"] == "STOPPED")
     overall_status = _overall_status(ready_count, stopped_count, len(services))
+    one_click_acceptance = _one_click_acceptance(
+        overall_status=overall_status,
+        ready_count=ready_count,
+        services=services,
+    )
     return {
         "type": "LAUNCHER_HEALTH",
         "health_id": LAUNCHER_HEALTH_V2_ID,
@@ -107,6 +115,7 @@ def build_launcher_health_summary_v2(
             "control_config_path": str(Path(control_config_path)),
             "generated_config_path": str(Path(generated_config_path)),
         },
+        "one_click_acceptance_v1": one_click_acceptance,
         "recommended_actions": _recommended_actions(overall_status, services),
         "diagnostic_commands": (
             "scripts\\sees_launcher.ps1 status",
@@ -148,6 +157,45 @@ def _recommended_actions(
         elif service["readiness"] == "STOPPED":
             actions.append(f"{service['service']} is not listening on its configured port.")
     return tuple(actions)
+
+
+def _one_click_acceptance(
+    *,
+    overall_status: str,
+    ready_count: int,
+    services: tuple[dict[str, object], ...],
+) -> dict[str, object]:
+    blocked_services = tuple(
+        str(service["service"])
+        for service in services
+        if service["readiness"] != "READY"
+    )
+    if not blocked_services:
+        status = "PASS"
+        next_action = "Open the console or dashboard and run the smoke check."
+    elif overall_status == "STOPPED":
+        status = "STOPPED"
+        next_action = "Run scripts\\sees_launcher.ps1 start."
+    else:
+        status = "BLOCKED"
+        next_action = "Inspect launcher logs and restart unhealthy services."
+    return {
+        "acceptance_id": LAUNCHER_ONE_CLICK_ACCEPTANCE_V1_ID,
+        "status": status,
+        "ready": status == "PASS",
+        "required_service_count": len(services),
+        "ready_service_count": ready_count,
+        "blocked_service_count": len(blocked_services),
+        "blocking_services": blocked_services,
+        "smoke_command": "scripts\\smoke_runtime_health.ps1",
+        "next_action": next_action,
+        "criteria": (
+            "backend HTTP health READY",
+            "frontend HTTP health READY",
+            "launcher logs captured",
+            "read-only smoke command available",
+        ),
+    }
 
 
 def _normalize_process_id(value: object) -> int:

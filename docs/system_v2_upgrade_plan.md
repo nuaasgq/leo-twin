@@ -1430,6 +1430,11 @@ Current Phase 3 progress:
   scenario review, artifact browser, and long-term audit index now carry the
   same readiness and business-activity evidence used by the live dashboard.
 
+- T426 adds `one_click_acceptance_v1` to launcher health summaries and the
+  Windows launcher status output. Operators and automation can now read one
+  deterministic answer for whether the local backend/frontend startup is
+  accepted, which services block it, and which smoke command should run next.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

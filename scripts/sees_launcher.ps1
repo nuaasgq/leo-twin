@@ -322,6 +322,34 @@ function Get-LauncherHealthSummary {
             }
         }
     }
+    $blockingServices = @($services | Where-Object { $_.readiness -ne "READY" } | ForEach-Object { $_.service })
+    $acceptanceStatus = "BLOCKED"
+    $acceptanceNextAction = "Inspect launcher logs and restart unhealthy services."
+    if ($blockingServices.Count -eq 0) {
+        $acceptanceStatus = "PASS"
+        $acceptanceNextAction = "Open the console or dashboard and run the smoke check."
+    }
+    elseif ($overall -eq "STOPPED") {
+        $acceptanceStatus = "STOPPED"
+        $acceptanceNextAction = "Run scripts\sees_launcher.ps1 start."
+    }
+    $oneClickAcceptance = [ordered]@{
+        acceptance_id = "leo_twin.launcher_one_click_acceptance.v1"
+        status = $acceptanceStatus
+        ready = ($acceptanceStatus -eq "PASS")
+        required_service_count = $services.Count
+        ready_service_count = $readyCount
+        blocked_service_count = $blockingServices.Count
+        blocking_services = @($blockingServices)
+        smoke_command = "scripts\smoke_runtime_health.ps1"
+        next_action = $acceptanceNextAction
+        criteria = @(
+            "backend HTTP health READY",
+            "frontend HTTP health READY",
+            "launcher logs captured",
+            "read-only smoke command available"
+        )
+    }
     return [ordered]@{
         type = "LAUNCHER_HEALTH"
         health_id = "leo_twin.launcher_health.v2"
@@ -339,6 +367,7 @@ function Get-LauncherHealthSummary {
         }
         console_url = $FrontendUrl
         dashboard_url = $DashboardUrl
+        one_click_acceptance_v1 = $oneClickAcceptance
         diagnostic_commands = @(
             "scripts\sees_launcher.ps1 status",
             "scripts\sees_launcher.ps1 status -JsonSummary",
@@ -383,6 +412,8 @@ function Show-Status {
     Write-Host "Generated config path: $GeneratedConfigPath"
     Write-Host "Console URL: $FrontendUrl"
     Write-Host "Dashboard URL: $DashboardUrl"
+    Write-Host "One-click acceptance: $($summary.one_click_acceptance_v1.status)"
+    Write-Host "Acceptance next action: $($summary.one_click_acceptance_v1.next_action)"
     Write-Host "Smoke check: .\smoke_leo_twin.bat"
     Write-Host "Dashboard launcher: .\dashboard_leo_twin.bat"
 }

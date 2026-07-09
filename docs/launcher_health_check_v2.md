@@ -28,6 +28,12 @@ The JSON payload uses:
 leo_twin.launcher_health.v2
 ```
 
+It also includes a one-click startup acceptance object:
+
+```text
+leo_twin.launcher_one_click_acceptance.v1
+```
+
 ## Reported Fields
 
 The health summary reports:
@@ -41,6 +47,7 @@ The health summary reports:
 - scenario config path;
 - effective control config path;
 - generated config path;
+- one-click acceptance status, blockers, next action, and smoke command;
 - recommended diagnostic actions.
 
 ## Readiness Semantics
@@ -56,6 +63,20 @@ Overall status is:
 - `HEALTHY` when backend and frontend are both `READY`;
 - `STOPPED` when both are `STOPPED`;
 - `DEGRADED` for mixed or partial readiness.
+
+## One-Click Acceptance Semantics
+
+`one_click_acceptance_v1` is a deterministic operator summary derived from the
+same backend/frontend service probes:
+
+- `PASS`: backend and frontend are both `READY`;
+- `STOPPED`: both required services are stopped;
+- `BLOCKED`: at least one required service is not `READY`.
+
+The object reports `blocking_services`, `blocked_service_count`,
+`ready_service_count`, `next_action`, and `smoke_command`. It is intended for
+launcher scripts, operator diagnostics, and automated smoke checks. It does not
+start or stop services by itself and does not change simulation behavior.
 
 ## Paths
 

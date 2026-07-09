@@ -21705,3 +21705,45 @@ change.
   - Readiness and business activity evidence are now exported and audited, but
     the final 72/300/1200 standard scenario acceptance pass still needs to be
     run as a separate task.
+
+
+## 2026-07-09 - T426 launcher health acceptance v1
+
+- Branch: `feature/T426-launcher-health-acceptance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a deterministic `one_click_acceptance_v1` object to launcher
+  health summaries and the Windows launcher status JSON. The object reports
+  startup acceptance status, readiness boolean, required/ready/blocked service
+  counts, blocking services, smoke command, criteria, and next operator action.
+  This is an ops/diagnostics task. No Event Kernel behavior, simulation runtime
+  progression, model formula, frontend rendering, external simulator
+  integration, packet-level simulation, or runtime generated config behavior was
+  changed.
+- Changed files/modules:
+  - `src/leo_twin/services/launcher_health.py`
+  - `scripts/sees_launcher.ps1`
+  - `tests/unit/test_launcher_health_v2.py`
+  - `tests/unit/test_launcher_script_acceptance_v1.py`
+  - `docs/launcher_health_check_v2.md`
+  - `docs/launcher_acceptance_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/launcher_health.py`
+    - Result: passed.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_launcher_health_v2.py tests/unit/test_launcher_script_acceptance_v1.py`
+    - Result: 4 passed.
+  - PowerShell script parse check for `scripts/sees_launcher.ps1`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sees_launcher.ps1 status -JsonSummary`
+    - Result: passed. The command returned `one_click_acceptance_v1` with
+      `STOPPED` status because local backend/frontend services were not running.
+- Problems encountered:
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - This task proves startup acceptance from launcher service health only. It
+    does not run the full 72/300/1200 disposable acceptance matrix; that remains
+    a separate executable-loop verification task.
