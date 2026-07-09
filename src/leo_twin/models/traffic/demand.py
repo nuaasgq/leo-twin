@@ -506,6 +506,98 @@ class TrafficDemandBatch:
             ),
         }
 
+    def runtime_business_activity_window(
+        self,
+        *,
+        sim_time: float,
+        lookback_window_s: float = 120.0,
+        lookahead_window_s: float = 120.0,
+        assumed_service_duration_s: float = 60.0,
+        user_limit: int = 128,
+    ) -> dict[str, object]:
+        """Return per-user business activity derived from request arrival time."""
+
+        _require_non_negative_number(sim_time, "sim_time")
+        _require_non_negative_number(lookback_window_s, "lookback_window_s")
+        _require_non_negative_number(lookahead_window_s, "lookahead_window_s")
+        _require_positive_number(
+            assumed_service_duration_s,
+            "assumed_service_duration_s",
+        )
+        _require_positive_int(user_limit, "user_limit")
+        current = float(sim_time)
+        window_start = max(0.0, current - float(lookback_window_s))
+        window_end = current + float(lookahead_window_s)
+        records_by_user = _records_by_source_user(self.records)
+        user_rows = tuple(
+            _business_activity_user_row(
+                user_id,
+                tuple(records_by_user[user_id]),
+                current=current,
+                window_start=window_start,
+                window_end=window_end,
+                assumed_service_duration_s=float(assumed_service_duration_s),
+            )
+            for user_id in sorted(records_by_user, key=_entity_sort_key)
+        )
+        window_rows = tuple(
+            row for row in user_rows if int(row["window_request_count"]) > 0
+        )
+        ordered_window_rows = tuple(
+            sorted(window_rows, key=_business_activity_row_sort_key)
+        )
+        limited_rows = ordered_window_rows[:user_limit]
+        state_counts = _business_activity_state_counts(user_rows)
+        window_state_counts = _business_activity_state_counts(window_rows)
+        return {
+            "version": "v1",
+            "summary_id": "leo_twin.traffic_business_activity_window.v1",
+            "source": "TrafficDemandBatch.records",
+            "metric_model": "FLOW_LEVEL_BUSINESS_ACTIVITY_WINDOW",
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "current_sim_time": current,
+            "request_count": len(self.records),
+            "user_count": len(user_rows),
+            "active_user_count": state_counts["ACTIVE_BUSINESS"],
+            "recent_user_count": state_counts["RECENT_BUSINESS"],
+            "pending_user_count": state_counts["PENDING_BUSINESS"],
+            "idle_user_count": state_counts["IDLE"],
+            "window_user_count": len(ordered_window_rows),
+            "window_active_user_count": window_state_counts["ACTIVE_BUSINESS"],
+            "window_recent_user_count": window_state_counts["RECENT_BUSINESS"],
+            "window_pending_user_count": window_state_counts["PENDING_BUSINESS"],
+            "window_idle_user_count": window_state_counts["IDLE"],
+            "window": {
+                "lookback_window_s": float(lookback_window_s),
+                "lookahead_window_s": float(lookahead_window_s),
+                "window_start_s": window_start,
+                "window_end_s": window_end,
+                "assumed_service_duration_s": float(assumed_service_duration_s),
+            },
+            "item_limit": int(user_limit),
+            "item_count": len(limited_rows),
+            "hidden_window_user_count": max(
+                0,
+                len(ordered_window_rows) - len(limited_rows),
+            ),
+            "state_counts": dict(state_counts),
+            "window_state_counts": dict(window_state_counts),
+            "items": limited_rows,
+            "model_assumptions": (
+                "Business activity is derived from flow-level request arrival records.",
+                (
+                    "ACTIVE_BUSINESS uses an assumed service-duration window; "
+                    "actual network queue and compute execution are joined by "
+                    "runtime observability summaries."
+                ),
+                (
+                    "This summary is deterministic and does not model packets, "
+                    "stochastic retries, or external simulators."
+                ),
+            ),
+        }
+
     def per_user_active_service_state(self) -> tuple[dict[str, object], ...]:
         """Return deterministic per-source service state rows."""
 
@@ -1051,6 +1143,273 @@ def _per_user_active_service_state(
         "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
         "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
     }
+
+
+_BUSINESS_ACTIVITY_STATES = (
+    "ACTIVE_BUSINESS",
+    "RECENT_BUSINESS",
+    "PENDING_BUSINESS",
+    "IDLE",
+)
+
+_BUSINESS_ACTIVITY_STATE_ORDER = {
+    state: index for index, state in enumerate(_BUSINESS_ACTIVITY_STATES)
+}
+
+
+def _records_by_source_user(
+    records: tuple[TrafficDemandRecord, ...],
+) -> dict[str, list[TrafficDemandRecord]]:
+    by_user: dict[str, list[TrafficDemandRecord]] = {}
+    for record in records:
+        by_user.setdefault(record.input_flow.source_id, []).append(record)
+    return by_user
+
+
+def _business_activity_user_row(
+    user_id: str,
+    records: tuple[TrafficDemandRecord, ...],
+    *,
+    current: float,
+    window_start: float,
+    window_end: float,
+    assumed_service_duration_s: float,
+) -> dict[str, object]:
+    ordered_records = tuple(sorted(records, key=_traffic_record_sort_key))
+    active_records = tuple(
+        record
+        for record in ordered_records
+        if record.arrival_time <= current
+        and current < record.arrival_time + assumed_service_duration_s
+    )
+    recent_records = tuple(
+        record
+        for record in ordered_records
+        if not _business_record_active(
+            record,
+            current=current,
+            assumed_service_duration_s=assumed_service_duration_s,
+        )
+        and window_start <= record.arrival_time <= current
+    )
+    pending_records = tuple(
+        record for record in ordered_records if record.arrival_time > current
+    )
+    pending_window_records = tuple(
+        record for record in pending_records if record.arrival_time <= window_end
+    )
+    past_records = tuple(
+        record
+        for record in ordered_records
+        if record.arrival_time + assumed_service_duration_s < current
+    )
+    window_records = tuple(
+        sorted(
+            {*active_records, *recent_records, *pending_window_records},
+            key=_traffic_record_sort_key,
+        )
+    )
+    selected_record = _business_activity_selected_record(
+        active_records,
+        recent_records,
+        pending_records,
+    )
+    next_record = pending_records[0] if pending_records else None
+    last_record = _last_arrived_record(ordered_records, current)
+    business_state = _business_activity_state(
+        active_records,
+        recent_records,
+        pending_records,
+    )
+    current_or_next_arrival_time = (
+        None if selected_record is None else float(selected_record.arrival_time)
+    )
+    return {
+        "user_id": user_id,
+        "platform_type": _traffic_source_platform_type(user_id),
+        "business_state": business_state,
+        "request_count": len(ordered_records),
+        "active_request_count": len(active_records),
+        "recent_request_count": len(recent_records),
+        "pending_request_count": len(pending_records),
+        "past_request_count": len(past_records),
+        "window_request_count": len(window_records),
+        "communication_request_count": sum(
+            1
+            for record in ordered_records
+            if record.traffic_class != TrafficClass.COMPUTE_SERVICE
+        ),
+        "compute_request_count": sum(
+            1
+            for record in ordered_records
+            if record.traffic_class == TrafficClass.COMPUTE_SERVICE
+        ),
+        "service_classes": _traffic_class_values(ordered_records),
+        "active_business_types": _traffic_class_values(active_records),
+        "window_business_types": _traffic_class_values(window_records),
+        "current_or_next_business_type": (
+            "" if selected_record is None else selected_record.traffic_class.value
+        ),
+        "primary_request_id": (
+            "" if selected_record is None else _service_id_from_record(selected_record)
+        ),
+        "primary_flow_id": (
+            "" if selected_record is None else selected_record.input_flow.flow_id
+        ),
+        "primary_target_id": (
+            "" if selected_record is None else selected_record.input_flow.target_id
+        ),
+        "selected_satellite_id": _selected_satellite_id_from_record(selected_record),
+        "current_or_next_arrival_time": current_or_next_arrival_time,
+        "last_arrival_time": None if last_record is None else float(last_record.arrival_time),
+        "next_arrival_time": None if next_record is None else float(next_record.arrival_time),
+        "time_to_next_request_s": (
+            None if next_record is None else max(0.0, float(next_record.arrival_time - current))
+        ),
+        "active_flow_ids": tuple(record.input_flow.flow_id for record in active_records[:8]),
+        "recent_flow_ids": tuple(record.input_flow.flow_id for record in recent_records[:8]),
+        "pending_flow_ids": tuple(record.input_flow.flow_id for record in pending_window_records[:8]),
+        "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
+        "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
+        "network_queue_model": "JOIN_RUNTIME_USER_REQUEST_SUMMARY_FOR_QUEUE_STATE",
+        "compute_execution_model": "JOIN_SERVICE_LIFECYCLE_TRACE_FOR_EXECUTION_STATE",
+    }
+
+
+def _business_record_active(
+    record: TrafficDemandRecord,
+    *,
+    current: float,
+    assumed_service_duration_s: float,
+) -> bool:
+    return record.arrival_time <= current < record.arrival_time + assumed_service_duration_s
+
+
+def _business_activity_state(
+    active_records: tuple[TrafficDemandRecord, ...],
+    recent_records: tuple[TrafficDemandRecord, ...],
+    pending_records: tuple[TrafficDemandRecord, ...],
+) -> str:
+    if active_records:
+        return "ACTIVE_BUSINESS"
+    if recent_records:
+        return "RECENT_BUSINESS"
+    if pending_records:
+        return "PENDING_BUSINESS"
+    return "IDLE"
+
+
+def _business_activity_selected_record(
+    active_records: tuple[TrafficDemandRecord, ...],
+    recent_records: tuple[TrafficDemandRecord, ...],
+    pending_records: tuple[TrafficDemandRecord, ...],
+) -> TrafficDemandRecord | None:
+    if active_records:
+        return min(
+            active_records,
+            key=lambda record: (
+                -record.input_flow.priority,
+                record.arrival_time,
+                _service_id_from_record(record),
+            ),
+        )
+    if recent_records:
+        return min(
+            recent_records,
+            key=lambda record: (
+                -record.arrival_time,
+                -record.input_flow.priority,
+                _service_id_from_record(record),
+            ),
+        )
+    if pending_records:
+        return min(
+            pending_records,
+            key=lambda record: (
+                record.arrival_time,
+                -record.input_flow.priority,
+                _service_id_from_record(record),
+            ),
+        )
+    return None
+
+
+def _last_arrived_record(
+    records: tuple[TrafficDemandRecord, ...],
+    current: float,
+) -> TrafficDemandRecord | None:
+    arrived = tuple(record for record in records if record.arrival_time <= current)
+    if not arrived:
+        return None
+    return max(
+        arrived,
+        key=lambda record: (
+            record.arrival_time,
+            record.input_flow.priority,
+            _service_id_from_record(record),
+        ),
+    )
+
+
+def _traffic_class_values(
+    records: tuple[TrafficDemandRecord, ...],
+) -> tuple[str, ...]:
+    return tuple(
+        traffic_class.value
+        for traffic_class in TrafficClass
+        if any(record.traffic_class == traffic_class for record in records)
+    )
+
+
+def _selected_satellite_id_from_record(record: TrafficDemandRecord | None) -> str:
+    if record is None:
+        return ""
+    target_id = record.input_flow.target_id
+    lowered = target_id.lower()
+    if lowered.startswith("sat") or "sat-" in lowered or "compute" in lowered:
+        return target_id
+    return ""
+
+
+def _traffic_source_platform_type(source_id: str) -> str:
+    lowered = source_id.lower()
+    if lowered.startswith("user"):
+        return "GROUND_USER_TERMINAL"
+    if lowered.startswith("sat"):
+        return "SATELLITE_PLATFORM"
+    if lowered.startswith("sensor"):
+        return "SENSOR_TERMINAL"
+    return "SERVICE_SOURCE"
+
+
+def _business_activity_state_counts(
+    rows: tuple[dict[str, object], ...],
+) -> dict[str, int]:
+    return {
+        state: sum(1 for row in rows if row["business_state"] == state)
+        for state in _BUSINESS_ACTIVITY_STATES
+    }
+
+
+def _business_activity_row_sort_key(row: dict[str, object]) -> tuple[object, ...]:
+    business_state = str(row.get("business_state", "IDLE"))
+    arrival_value = row.get("current_or_next_arrival_time")
+    arrival_time = float("inf") if arrival_value is None else float(arrival_value)
+    return (
+        _BUSINESS_ACTIVITY_STATE_ORDER.get(business_state, 99),
+        arrival_time,
+        _entity_sort_key(str(row.get("user_id", ""))),
+    )
+
+
+def _entity_sort_key(value: str) -> tuple[object, ...]:
+    parts: list[object] = []
+    for part in value.replace("_", "-").split("-"):
+        if part.isdigit():
+            parts.append(int(part))
+        else:
+            parts.append(part)
+    return tuple(parts)
 
 
 def _request_timeline_state(

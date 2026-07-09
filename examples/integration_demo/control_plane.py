@@ -2577,6 +2577,11 @@ class DemoControlPlane:
         status["traffic_request_timeline_v1"] = (
             self._traffic_request_timeline_json(float(status["current_sim_time"]))
         )
+        status["traffic_business_activity_window_v1"] = (
+            self._traffic_business_activity_window_json(
+                float(status["current_sim_time"])
+            )
+        )
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
         status["reproducibility_manifest_v1"] = (
             build_runtime_reproducibility_manifest(
@@ -2932,6 +2937,79 @@ class DemoControlPlane:
         )
         timeline["summary_hash"] = stable_hash_payload(timeline)
         return timeline
+
+    def _traffic_business_activity_window_json(self, sim_time: float) -> dict[str, Any]:
+        context = self._runtime_context
+        window_s = 60.0
+        try:
+            window_s = max(
+                1.0,
+                float(
+                    self._controller.config.scenario.traffic_model.flow_interval_seconds
+                ),
+            )
+        except Exception:
+            window_s = 60.0
+        if context is None:
+            activity_window: dict[str, Any] = {
+                "version": "v1",
+                "summary_id": "leo_twin.traffic_business_activity_window.v1",
+                "source": "TrafficDemandBatch.records",
+                "metric_model": "FLOW_LEVEL_BUSINESS_ACTIVITY_WINDOW",
+                "packet_level_simulation": False,
+                "frontend_inference_required": False,
+                "current_sim_time": float(sim_time),
+                "request_count": 0,
+                "user_count": 0,
+                "active_user_count": 0,
+                "recent_user_count": 0,
+                "pending_user_count": 0,
+                "idle_user_count": 0,
+                "window_user_count": 0,
+                "window_active_user_count": 0,
+                "window_recent_user_count": 0,
+                "window_pending_user_count": 0,
+                "window_idle_user_count": 0,
+                "window": {
+                    "lookback_window_s": window_s * 2.0,
+                    "lookahead_window_s": window_s * 2.0,
+                    "window_start_s": max(0.0, float(sim_time) - window_s * 2.0),
+                    "window_end_s": float(sim_time) + window_s * 2.0,
+                    "assumed_service_duration_s": window_s,
+                },
+                "item_limit": 128,
+                "item_count": 0,
+                "hidden_window_user_count": 0,
+                "state_counts": {
+                    "ACTIVE_BUSINESS": 0,
+                    "RECENT_BUSINESS": 0,
+                    "PENDING_BUSINESS": 0,
+                    "IDLE": 0,
+                },
+                "window_state_counts": {
+                    "ACTIVE_BUSINESS": 0,
+                    "RECENT_BUSINESS": 0,
+                    "PENDING_BUSINESS": 0,
+                    "IDLE": 0,
+                },
+                "items": (),
+                "model_assumptions": (
+                    "Business activity is derived from flow-level request arrival records.",
+                    "No runtime scenario context is attached yet.",
+                ),
+            }
+        else:
+            activity_window = dict(
+                context.scenario.traffic_demand.runtime_business_activity_window(
+                    sim_time=sim_time,
+                    lookback_window_s=window_s * 2.0,
+                    lookahead_window_s=window_s * 2.0,
+                    assumed_service_duration_s=window_s,
+                    user_limit=128,
+                )
+            )
+        activity_window["summary_hash"] = stable_hash_payload(activity_window)
+        return activity_window
 
     def _stream_diagnostics_json(self) -> dict[str, Any]:
         loop = self._require_advance_loop()

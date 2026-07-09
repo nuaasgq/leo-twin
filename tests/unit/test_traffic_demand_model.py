@@ -557,6 +557,138 @@ def test_runtime_request_timeline_reports_time_relative_business_state() -> None
     )
 
 
+def test_runtime_business_activity_window_reports_time_varying_user_state() -> None:
+    profiles = (
+        TrafficDemandProfile(
+            traffic_class=TrafficClass.COMPUTE_SERVICE,
+            source_ids=("user-001",),
+            destination_ids=("sat-compute-001",),
+            request_count=3,
+            arrival_interval=10.0,
+            input_data_size=6.0,
+            output_data_size=2.0,
+            priority=5,
+            destination_type=TrafficDestinationType.COMPUTE_NODE,
+            output_destination_ids=("user-001",),
+            id_prefix="biz",
+        ),
+        TrafficDemandProfile(
+            traffic_class=TrafficClass.DATA_TRANSFER,
+            source_ids=("user-002",),
+            destination_ids=("gateway-001",),
+            request_count=2,
+            arrival_interval=30.0,
+            input_data_size=1.5,
+            start_time=8.0,
+            priority=2,
+            destination_type=TrafficDestinationType.SERVICE_ENDPOINT,
+            id_prefix="data",
+        ),
+    )
+    batch = generate_traffic_demand(profiles)
+
+    first = batch.runtime_business_activity_window(
+        sim_time=12.0,
+        lookback_window_s=10.0,
+        lookahead_window_s=12.0,
+        assumed_service_duration_s=5.0,
+        user_limit=8,
+    )
+    second = batch.runtime_business_activity_window(
+        sim_time=12.0,
+        lookback_window_s=10.0,
+        lookahead_window_s=12.0,
+        assumed_service_duration_s=5.0,
+        user_limit=8,
+    )
+
+    assert first == second
+    assert first["summary_id"] == "leo_twin.traffic_business_activity_window.v1"
+    assert first["source"] == "TrafficDemandBatch.records"
+    assert first["metric_model"] == "FLOW_LEVEL_BUSINESS_ACTIVITY_WINDOW"
+    assert first["packet_level_simulation"] is False
+    assert first["frontend_inference_required"] is False
+    assert first["current_sim_time"] == 12.0
+    assert first["request_count"] == 5
+    assert first["user_count"] == 2
+    assert first["active_user_count"] == 2
+    assert first["recent_user_count"] == 0
+    assert first["pending_user_count"] == 0
+    assert first["idle_user_count"] == 0
+    assert first["window"] == {
+        "lookback_window_s": 10.0,
+        "lookahead_window_s": 12.0,
+        "window_start_s": 2.0,
+        "window_end_s": 24.0,
+        "assumed_service_duration_s": 5.0,
+    }
+    assert first["state_counts"] == {
+        "ACTIVE_BUSINESS": 2,
+        "RECENT_BUSINESS": 0,
+        "PENDING_BUSINESS": 0,
+        "IDLE": 0,
+    }
+
+    rows = {row["user_id"]: row for row in first["items"]}
+    assert rows["user-001"]["business_state"] == "ACTIVE_BUSINESS"
+    assert rows["user-001"]["active_request_count"] == 1
+    assert rows["user-001"]["pending_request_count"] == 1
+    assert rows["user-001"]["past_request_count"] == 1
+    assert rows["user-001"]["compute_request_count"] == 3
+    assert rows["user-001"]["communication_request_count"] == 0
+    assert rows["user-001"]["current_or_next_business_type"] == "COMPUTE_SERVICE"
+    assert rows["user-001"]["primary_target_id"] == "sat-compute-001"
+    assert rows["user-001"]["selected_satellite_id"] == "sat-compute-001"
+    assert rows["user-001"]["next_arrival_time"] == 20.0
+    assert rows["user-001"]["time_to_next_request_s"] == 8.0
+    assert rows["user-001"]["active_flow_ids"] == (
+        "biz-00-compute_service-00001-input",
+    )
+    assert rows["user-001"]["pending_flow_ids"] == (
+        "biz-00-compute_service-00002-input",
+    )
+
+    assert rows["user-002"]["business_state"] == "ACTIVE_BUSINESS"
+    assert rows["user-002"]["platform_type"] == "GROUND_USER_TERMINAL"
+    assert rows["user-002"]["service_classes"] == ("DATA_TRANSFER",)
+    assert rows["user-002"]["primary_target_id"] == "gateway-001"
+    assert rows["user-002"]["selected_satellite_id"] == ""
+    assert rows["user-002"]["time_to_next_request_s"] == 26.0
+    assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
+        "leo_twin.traffic_business_activity_window.v1"
+    )
+
+
+def test_runtime_business_activity_window_limits_window_rows() -> None:
+    profile = TrafficDemandProfile(
+        traffic_class=TrafficClass.DATA_TRANSFER,
+        source_ids=("user-001", "user-002"),
+        destination_ids=("gateway-001",),
+        request_count=2,
+        arrival_interval=1.0,
+        input_data_size=1.0,
+        priority=1,
+        id_prefix="limit",
+    )
+    batch = generate_traffic_demand((profile,))
+
+    window = batch.runtime_business_activity_window(
+        sim_time=1.0,
+        lookback_window_s=1.0,
+        lookahead_window_s=1.0,
+        assumed_service_duration_s=10.0,
+        user_limit=1,
+    )
+
+    assert window["window_user_count"] == 2
+    assert window["item_count"] == 1
+    assert window["hidden_window_user_count"] == 1
+    assert len(window["items"]) == 1
+
+    with pytest.raises(ValueError, match="user_limit"):
+        batch.runtime_business_activity_window(sim_time=1.0, user_limit=0)
+
+
 def test_burst_arrival_profile_groups_requests_deterministically() -> None:
     profile = TrafficDemandProfile(
         traffic_class=TrafficClass.DATA_TRANSFER,

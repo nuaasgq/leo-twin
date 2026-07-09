@@ -326,6 +326,20 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         }
         assert "observed_complete" in first_request
     assert str(traffic_timeline["summary_hash"]).startswith("sha256:")
+    business_window = status_after_tick["traffic_business_activity_window_v1"]
+    assert business_window["version"] == "v1"
+    assert business_window["summary_id"] == (
+        "leo_twin.traffic_business_activity_window.v1"
+    )
+    assert business_window["source"] == "TrafficDemandBatch.records"
+    assert business_window["metric_model"] == "FLOW_LEVEL_BUSINESS_ACTIVITY_WINDOW"
+    assert business_window["packet_level_simulation"] is False
+    assert business_window["frontend_inference_required"] is False
+    assert business_window["current_sim_time"] == status_after_tick["current_sim_time"]
+    assert business_window["request_count"] > 0
+    assert business_window["item_count"] <= business_window["item_limit"]
+    assert "ACTIVE_BUSINESS" in business_window["state_counts"]
+    assert str(business_window["summary_hash"]).startswith("sha256:")
     lifecycle = status_after_tick["network_flow_lifecycle_summary_v1"]
     assert lifecycle["version"] == "v1"
     assert lifecycle["source"] == "METRICS_SUMMARY_NETWORK_FLOW_LIFECYCLE_FIELDS"

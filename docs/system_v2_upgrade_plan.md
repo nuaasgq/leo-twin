@@ -1407,6 +1407,12 @@ Current Phase 3 progress:
   NOT_OBSERVED, OBSERVED_IN_PROGRESS, or COMPLETED status plus observed task,
   flow, latency, and component-count fields when service traces are retained.
 
+- T422 adds `traffic_business_activity_window_v1` to runtime status. The
+  backend now derives per-user ACTIVE_BUSINESS, RECENT_BUSINESS,
+  PENDING_BUSINESS, and IDLE rows from `TrafficDemandBatch.records` at the
+  current simulation time, including primary request, flow, target, selected
+  satellite, and next-arrival fields for dashboard tables.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

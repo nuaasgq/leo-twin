@@ -21524,3 +21524,49 @@ change.
   - The model is still a deterministic flow-level proxy. It improves ownership
     and explainability, but it is not packet-level loss/jitter, RF channel
     fidelity, or external network-simulator calibration.
+
+
+## 2026-07-09 - T422 traffic business activity window v2
+
+- Branch: `feature/T422-traffic-business-window-v2`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-owned `traffic_business_activity_window_v1` runtime
+  status object derived from `TrafficDemandBatch.records` at the current
+  simulation time. The new object reports per-user ACTIVE_BUSINESS,
+  RECENT_BUSINESS, PENDING_BUSINESS, and IDLE states plus primary request,
+  flow, target, selected satellite, business type, next-arrival, and bounded
+  window rows. This supports the executable v2 dashboard data model without
+  frontend-owned business-state inference. No Event Kernel, packet-level,
+  network routing, compute execution, frontend rendering, external simulator,
+  or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/traffic_business_activity_window_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct targeted test runner with `PYTHONPATH=src` and a minimal pytest shim
+    for the bundled Python environment.
+    - Result: `tests.unit.test_traffic_demand_model` 16 direct tests passed.
+    - Result: `tests.integration.test_runtime_session_control::test_demo_server_adapter_uses_runtime_status_and_control_layer` passed with a temporary directory argument.
+    - Result: `tests.unit.test_integration_demo_scenario` 15 direct tests passed.
+- Problems encountered:
+  - Creating the new task branch required elevated Git ref write access because
+    the sandbox initially denied `.git/refs` writes.
+  - `apply_patch` still failed in the Windows sandbox with
+    `orchestrator_helper_launch_canceled`; exact UTF-8 replacement/write scripts
+    were used and the resulting diff was reviewed.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - `ACTIVE_BUSINESS` is a deterministic flow-level activity window based on
+    request arrival records and the configured arrival interval. It is not a
+    packet-level completion model. Actual network queue and compute execution
+    state still come from runtime observability summaries and lifecycle traces.
