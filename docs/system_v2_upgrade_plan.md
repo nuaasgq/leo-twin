@@ -1525,6 +1525,13 @@ Current Phase 3 progress:
   industrial demo results while preserving the existing
   `v2_executable_readiness_v1` contract.
 
+- T439 adds backend-owned `runtime_dashboard_kpi_v1` to runtime status. It gives
+  frontend panels one current KPI contract for throughput, latency, loss proxy,
+  delay-variation proxy, and compute resource usage, preferring
+  `kpi_time_series_v1` tail samples while retaining `metrics_summary` as source
+  evidence and fallback. This reduces frontend inference from static snapshots
+  without changing metrics formulas or packet-level boundaries.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

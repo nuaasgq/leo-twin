@@ -22399,3 +22399,39 @@ change.
   - `runtime_closure_readiness_v1` currently reports service-lifecycle closure gaps when a run finishes without complete communication-compute traces. This is intentional evidence, not a synthetic fix. A later backend task should improve service lifecycle completion for standard demo scenarios.
   - The summary is not yet persisted into result packages. A follow-on export task should add `runtime_closure_readiness_v1.json` to the review bundle if this contract is accepted.
   - Frontend panels may still need to bind this field so users see the difference between `READY_TO_RUN` and `RESULT_READY` without reading raw JSON.
+
+## 2026-07-09 - T439 runtime dashboard KPI v1
+
+- Branch: `feature/T439-runtime-dashboard-kpi-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `runtime_dashboard_kpi_v1` to `/runtime/status`. The summary standardizes current dashboard KPI rows for throughput, latency, loss proxy, delay-variation proxy, and compute resource usage by preferring `kpi_time_series_v1` tail samples, retaining `metrics_summary` values as evidence/fallback, and carrying movement, dynamic-status, source-detail, and zero-value explanations. This is a backend status-contract task only. No Event Kernel behavior, metrics formulas, packet-level simulation, frontend rendering, external simulator integration, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_dashboard_kpi.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_runtime_dashboard_kpi.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/runtime_dashboard_kpi_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_dashboard_kpi.py examples\integration_demo\control_plane.py tests\unit\test_runtime_dashboard_kpi.py tests\integration\test_live_runtime_streaming.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_runtime_dashboard_kpi.py`
+    - Result: 3 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py::test_demo_kpi_tail_uses_runtime_target_during_empty_event_gap`
+    - Result: 1 passed.
+  - `python -m pytest tests\unit\test_runtime_dashboard_kpi.py tests\unit\test_runtime_kpi_movement.py tests\unit\test_network_kpi_dynamic_status.py`
+    - Result: 8 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py`
+    - Result: 14 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py`
+    - Result: 24 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py`
+    - Result: 1 passed.
+- Problems encountered:
+  - The existing backend already exposes KPI movement and dynamic status, but current dashboard consumers can still mix `/metrics/snapshot` topology summaries with `/runtime/status` KPI samples. This task therefore adds a normalized backend KPI view rather than changing formulas.
+  - The new contract intentionally prefers the tail sample over `metrics_summary` for current dashboard values because `kpi_time_series_v1` already carries the runtime observation-time tail during sparse-event gaps. `metrics_summary` remains visible as source evidence and fallback.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - Frontend panels are not yet bound to `runtime_dashboard_kpi_v1`; a follow-on frontend task should prefer this field when present.
+  - The summary is not yet persisted into result packages. A later export task can add `runtime_dashboard_kpi_v1.json` if offline dashboard KPI review is needed.

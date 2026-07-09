@@ -54,6 +54,7 @@ from leo_twin.services.executable_readiness import build_v2_executable_readiness
 from leo_twin.services.runtime_closure_readiness import (
     build_runtime_closure_readiness_v1,
 )
+from leo_twin.services.runtime_dashboard_kpi import build_runtime_dashboard_kpi_v1
 from leo_twin.services.network_kpi_benchmark_validation import (
     build_network_kpi_benchmark_validation_v1,
 )
@@ -2649,6 +2650,12 @@ class DemoControlPlane:
             build_network_kpi_dynamic_status_v1(
                 status["network_kpi_calibration_v1"],
             )
+        )
+        status["runtime_dashboard_kpi_v1"] = build_runtime_dashboard_kpi_v1(
+            status["kpi_time_series_v1"],
+            metrics_summary,
+            status["runtime_kpi_movement_summary_v1"],
+            status["network_kpi_dynamic_status_v1"],
         )
         status["network_kpi_formula_evidence_v1"] = (
             build_network_kpi_formula_evidence_v1(

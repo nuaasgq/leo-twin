@@ -677,6 +677,10 @@ def test_demo_kpi_tail_uses_runtime_target_during_empty_event_gap(
     status = control_plane.runtime_status()["status"]
     kpi_tail = status["kpi_time_series_v1"]["samples"][-1]
     metrics_summary = status["metrics_summary"]
+    dashboard_kpi = status["runtime_dashboard_kpi_v1"]
+    dashboard_items = {
+        item["metric"]: item for item in dashboard_kpi["items"] if isinstance(item, dict)
+    }
 
     assert status["kernel_current_sim_time"] == status["current_sim_time"]
     assert status["runtime_target_sim_time"] > status["kernel_current_sim_time"]
@@ -697,6 +701,28 @@ def test_demo_kpi_tail_uses_runtime_target_during_empty_event_gap(
     )
     assert metrics_summary["network_quality_effective_throughput_mbps"] == pytest.approx(
         kpi_tail["network_lifetime_effective_throughput_mbps"]
+    )
+    assert dashboard_kpi["summary_id"] == "leo_twin.runtime_dashboard_kpi.v1"
+    assert dashboard_kpi["source"] == "KPI_TIME_SERIES_TAIL_AND_METRICS_SUMMARY"
+    assert dashboard_kpi["tail_sample_time_s"] == kpi_tail["sim_time"]
+    assert dashboard_kpi["metrics_summary_time_source"] == "RUNTIME_ADVANCE_TARGET"
+    assert dashboard_kpi["frontend_inference_required"] is False
+    assert dashboard_kpi["packet_level_simulation"] is False
+    assert (
+        dashboard_items["NETWORK_EFFECTIVE_THROUGHPUT"]["current_value"]
+        == pytest.approx(kpi_tail["network_effective_throughput_mbps"])
+    )
+    assert (
+        dashboard_items["NETWORK_EFFECTIVE_LATENCY"]["current_value"]
+        == pytest.approx(kpi_tail["network_effective_latency_s"])
+    )
+    assert (
+        dashboard_items["NETWORK_EFFECTIVE_LOSS_PROXY"]["current_value"]
+        == pytest.approx(kpi_tail["network_effective_loss_proxy_rate"])
+    )
+    assert (
+        dashboard_items["NETWORK_EFFECTIVE_DELAY_VARIATION_PROXY"]["current_value"]
+        == pytest.approx(kpi_tail["network_effective_delay_variation_s"])
     )
 
 
