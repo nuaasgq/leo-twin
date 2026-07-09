@@ -57,6 +57,9 @@ from leo_twin.services.network_kpi_benchmark_validation import (
 from leo_twin.services.network_kpi_calibration import (
     build_network_kpi_calibration_v1,
 )
+from leo_twin.services.network_kpi_dynamic_status import (
+    build_network_kpi_dynamic_status_v1,
+)
 from leo_twin.services.network_kpi_formula_evidence import (
     build_network_kpi_formula_evidence_v1,
 )
@@ -2596,6 +2599,11 @@ class DemoControlPlane:
         status["network_kpi_calibration_v1"] = build_network_kpi_calibration_v1(
             status["kpi_time_series_v1"],
             metrics_summary,
+        )
+        status["network_kpi_dynamic_status_v1"] = (
+            build_network_kpi_dynamic_status_v1(
+                status["network_kpi_calibration_v1"],
+            )
         )
         status["network_kpi_formula_evidence_v1"] = (
             build_network_kpi_formula_evidence_v1(

@@ -535,6 +535,38 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "EFFECTIVE_LOSS_PROXY",
         "EFFECTIVE_DELAY_VARIATION_PROXY",
     } == {item["metric"] for item in network_kpi_calibration["kpis"]}
+    network_kpi_dynamic_status = status_after_tick["network_kpi_dynamic_status_v1"]
+    assert network_kpi_dynamic_status["version"] == "v1"
+    assert network_kpi_dynamic_status["status_id"] == (
+        "leo_twin.network_kpi_dynamic_status.v1"
+    )
+    assert network_kpi_dynamic_status["source"] == "NETWORK_KPI_CALIBRATION_V1"
+    assert network_kpi_dynamic_status["calibration_id"] == (
+        network_kpi_calibration["calibration_id"]
+    )
+    assert network_kpi_dynamic_status["packet_level_simulation"] is False
+    assert network_kpi_dynamic_status["frontend_inference_required"] is False
+    assert network_kpi_dynamic_status["sample_count"] == (
+        network_kpi_calibration["sample_count"]
+    )
+    assert network_kpi_dynamic_status["kpi_count"] == len(
+        network_kpi_dynamic_status["items"]
+    )
+    assert network_kpi_dynamic_status["dynamic_status"] in {
+        "DYNAMIC",
+        "PARTIALLY_DYNAMIC",
+        "FLAT_WITH_ACTIVITY",
+        "FLAT_NO_ACTIVITY",
+        "INSUFFICIENT_SERIES",
+        "NO_KPI_EVIDENCE",
+    }
+    assert {
+        "EFFECTIVE_THROUGHPUT",
+        "EFFECTIVE_LATENCY",
+        "EFFECTIVE_LOSS_PROXY",
+        "EFFECTIVE_DELAY_VARIATION_PROXY",
+    } == {item["metric"] for item in network_kpi_dynamic_status["items"]}
+    assert str(network_kpi_dynamic_status["status_hash"]).startswith("sha256:")
     network_kpi_formula_evidence = status_after_tick[
         "network_kpi_formula_evidence_v1"
     ]

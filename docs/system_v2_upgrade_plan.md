@@ -1447,6 +1447,11 @@ Current Phase 3 progress:
   request state, service state, priority, data volume, and model join hints
   without frontend inference or packet-level simulation.
 
+- T429 adds `network_kpi_dynamic_status_v1` to runtime status. The backend now
+  condenses network KPI calibration into a direct dynamic/flat/insufficient
+  status with metric names, zero-value notes, blocking reasons, and recommended
+  next actions for frontend rendering and operator diagnosis.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

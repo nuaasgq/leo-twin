@@ -21835,3 +21835,43 @@ change.
     standalone data panel. Actual network queue and compute execution details
     still come from joined runtime observability summaries rather than this
     demand schedule alone.
+
+
+## 2026-07-09 - T429 network KPI dynamic status v1
+
+- Branch: `feature/T429-network-kpi-dynamic-status-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `network_kpi_dynamic_status_v1` to runtime status.
+  The summary derives from `network_kpi_calibration_v1` and condenses network
+  KPI proxy behavior into dynamic, partially dynamic, flat-with-activity,
+  flat-no-activity, insufficient-series, or missing-evidence states. It exposes
+  per-KPI variation status, visibility hints, zero-value notes, blocking
+  reasons, and recommended next actions. This is a network KPI observability
+  task. No Event Kernel behavior, KPI formula, network routing logic, runtime
+  progression behavior, frontend rendering, external simulator integration,
+  packet-level simulation, or runtime generated config behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_dynamic_status.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_network_kpi_dynamic_status.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/network_kpi_dynamic_status_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/network_kpi_dynamic_status.py examples/integration_demo/control_plane.py tests/unit/test_network_kpi_dynamic_status.py`
+    - Result: passed.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_network_kpi_dynamic_status.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer`
+    - Result: 4 passed.
+- Problems encountered:
+  - Existing KPI calibration and variation explanation already existed. This
+    task therefore avoided changing formulas and added a compact status object
+    for UI/operator binding instead of duplicating the full explanation payload.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The frontend has not yet been rebound to render
+    `network_kpi_dynamic_status_v1`. Result export packages do not yet persist
+    this new status object as a standalone artifact.
