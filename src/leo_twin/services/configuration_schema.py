@@ -30,10 +30,12 @@ USER_CONFIGURATION_SCHEMA_V2_ID = "sees.user_configuration.v2"
 USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID = (
     "sees.user_configuration_control_surface_evidence.v1"
 )
+USER_CONFIGURATION_APPLY_PLAN_V1_ID = "sees.user_configuration_apply_plan.v1"
 
 UserConfigurationSchema = dict[str, object]
 UserConfigurationValidationReport = dict[str, object]
 UserConfigurationControlSurfaceEvidence = dict[str, object]
+UserConfigurationApplyPlan = dict[str, object]
 
 
 CONTROL_PANEL_KEY_FIELD_PATHS = (
@@ -506,6 +508,196 @@ def validate_user_configuration_mapping_v2(
         ok=True,
         errors=(),
         normalized_config=config_to_dict(config),
+    )
+
+
+def build_user_configuration_apply_plan_v1(
+    *,
+    validation_ok: bool,
+    errors: tuple[Any, ...],
+    validation_scope: str,
+    format_label: str,
+    normalized_config_hash: str | None,
+    change_summary: Mapping[str, Any] | None,
+    apply_readiness: Mapping[str, Any] | None,
+    apply_command: Mapping[str, Any],
+) -> UserConfigurationApplyPlan:
+    """Return a deterministic validate-only config application plan."""
+
+    can_apply = bool(apply_readiness.get("can_apply")) if apply_readiness else False
+    requires_confirmation = (
+        bool(apply_readiness.get("requires_confirmation")) if apply_readiness else False
+    )
+    if not validation_ok:
+        status = "REJECTED"
+        operator_next_action = "FIX_CONFIG_AND_VALIDATE_AGAIN"
+    elif not can_apply:
+        status = "BLOCKED"
+        operator_next_action = "RESOLVE_RUNTIME_BLOCKER_AND_REVALIDATE"
+    elif requires_confirmation:
+        status = "CONFIRMATION_REQUIRED"
+        operator_next_action = str(
+            apply_readiness.get("recommended_action", "CONFIRM_BEFORE_APPLY")
+        )
+    else:
+        status = "READY_TO_APPLY"
+        operator_next_action = str(
+            apply_readiness.get("recommended_action", "APPLY_WHEN_READY")
+        )
+    change_summary_hash = (
+        stable_hash_payload(change_summary)
+        if isinstance(change_summary, Mapping)
+        else None
+    )
+    changed_field_count = (
+        int(change_summary.get("changed_field_count", 0))
+        if isinstance(change_summary, Mapping)
+        else 0
+    )
+    plan: UserConfigurationApplyPlan = {
+        "version": "v1",
+        "plan_id": USER_CONFIGURATION_APPLY_PLAN_V1_ID,
+        "source": "BACKEND_USER_CONFIGURATION",
+        "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+        "validation_scope": validation_scope,
+        "format": format_label,
+        "status": status,
+        "validation_ok": validation_ok,
+        "can_apply": can_apply,
+        "requires_confirmation": requires_confirmation,
+        "normalized_config_hash": normalized_config_hash,
+        "change_summary_hash": change_summary_hash,
+        "changed_field_count": changed_field_count,
+        "blocking_reasons": _apply_blocking_reasons(
+            validation_ok=validation_ok,
+            errors=errors,
+            apply_readiness=apply_readiness,
+        ),
+        "confirmation_reasons": _apply_confirmation_reasons(apply_readiness),
+        "operator_next_action": operator_next_action,
+        "apply_command": dict(apply_command) if validation_ok else None,
+        "runtime_effects": _apply_runtime_effects(apply_readiness),
+        "execution_steps": _apply_execution_steps(
+            validation_ok=validation_ok,
+            can_apply=can_apply,
+            requires_confirmation=requires_confirmation,
+        ),
+        "model_boundaries": {
+            "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+            "mutation_policy": "VALIDATE_ONLY_UNTIL_EXPLICIT_CONFIG_UPDATE",
+        },
+    }
+    plan["plan_hash"] = stable_hash_payload(plan)
+    return plan
+
+
+def _apply_blocking_reasons(
+    *,
+    validation_ok: bool,
+    errors: tuple[Any, ...],
+    apply_readiness: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any], ...]:
+    if not validation_ok:
+        return tuple(
+            {
+                "reason_type": "VALIDATION_ERROR",
+                "source": str(error.get("source", "unknown"))
+                if isinstance(error, Mapping)
+                else "unknown",
+                "message": str(error.get("message", error))
+                if isinstance(error, Mapping)
+                else str(error),
+            }
+            for error in errors
+        )
+    if apply_readiness and not bool(apply_readiness.get("can_apply")):
+        return (
+            {
+                "reason_type": "APPLY_READINESS",
+                "source": "BACKEND_RUNTIME_STATUS",
+                "message": str(
+                    apply_readiness.get("reason", "runtime cannot apply config")
+                ),
+            },
+        )
+    return ()
+
+
+def _apply_confirmation_reasons(
+    apply_readiness: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any], ...]:
+    if not apply_readiness or not bool(apply_readiness.get("requires_confirmation")):
+        return ()
+    return (
+        {
+            "reason_type": "SESSION_REINITIALIZATION",
+            "source": "BACKEND_RUNTIME_STATUS",
+            "message": str(apply_readiness.get("reason", "")),
+            "lifecycle_state": str(apply_readiness.get("lifecycle_state", "")),
+        },
+    )
+
+
+def _apply_runtime_effects(
+    apply_readiness: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not apply_readiness:
+        return None
+    return {
+        "runtime_initialized": bool(apply_readiness.get("runtime_initialized")),
+        "controller_status": str(apply_readiness.get("controller_status", "")),
+        "lifecycle_state": str(apply_readiness.get("lifecycle_state", "")),
+        "session_effect": str(apply_readiness.get("session_effect", "")),
+        "stream_effect": str(apply_readiness.get("stream_effect", "")),
+    }
+
+
+def _apply_execution_steps(
+    *,
+    validation_ok: bool,
+    can_apply: bool,
+    requires_confirmation: bool,
+) -> tuple[dict[str, str], ...]:
+    if not validation_ok:
+        return (
+            {
+                "step": "PREFLIGHT_VALIDATION",
+                "status": "FAILED",
+                "description": "Fix validation errors before applying the config.",
+            },
+        )
+    config_update_status = "PENDING" if can_apply else "BLOCKED"
+    session_status = "WILL_REINITIALIZE" if can_apply else "BLOCKED"
+    confirmation_status = "REQUIRED" if requires_confirmation else "NOT_REQUIRED"
+    return (
+        {
+            "step": "PREFLIGHT_VALIDATION",
+            "status": "PASSED",
+            "description": "User configuration was normalized by backend schema v2.",
+        },
+        {
+            "step": "CHANGE_REVIEW",
+            "status": "READY",
+            "description": "Review backend-generated changed-field summary.",
+        },
+        {
+            "step": "USER_CONFIRMATION",
+            "status": confirmation_status,
+            "description": "Explicit user action is required before mutation.",
+        },
+        {
+            "step": "CONFIG_UPDATE",
+            "status": config_update_status,
+            "description": "Send normalized_config through CONFIG_UPDATE.",
+        },
+        {
+            "step": "SESSION_REINITIALIZE",
+            "status": session_status,
+            "description": "Backend reinitializes session and stream buffers.",
+        },
     )
 
 

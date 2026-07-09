@@ -7,8 +7,10 @@ from typing import Any
 from leo_twin.schema.config import RuntimeConfig, SEESConfig, ScenarioConfig, config_to_dict
 from leo_twin.services.configuration_schema import (
     CONTROL_PANEL_KEY_FIELD_PATHS,
+    USER_CONFIGURATION_APPLY_PLAN_V1_ID,
     USER_CONFIGURATION_CONTROL_SURFACE_EVIDENCE_V1_ID,
     USER_CONFIGURATION_SCHEMA_V2_ID,
+    build_user_configuration_apply_plan_v1,
     build_user_configuration_control_surface_evidence_v1,
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
@@ -37,6 +39,9 @@ def test_user_configuration_schema_v2_covers_full_effective_config() -> None:
 
     assert schema["version"] == "v2"
     assert schema["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert USER_CONFIGURATION_APPLY_PLAN_V1_ID == (
+        "sees.user_configuration_apply_plan.v1"
+    )
     assert schema["source"] == "backend_sees_config"
     assert schema["unknown_key_policy"] == "REJECT"
     assert schema["defaulting_policy"] == "OMITTED_FIELDS_USE_BACKEND_DEFAULTS"
@@ -210,6 +215,70 @@ def test_user_configuration_schema_v2_validation_rejects_invalid_semantics() -> 
     errors = report["errors"]
     assert isinstance(errors, tuple)
     assert "destination_type must be COMPUTE_NODE" in errors[0]["message"]
+
+
+def test_user_configuration_apply_plan_v1_reports_ready_and_rejected_states() -> None:
+    apply_command = {
+        "type": "CONFIG_UPDATE",
+        "action": "CONFIG_UPDATE",
+        "payload_source": "normalized_config",
+    }
+    change_summary = {
+        "version": "v1",
+        "changed_field_count": 2,
+        "changes": (),
+    }
+    readiness = {
+        "can_apply": True,
+        "requires_confirmation": False,
+        "recommended_action": "APPLY_WHEN_READY",
+        "runtime_initialized": False,
+        "controller_status": "STOPPED",
+        "lifecycle_state": "INITIALIZED",
+        "session_effect": "REINITIALIZES_SESSION",
+        "stream_effect": "STOPS_AND_RECREATES_STREAM_BUFFERS",
+    }
+
+    ready = build_user_configuration_apply_plan_v1(
+        validation_ok=True,
+        errors=(),
+        validation_scope="USER_PROVIDED_CONFIG_MAPPING",
+        format_label="JSON_MAPPING",
+        normalized_config_hash="sha256:normalized",
+        change_summary=change_summary,
+        apply_readiness=readiness,
+        apply_command=apply_command,
+    )
+    rejected = build_user_configuration_apply_plan_v1(
+        validation_ok=False,
+        errors=({"source": "config_loader", "message": "unknown scenario keys"},),
+        validation_scope="USER_PROVIDED_CONFIG_MAPPING",
+        format_label="JSON_MAPPING",
+        normalized_config_hash=None,
+        change_summary=None,
+        apply_readiness=None,
+        apply_command=apply_command,
+    )
+
+    assert ready["plan_id"] == USER_CONFIGURATION_APPLY_PLAN_V1_ID
+    assert ready["status"] == "READY_TO_APPLY"
+    assert ready["can_apply"] is True
+    assert ready["requires_confirmation"] is False
+    assert ready["changed_field_count"] == 2
+    assert ready["change_summary_hash"].startswith("sha256:")
+    assert ready["blocking_reasons"] == ()
+    assert ready["apply_command"] == apply_command
+    assert ready["plan_hash"].startswith("sha256:")
+    assert rejected["status"] == "REJECTED"
+    assert rejected["can_apply"] is False
+    assert rejected["apply_command"] is None
+    assert rejected["blocking_reasons"] == (
+        {
+            "reason_type": "VALIDATION_ERROR",
+            "source": "config_loader",
+            "message": "unknown scenario keys",
+        },
+    )
 
 
 def test_configuration_view_exposes_user_configuration_schema_v2() -> None:

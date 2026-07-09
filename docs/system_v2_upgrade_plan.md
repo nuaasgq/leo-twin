@@ -1435,6 +1435,12 @@ Current Phase 3 progress:
   deterministic answer for whether the local backend/frontend startup is
   accepted, which services block it, and which smoke command should run next.
 
+- T427 adds `apply_plan_v1` to user-configuration validation responses. The
+  backend now returns one deterministic preflight plan with validation status,
+  change-summary hash, runtime/session effects, blockers, confirmation reasons,
+  execution steps, and the explicit CONFIG_UPDATE command when validation
+  passes.
+
 - T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
   compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
   INT8, memory, and storage dimensions with utilization/status fields. The

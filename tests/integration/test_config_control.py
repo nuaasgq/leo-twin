@@ -14,7 +14,10 @@ from examples.integration_demo.runtime import (
 from leo_twin.core.config import ConfigValidationError, config_from_mapping, load_config
 from leo_twin.schema.config import OrbitParameters, RuntimeConfig, ScenarioConfig, SEESConfig
 from leo_twin.services.control import RuntimeController, ScaleSafetyChecker
-from leo_twin.services.configuration_schema import USER_CONFIGURATION_SCHEMA_V2_ID
+from leo_twin.services.configuration_schema import (
+    USER_CONFIGURATION_APPLY_PLAN_V1_ID,
+    USER_CONFIGURATION_SCHEMA_V2_ID,
+)
 from leo_twin.services.configuration_view import load_user_configuration_template
 
 
@@ -905,6 +908,41 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
             "RUNNING_SESSION_IS_STOPPED_AND_REINITIALIZED_BY_BACKEND"
         ),
     }
+    apply_plan = accepted_summary["apply_plan_v1"]
+    assert apply_plan["plan_id"] == USER_CONFIGURATION_APPLY_PLAN_V1_ID
+    assert apply_plan["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert apply_plan["status"] == "READY_TO_APPLY"
+    assert apply_plan["validation_ok"] is True
+    assert apply_plan["can_apply"] is True
+    assert apply_plan["requires_confirmation"] is False
+    assert apply_plan["normalized_config_hash"] == accepted_summary[
+        "normalized_config_hash"
+    ]
+    assert apply_plan["change_summary_hash"].startswith("sha256:")
+    assert apply_plan["changed_field_count"] == accepted_summary["change_summary"][
+        "changed_field_count"
+    ]
+    assert apply_plan["blocking_reasons"] == ()
+    assert apply_plan["confirmation_reasons"] == ()
+    assert apply_plan["operator_next_action"] == "APPLY_WHEN_READY"
+    assert apply_plan["apply_command"] == accepted_summary["apply_command"]
+    assert apply_plan["runtime_effects"] == {
+        "runtime_initialized": False,
+        "controller_status": "STOPPED",
+        "lifecycle_state": "INITIALIZED",
+        "session_effect": "REINITIALIZES_SESSION",
+        "stream_effect": "STOPS_AND_RECREATES_STREAM_BUFFERS",
+    }
+    assert [step["step"] for step in apply_plan["execution_steps"]] == [
+        "PREFLIGHT_VALIDATION",
+        "CHANGE_REVIEW",
+        "USER_CONFIRMATION",
+        "CONFIG_UPDATE",
+        "SESSION_REINITIALIZE",
+    ]
+    assert apply_plan["execution_steps"][0]["status"] == "PASSED"
+    assert apply_plan["execution_steps"][2]["status"] == "NOT_REQUIRED"
+    assert apply_plan["plan_hash"].startswith("sha256:")
 
     rejected_summary = rejected["summary"]
     assert rejected_summary["ok"] is False
@@ -916,6 +954,29 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     assert "unknown scenario keys: unsupported_compute_gpu" in rejected_summary[
         "errors"
     ][0]["message"]
+    rejected_plan = rejected_summary["apply_plan_v1"]
+    assert rejected_plan["plan_id"] == USER_CONFIGURATION_APPLY_PLAN_V1_ID
+    assert rejected_plan["status"] == "REJECTED"
+    assert rejected_plan["validation_ok"] is False
+    assert rejected_plan["can_apply"] is False
+    assert rejected_plan["requires_confirmation"] is False
+    assert rejected_plan["normalized_config_hash"] is None
+    assert rejected_plan["change_summary_hash"] is None
+    assert rejected_plan["changed_field_count"] == 0
+    assert rejected_plan["apply_command"] is None
+    assert rejected_plan["runtime_effects"] is None
+    assert rejected_plan["operator_next_action"] == "FIX_CONFIG_AND_VALIDATE_AGAIN"
+    assert rejected_plan["blocking_reasons"][0]["reason_type"] == "VALIDATION_ERROR"
+    assert "unknown scenario keys: unsupported_compute_gpu" in rejected_plan[
+        "blocking_reasons"
+    ][0]["message"]
+    assert rejected_plan["execution_steps"] == (
+        {
+            "step": "PREFLIGHT_VALIDATION",
+            "status": "FAILED",
+            "description": "Fix validation errors before applying the config.",
+        },
+    )
     assert control_plane.controller.config_json() == before_config
     assert control_plane.runtime_status()["status"]["initialized"] is before_initialized
 
@@ -970,12 +1031,22 @@ runtime:
     assert yaml_summary["normalized_config"]["scenario"]["satellite_count"] == 72
     assert yaml_summary["change_summary"]["changed_field_count"] > 0
     assert yaml_summary["apply_readiness"]["can_apply"] is True
+    assert yaml_summary["apply_plan_v1"]["status"] == "READY_TO_APPLY"
+    assert yaml_summary["apply_plan_v1"]["validation_scope"] == (
+        "USER_PROVIDED_CONFIG_TEXT"
+    )
+    assert yaml_summary["apply_plan_v1"]["format"] == "YAML_TEXT"
+    assert yaml_summary["apply_plan_v1"]["normalized_config_hash"] == yaml_summary[
+        "normalized_config_hash"
+    ]
 
     json_summary = json_report["summary"]
     assert json_summary["ok"] is True
     assert json_summary["format"] == "JSON_TEXT"
     assert json_summary["text_parse"]["requested_format"] == "auto"
     assert json_summary["text_parse"]["detected_format"] == "json"
+    assert json_summary["apply_plan_v1"]["format"] == "JSON_TEXT"
+    assert json_summary["apply_plan_v1"]["status"] == "READY_TO_APPLY"
 
     rejected_summary = rejected["summary"]
     assert rejected_summary["ok"] is False
@@ -984,6 +1055,10 @@ runtime:
     assert rejected_summary["normalized_config"] is None
     assert rejected_summary["change_summary"] is None
     assert rejected_summary["apply_readiness"] is None
+    assert rejected_summary["apply_plan_v1"]["status"] == "REJECTED"
+    assert rejected_summary["apply_plan_v1"]["blocking_reasons"][0][
+        "reason_type"
+    ] == "VALIDATION_ERROR"
     assert control_plane.controller.config_json() == before_config
 
 
@@ -1080,6 +1155,24 @@ def test_control_plane_reports_running_apply_readiness(tmp_path) -> None:
         assert readiness["recommended_action"] == "PAUSE_OR_STOP_BEFORE_APPLY"
         assert readiness["session_effect"] == "REINITIALIZES_SESSION"
         assert readiness["stream_effect"] == "STOPS_AND_RECREATES_STREAM_BUFFERS"
+        apply_plan = report["summary"]["apply_plan_v1"]
+        assert apply_plan["status"] == "CONFIRMATION_REQUIRED"
+        assert apply_plan["can_apply"] is True
+        assert apply_plan["requires_confirmation"] is True
+        assert apply_plan["operator_next_action"] == "PAUSE_OR_STOP_BEFORE_APPLY"
+        assert apply_plan["confirmation_reasons"] == (
+            {
+                "reason_type": "SESSION_REINITIALIZATION",
+                "source": "BACKEND_RUNTIME_STATUS",
+                "message": (
+                    "runtime is running; applying config will stop and rebuild "
+                    "the live session"
+                ),
+                "lifecycle_state": "RUNNING",
+            },
+        )
+        assert apply_plan["runtime_effects"]["lifecycle_state"] == "RUNNING"
+        assert apply_plan["execution_steps"][2]["status"] == "REQUIRED"
     finally:
         control_plane.handle_raw_message(
             json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"})

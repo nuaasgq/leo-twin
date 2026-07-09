@@ -21747,3 +21747,48 @@ change.
   - This task proves startup acceptance from launcher service health only. It
     does not run the full 72/300/1200 disposable acceptance matrix; that remains
     a separate executable-loop verification task.
+
+
+## 2026-07-09 - T427 user configuration apply plan v1
+
+- Branch: `feature/T427-user-config-apply-plan-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `apply_plan_v1` to user-configuration validation
+  responses. The plan combines validation outcome, normalized config hash,
+  change-summary hash, runtime/session side effects, blocking reasons,
+  confirmation reasons, ordered execution steps, and the explicit
+  `CONFIG_UPDATE` command when validation passes. This is a configuration
+  preflight contract task. No Event Kernel behavior, simulation model formula,
+  runtime progression behavior, frontend rendering, external simulator
+  integration, packet-level simulation, or runtime generated config behavior was
+  changed.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_schema.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_user_configuration_schema_v2.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples/integration_demo/control_plane.py src/leo_twin/services/configuration_schema.py`
+    - Result: passed.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_user_configuration_schema_v2.py tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_text_without_applying tests/integration/test_config_control.py::test_control_plane_reports_running_apply_readiness`
+    - Result: 11 passed.
+- Problems encountered:
+  - The existing validation response already exposed `apply_readiness` and
+    `apply_command`, so the implementation kept those compatibility fields and
+    added `apply_plan_v1` as a compact backend-owned aggregate rather than
+    replacing the old fields.
+  - The first implementation placed the plan builder in `DemoControlPlane`;
+    it was moved into `src/leo_twin/services/configuration_schema.py` so the
+    integration demo stays a thin adapter over backend configuration services.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also
+    remains unstaged.
+- Known remaining issues:
+  - The frontend has not yet been rebound to prefer `apply_plan_v1`; this task
+    only adds and verifies the backend contract. Full 72/300/1200 acceptance
+    remains a separate executable-loop verification task.

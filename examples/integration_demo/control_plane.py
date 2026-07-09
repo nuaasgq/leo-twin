@@ -34,6 +34,7 @@ from leo_twin.schema import SatelliteState
 from leo_twin.schema.config import SEESConfig, config_to_dict
 from leo_twin.services.configuration_schema import (
     USER_CONFIGURATION_SCHEMA_V2_ID,
+    build_user_configuration_apply_plan_v1,
     build_user_configuration_control_surface_evidence_v1,
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
@@ -476,6 +477,17 @@ class DemoControlPlane:
             if isinstance(normalized_config, dict)
             else None
         )
+        apply_command = _user_configuration_apply_command()
+        apply_plan = build_user_configuration_apply_plan_v1(
+            validation_ok=bool(validation["ok"]),
+            errors=tuple(validation["errors"]),
+            validation_scope=validation_scope,
+            format_label=format_label,
+            normalized_config_hash=normalized_hash,
+            change_summary=change_summary,
+            apply_readiness=apply_readiness,
+            apply_command=apply_command,
+        )
         response = {
             "type": "USER_CONFIGURATION_VALIDATION_REPORT",
             "summary": {
@@ -494,7 +506,8 @@ class DemoControlPlane:
                 "normalized_config": normalized_config,
                 "change_summary": change_summary,
                 "apply_readiness": apply_readiness,
-                "apply_command": _user_configuration_apply_command(),
+                "apply_command": apply_command,
+                "apply_plan_v1": apply_plan,
             },
         }
         if text_parse is not None:

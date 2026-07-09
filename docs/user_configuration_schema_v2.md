@@ -85,7 +85,11 @@ The HTTP endpoints are read-only:
   the accepted normalized candidate. It also includes `apply_readiness`, a
   backend runtime-state summary describing whether the config can be applied
   now, the current controller/session lifecycle state, recommended operator
-  action, and session/stream side effects.
+  action, and session/stream side effects. The same response includes
+  `apply_plan_v1`, a backend-owned executable application plan that combines
+  validation status, change-summary hash, runtime side effects, blocking
+  reasons, confirmation reasons, ordered execution steps, and the explicit
+  apply command.
 - `/scenario/user-config/validate-text` accepts raw UTF-8 JSON or simplified
   YAML config text and returns the same validate-only report. The optional
   query parameter `format=auto|json|yaml` controls parsing. The report includes
@@ -155,6 +159,24 @@ user can press "应用配置".
 preflight card so users can see when applying will reinitialize an existing or
 running session, whether extra confirmation is recommended, and what will
 happen to stream buffers.
+
+`apply_plan_v1` is the preferred machine-readable preflight summary for UI and
+automation. It uses plan id `sees.user_configuration_apply_plan.v1` and reports:
+
+- `status`: `READY_TO_APPLY`, `CONFIRMATION_REQUIRED`, `BLOCKED`, or `REJECTED`;
+- `validation_ok`, `can_apply`, and `requires_confirmation`;
+- `normalized_config_hash` and `change_summary_hash`;
+- `blocking_reasons` for rejected or blocked configs;
+- `confirmation_reasons` when applying will rebuild a running/completed/error
+  session;
+- `runtime_effects` for session and stream-buffer reinitialization;
+- ordered `execution_steps` from preflight validation through session
+  reinitialization;
+- `plan_hash` for deterministic audit comparison.
+
+The plan is still validate-only. It never mutates runtime state until the user
+or automation sends the declared `CONFIG_UPDATE` command with the normalized
+config payload.
 
 Each field schema includes:
 

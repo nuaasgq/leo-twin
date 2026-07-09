@@ -288,6 +288,12 @@ field-path ordering and bounded preview rows. Reports include
 `apply_readiness` as well, which records current controller/session lifecycle,
 recommended action, confirmation requirement, and the fact that applying a
 config rebuilds the session and stream buffers.
+Reports also include `apply_plan_v1`, the backend-owned executable preflight
+plan for UI and automation. It records whether the candidate is
+`READY_TO_APPLY`, `CONFIRMATION_REQUIRED`, `BLOCKED`, or `REJECTED`, plus
+blocking reasons, confirmation reasons, runtime effects, ordered execution
+steps, the normalized-config hash, the change-summary hash, and the explicit
+apply command when validation passes.
 `POST /scenario/user-config/validate-text` accepts raw UTF-8 JSON/YAML text
 with `format=auto|json|yaml` and returns the same report plus `text_parse`.
 `GET /scenario/user-config/reference` returns the backend-owned full
@@ -306,7 +312,8 @@ existing `CONFIG_UPDATE` control channel. The preflight card renders the
 backend `change_summary` so users can see changed field counts, section counts,
 and bounded field-path previews before applying, and it renders
 `apply_readiness` so the runtime/session side effect is visible before the
-command is sent.
+command is sent. New UI surfaces should bind to `apply_plan_v1` as the compact
+source of truth for whether the validated candidate can be applied.
 
 Persisted package artifact routes:
 
