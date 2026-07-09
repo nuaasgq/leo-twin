@@ -366,6 +366,36 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert business_lifecycle["request_count"] == traffic_timeline["request_count"]
     assert business_lifecycle["item_count"] <= business_lifecycle["limit"]
     assert str(business_lifecycle["summary_hash"]).startswith("sha256:")
+    compute_service_evidence = status_after_tick[
+        "compute_service_resource_evidence_v1"
+    ]
+    assert compute_service_evidence["version"] == "v1"
+    assert compute_service_evidence["summary_id"] == (
+        "leo_twin.compute_service_resource_evidence.v1"
+    )
+    assert compute_service_evidence["source"] == (
+        "service_latency_history_v1 + compute_resource_pool_summary_v1"
+    )
+    assert compute_service_evidence["packet_level_simulation"] is False
+    assert compute_service_evidence["frontend_inference_required"] is False
+    assert compute_service_evidence["resource_dimension_count"] == (
+        compute_pool["dimension_count"]
+    )
+    assert compute_service_evidence["queue_pressure_status"] in {
+        "NO_SERVICE_EVIDENCE",
+        "QUEUE_PRESSURE_WITH_RESOURCE_SATURATION",
+        "QUEUE_PRESSURE_OBSERVED",
+        "EXECUTION_ONLY_OBSERVED",
+        "NO_COMPUTE_STAGE_EVIDENCE",
+    }
+    assert compute_service_evidence["resource_pressure_status"] in {
+        "RESOURCE_SATURATED",
+        "RESOURCE_BUSY",
+        "RESOURCE_ACTIVE",
+        "RESOURCE_IDLE",
+        "RESOURCE_NOT_CONFIGURED",
+    }
+    assert str(compute_service_evidence["summary_hash"]).startswith("sha256:")
     readiness = status_after_tick["v2_executable_readiness_v1"]
     assert readiness["version"] == "v1"
     assert readiness["readiness_id"] == "leo_twin.v2_executable_readiness.v1"

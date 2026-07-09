@@ -22591,3 +22591,40 @@ change.
   - `network_kpi_assurance_v2` is an evidence closure, not a higher-fidelity network model. Loss and delay variation remain deterministic flow-level proxies, not packet loss or packet jitter.
   - Normal low-pressure scenarios may still show flat or zero loss/delay-variation proxies. The new summary explains that state; it does not force artificial variation into the formulas.
   - Frontend panels still need a binding task to display per-KPI `display_policy`, `flat_reason`, and `zero_value_note`.
+
+## 2026-07-09 - T444 compute service resource evidence v1
+
+- Branch: `feature/T444-compute-service-resource-evidence-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned `compute_service_resource_evidence_v1` runtime status evidence. The new summary joins `service_latency_history_v1` with `compute_resource_pool_summary_v1` and reports service queue delay, execution delay, placement metadata, bottleneck resource counts, per-compute-node service aggregation, resource dimension pressure, and stable hashes. This task does not change Event Kernel behavior, placement/scheduling algorithms, traffic generation, network/orbit models, frontend rendering, packet-level boundaries, external simulator policy, or runtime generated config behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/compute_service_resource_evidence.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_compute_service_resource_evidence.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/compute_service_resource_evidence_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\compute_service_resource_evidence.py examples\integration_demo\control_plane.py tests\unit\test_compute_service_resource_evidence.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_compute_service_resource_evidence.py -q`
+    - Result: 4 passed.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: 1 passed.
+  - `python -m pytest tests\integration\test_compute_service_lifecycle.py -q`
+    - Result: 1 passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py -q`
+    - Result: 14 passed.
+  - `python -m pytest tests\unit\test_compute_resource_pool_summary_v1.py tests\unit\test_compute_resource_model.py tests\unit\test_compute_resource_contract_v2.py -q`
+    - Result: 18 passed.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: 2 passed.
+  - `python -m pytest tests\integration\test_product_acceptance_scenarios.py -q`
+    - Result: 5 passed.
+- Problems encountered:
+  - Existing backend exposed compute resource pool totals and service latency traces separately, but did not provide one field that connects queue delay, execution delay, placement metadata, compute node aggregation, and resource pressure. T444 adds that join without changing the compute scheduler.
+  - Existing local runtime config drift remains untouched and must stay unstaged: `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`. The untracked `%SystemDrive%/` directory also remains unstaged.
+- Known remaining issues:
+  - `compute_service_resource_evidence_v1` is service-level evidence. It does not add stochastic queues, task migration, cache/offload behavior, hardware telemetry, or packet-level network effects.
+  - Result package export does not yet persist this field as a standalone artifact; it is available in live runtime status and config snapshots.
+  - Frontend panels still need a binding task to show node-level queue/resource evidence directly.

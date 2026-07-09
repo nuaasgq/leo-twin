@@ -42,6 +42,9 @@ from leo_twin.services.configuration_schema import (
 from leo_twin.services.compute_resource_pool_summary import (
     build_compute_resource_pool_summary_v1,
 )
+from leo_twin.services.compute_service_resource_evidence import (
+    build_compute_service_resource_evidence_v1,
+)
 from leo_twin.services.business_request_lifecycle import (
     build_business_request_lifecycle_v2,
 )
@@ -2754,6 +2757,12 @@ class DemoControlPlane:
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
         status["satellite_kpi_history_v1"] = self._satellite_kpi_history_json()
         status["service_latency_history_v1"] = self._service_latency_history_json()
+        status["compute_service_resource_evidence_v1"] = (
+            build_compute_service_resource_evidence_v1(
+                status["service_latency_history_v1"],
+                status["compute_resource_pool_summary_v1"],
+            )
+        )
         status["route_pressure_evidence_v1"] = self._route_pressure_evidence_json()
         lifecycle_summaries = build_runtime_lifecycle_summaries(
             self.visible_snapshot(),
