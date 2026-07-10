@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-10 - Launcher Tool Discovery v1
+
+- Branch: `feature/T453-launcher-tool-discovery-v1`
+- Commit: pending in this commit
+- Scope: fix manual `start_leo_twin.bat` startup on Windows environments where
+  `pnpm` is not on the user PATH. `scripts/sees_launcher.ps1` now discovers
+  toolchains from global `pnpm`, `corepack pnpm`, `LEO_TWIN_DEPENDENCIES_ROOT`,
+  and the Codex Desktop bundled dependency root under
+  `%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies`.
+  The same dependency-root path handling also exposes bundled Python and Node
+  to child backend/frontend service processes. No Event Kernel behavior,
+  simulation model, frontend architecture, packet-level simulation, or external
+  simulator integration was changed.
+- Changed files/modules:
+  - `scripts/sees_launcher.ps1`
+  - `tests/unit/test_launcher_script_acceptance_v1.py`
+  - `docs/launcher_troubleshooting.md`
+  - `docs/development_log.md`
+- Validation:
+  - `powershell -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw 'scripts\sees_launcher.ps1')) | Out-Null"`
+    - Result: passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_launcher_script_acceptance_v1.py -q`
+    - Result: passed, 2 passed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 restart -NoBrowser`
+    - Result: passed in an environment where `node`, `npm`, `pnpm`, and
+      `corepack` were not visible through the ambient shell PATH before the
+      script ran. Backend and frontend became HTTP healthy.
+  - `Invoke-WebRequest http://127.0.0.1:5173/` and
+    `Invoke-WebRequest http://127.0.0.1:8765/runtime/status`
+    - Result: both returned HTTP 200.
+- Problems encountered and handling:
+  - Manual startup failed because `Add-BundledNodeToPath` only repaired Node
+    PATH after `pnpm` was already discoverable. The launcher now prepends known
+    dependency roots before resolving Python or pnpm.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and are not staged.
+- Known remaining issues / follow-up:
+  - On machines without global Node/pnpm and without the Codex Desktop bundled
+    dependency root, the operator must install Node.js and enable pnpm with
+    Corepack or set `LEO_TWIN_DEPENDENCIES_ROOT` to a compatible dependency
+    bundle.
+
 ## 2026-07-09 - System V2 Demo Closure Evidence v1
 
 - Branch: `feature/T452-v2-demo-closure-evidence-v1`

@@ -68,10 +68,61 @@ function Get-PnpmInvocation {
     if ($null -ne $corepack) {
         return $corepack
     }
-    throw "pnpm was not found. Install Node.js and enable pnpm with: corepack enable"
+    throw "pnpm was not found. Install Node.js and enable pnpm with: corepack enable. If you are running inside Codex Desktop, make sure the bundled dependency root exists under %USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies."
+}
+
+function Add-PathEntry {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return
+    }
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+    $resolved = (Resolve-Path -LiteralPath $Path).Path
+    $existing = @($env:PATH -split ";" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    foreach ($entry in $existing) {
+        if ($entry -ieq $resolved) {
+            return
+        }
+    }
+    $env:PATH = "$resolved;$env:PATH"
+}
+
+function Add-DependencyToolRootToPath {
+    param([string]$Root)
+
+    if ([string]::IsNullOrWhiteSpace($Root)) {
+        return
+    }
+    if (-not (Test-Path -LiteralPath $Root)) {
+        return
+    }
+    foreach ($relativePath in @("python", "node\bin", "bin\override", "bin\fallback", "bin")) {
+        Add-PathEntry -Path (Join-Path $Root $relativePath)
+    }
+}
+
+function Add-KnownToolchainPaths {
+    $candidateRoots = @()
+    if ($env:LEO_TWIN_DEPENDENCIES_ROOT) {
+        $candidateRoots += $env:LEO_TWIN_DEPENDENCIES_ROOT
+    }
+    if ($env:USERPROFILE) {
+        $candidateRoots += Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies"
+    }
+    $candidateRoots += Join-Path $RepoRoot ".runtime\dependencies"
+    $candidateRoots += Join-Path $RepoRoot "tools\dependencies"
+
+    foreach ($root in $candidateRoots) {
+        Add-DependencyToolRootToPath -Root $root
+    }
 }
 
 function Add-BundledNodeToPath {
+    Add-KnownToolchainPaths
+
     if ($null -ne (Get-Command "node" -ErrorAction SilentlyContinue)) {
         return
     }

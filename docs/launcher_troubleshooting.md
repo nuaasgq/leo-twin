@@ -41,7 +41,24 @@ Expected URLs:
 | Buttons stay in starting/stopping state | Run `.\smoke_leo_twin.bat`, then `.\control_smoke_leo_twin.bat` | If health passes but control smoke fails, restart services and inspect `artifacts\launcher\*-backend.err.log`. |
 | Port is already occupied | Run `.\restart_leo_twin.bat` | The launcher stops listeners on configured backend/frontend ports before restart. |
 | `node` is not recognized | Run `.\scripts\verify_frontend_visuals.ps1` | The script repairs bundled Node PATH when launched from the bundled `pnpm.cmd` path. |
+| `pnpm was not found` | Run `.\scripts\sees_launcher.ps1 status` | The launcher now tries global `pnpm`, `corepack pnpm`, `LEO_TWIN_DEPENDENCIES_ROOT`, and the Codex Desktop bundled dependency root before failing. |
 | Need dashboard-first startup | Run `.\dashboard_leo_twin.bat` | This starts services and opens `/dashboard`. |
+
+If the machine has neither global Node/pnpm nor the Codex Desktop dependency
+bundle, install Node.js and enable pnpm:
+
+```powershell
+corepack enable
+corepack prepare pnpm@latest --activate
+```
+
+For a local dependency bundle without changing the system PATH, point the
+launcher at the dependency root before starting:
+
+```powershell
+$env:LEO_TWIN_DEPENDENCIES_ROOT="C:\path\to\dependencies"
+.\start_leo_twin.bat
+```
 
 ## Logs
 
