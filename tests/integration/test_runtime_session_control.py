@@ -19,6 +19,7 @@ from examples.integration_demo.control_plane import (
 )
 from examples.integration_demo.runtime import run_integration_demo
 from examples.integration_demo.server import (
+    DemoThreadingHTTPServer,
     _handler_for,
     _comparison_review_report_filter_query,
     _detail_filter_query,
@@ -1206,6 +1207,11 @@ def test_demo_http_control_post_uses_runtime_control_layer(tmp_path) -> None:
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def test_demo_server_accept_queue_handles_frontend_polling_bursts() -> None:
+    assert DemoThreadingHTTPServer.request_queue_size >= 128
+    assert DemoThreadingHTTPServer.daemon_threads is True
 
 
 def test_runtime_kpi_series_changes_with_configured_flow_demand(tmp_path) -> None:

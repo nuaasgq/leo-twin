@@ -85,6 +85,13 @@ export const DEFAULT_USER_CONFIG_EXPORT_ENDPOINT = "/scenario/user-config/export
 export const DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT = "/scenario/user-config/validate";
 export const DEFAULT_USER_CONFIG_VALIDATE_TEXT_ENDPOINT =
   "/scenario/user-config/validate-text";
+export const DEFAULT_SCENARIO_CONFIG_RETRY_DELAYS_MS = [100, 250, 500] as const;
+
+export interface ScenarioConfigLoadOptions {
+  fetchConfig?: (endpoint: string) => Promise<Response>;
+  retryDelaysMs?: readonly number[];
+  wait?: (delayMs: number) => Promise<void>;
+}
 
 export interface RuntimeDetailQueryFilters {
   query?: string;
@@ -113,12 +120,44 @@ export interface RuntimeExportScenarioReviewChecklistRequest {
   records: readonly Partial<RuntimeExportScenarioReviewChecklistRecordV1>[];
 }
 
-export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
-  const response = await fetch(endpoint);
-  if (!response.ok) {
-    throw new Error(`failed to load scenario config from ${endpoint}: HTTP ${response.status}`);
+export async function loadScenarioConfig(
+  endpoint = "/scenario/config",
+  options: ScenarioConfigLoadOptions = {}
+): Promise<ScenarioConfig> {
+  const fetchConfig = options.fetchConfig ?? ((url: string) => fetch(url));
+  const retryDelaysMs = options.retryDelaysMs ?? DEFAULT_SCENARIO_CONFIG_RETRY_DELAYS_MS;
+  const wait = options.wait ?? waitForRetry;
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= retryDelaysMs.length; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetchConfig(endpoint);
+    } catch (error) {
+      lastError = error;
+      if (attempt === retryDelaysMs.length) {
+        throw error;
+      }
+      await wait(retryDelaysMs[attempt]);
+      continue;
+    }
+    if (response.ok) {
+      return decodeScenarioConfig(await response.json());
+    }
+    const error = new Error(
+      `failed to load scenario config from ${endpoint}: HTTP ${response.status}`
+    );
+    if (response.status < 500 || attempt === retryDelaysMs.length) {
+      throw error;
+    }
+    lastError = error;
+    await wait(retryDelaysMs[attempt]);
   }
-  return decodeScenarioConfig(await response.json());
+  throw lastError;
+}
+
+function waitForRetry(delayMs: number): Promise<void> {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, delayMs));
 }
 
 export async function loadMetricsSnapshot(endpoint = "/metrics/snapshot"): Promise<StateSnapshot> {

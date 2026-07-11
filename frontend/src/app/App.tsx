@@ -2163,14 +2163,8 @@ export function App() {
     snapshotEngine.applySnapshot(visibleSnapshot);
     snapshotEngine.publishNow();
     setConnectionChannel("http", "live");
-    void refreshRuntimeDetails(runtime.generated_config ?? null);
-    void refreshRuntimeExportCatalog();
-    void refreshUserConfigurationContract();
     return { scenario: effectiveScenario, runtime };
   }, [
-    refreshRuntimeDetails,
-    refreshRuntimeExportCatalog,
-    refreshUserConfigurationContract,
     setConnectionChannel,
     snapshotEngine
   ]);
@@ -2403,7 +2397,7 @@ export function App() {
   ]);
 
   useEffect(() => {
-    if (surface !== "dashboard") {
+    if (surface !== "dashboard" || !advancedDashboardVisible) {
       return;
     }
     let closed = false;
@@ -2418,10 +2412,10 @@ export function App() {
       closed = true;
       window.clearInterval(timer);
     };
-  }, [generatedConfig, refreshRuntimeDetails, surface]);
+  }, [advancedDashboardVisible, generatedConfig, refreshRuntimeDetails, surface]);
 
   useEffect(() => {
-    if (surface !== "dashboard") {
+    if (surface !== "dashboard" || !advancedDashboardVisible) {
       return;
     }
     let closed = false;
@@ -2436,10 +2430,10 @@ export function App() {
       closed = true;
       window.clearInterval(timer);
     };
-  }, [refreshRuntimeExportCatalog, surface]);
+  }, [advancedDashboardVisible, refreshRuntimeExportCatalog, surface]);
 
   useEffect(() => {
-    if (surface !== "dashboard") {
+    if (surface !== "dashboard" || !advancedDashboardVisible) {
       return;
     }
     let closed = false;
@@ -2457,7 +2451,7 @@ export function App() {
       closed = true;
       window.clearInterval(timer);
     };
-  }, [refreshUserConfigurationContract, surface]);
+  }, [advancedDashboardVisible, refreshUserConfigurationContract, surface]);
 
   useEffect(() => {
     let closed = false;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  loadScenarioConfig,
   loadRuntimeExportCatalog,
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportHistory,
@@ -92,6 +93,44 @@ import {
 describe("runtime API diagnostics", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("retries transient scenario config server failures deterministically", async () => {
+    const fetchConfig = vi
+      .fn<(endpoint: string) => Promise<Response>>()
+      .mockResolvedValueOnce(apiResponse(500))
+      .mockResolvedValueOnce(apiResponse(503))
+      .mockResolvedValueOnce(apiResponse(200, { scenario_id: "retry-ok" }));
+    const waits: number[] = [];
+
+    const config = await loadScenarioConfig("/scenario/config", {
+      fetchConfig,
+      retryDelaysMs: [10, 20],
+      wait: async (delayMs) => {
+        waits.push(delayMs);
+      }
+    });
+
+    expect(config.scenario_id).toBe("retry-ok");
+    expect(fetchConfig).toHaveBeenCalledTimes(3);
+    expect(waits).toEqual([10, 20]);
+  });
+
+  it("does not retry non-transient scenario config client failures", async () => {
+    const fetchConfig = vi
+      .fn<(endpoint: string) => Promise<Response>>()
+      .mockResolvedValue(apiResponse(400));
+    const wait = vi.fn(async () => undefined);
+
+    await expect(
+      loadScenarioConfig("/scenario/config", {
+        fetchConfig,
+        retryDelaysMs: [10, 20],
+        wait
+      })
+    ).rejects.toThrow("failed to load scenario config from /scenario/config: HTTP 400");
+    expect(fetchConfig).toHaveBeenCalledTimes(1);
+    expect(wait).not.toHaveBeenCalled();
   });
 
   it("exposes the runtime export archive download endpoint", () => {
@@ -3343,3 +3382,11 @@ describe("runtime API diagnostics", () => {
     );
   });
 });
+
+function apiResponse(status: number, body: unknown = {}): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body
+  } as Response;
+}

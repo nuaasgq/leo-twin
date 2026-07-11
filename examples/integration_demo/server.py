@@ -45,9 +45,16 @@ _FRONTEND_EVENT_TYPES = frozenset(
 )
 
 
+class DemoThreadingHTTPServer(ThreadingHTTPServer):
+    """Bounded local demo server with enough accept backlog for UI polling bursts."""
+
+    daemon_threads = True
+    request_queue_size = 128
+
+
 def serve_demo(result: DemoRunResult, host: str, port: int) -> None:
     handler = _handler_for(DemoControlPlane.from_result(result))
-    ThreadingHTTPServer((host, port), handler).serve_forever()
+    DemoThreadingHTTPServer((host, port), handler).serve_forever()
 
 
 def write_replay_artifacts(result: DemoRunResult, output_dir: str | Path) -> dict[str, Path]:

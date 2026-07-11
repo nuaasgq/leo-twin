@@ -38,4 +38,11 @@ describe("user-facing frontend acceptance", () => {
     );
     expect(configPanelSource).toContain('className="config-subsection-content"');
   });
+
+  it("loads operator diagnostics only after the advanced dashboard is opened", () => {
+    const advancedGuards = appSource.match(
+      /surface !== "dashboard" \|\| !advancedDashboardVisible/g
+    );
+    expect(advancedGuards).toHaveLength(3);
+  });
 });

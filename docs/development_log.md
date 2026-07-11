@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-11 - Initialize Config Load Resilience v1
+
+- Branch: `feature/T456-initialize-config-load-resilience-v1`
+- Commit: pending in this commit
+- Scope: prevent transient `/scenario/config` HTTP 500 errors after
+  initialization. The default control and overview surfaces no longer request
+  operator detail pages, export catalogs, or configuration evidence until the
+  user explicitly opens `高级诊断`. Scenario-config loading retries transient
+  network and HTTP 5xx failures with the fixed delay sequence 100/250/500 ms,
+  while HTTP 4xx failures remain immediate. The integration demo server now
+  uses a 128-request accept backlog and daemon request threads to absorb bounded
+  frontend polling bursts. No Event Kernel, simulation ordering, domain model,
+  packet-level simulation, or forbidden external integration was changed.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/userSurfaceAcceptance.test.ts`
+  - `examples/integration_demo/server.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_runtime_session_control.py::test_demo_http_control_post_uses_runtime_control_layer tests\integration\test_runtime_session_control.py::test_demo_server_accept_queue_handles_frontend_polling_bursts -q`
+    - Result: passed, 2 passed.
+  - `pnpm --dir frontend exec vitest run tests/api.test.ts tests/userSurfaceAcceptance.test.ts`
+    - Result: passed, 2 test files and 52 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed; TypeScript and Vite production build completed.
+  - `$env:PYTHONPATH='src;.'; pytest tests\integration\test_runtime_session_control.py -q`
+    - Result: passed, 25 passed.
+  - `pnpm --dir frontend test`
+    - Result: passed, 29 test files and 485 tests.
+  - `python -m py_compile examples\integration_demo\server.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 restart -NoBrowser`
+    - Result: passed.
+  - Live HTTP regression: `POST /control` with `INITIALIZE`, followed by 12
+    consecutive `GET /scenario/config` requests.
+    - Result: initialize acknowledged with `ok=true`, lifecycle
+      `INITIALIZED`, and all 12 scenario-config responses returned HTTP 200.
+- Problems encountered and handling:
+  - The backend endpoint itself returned HTTP 200 after the incident. The Vite
+    proxy log showed the actual failure as `ECONNREFUSED 127.0.0.1:8765` while
+    multiple frontend polling requests were active, proving this was transient
+    listener pressure rather than malformed YAML/JSON.
+  - The previous compact UI still performed background operator-detail loads.
+    Those requests are now tied to the same explicit advanced-dashboard state
+    that controls rendering.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and will not be staged.
+- Known remaining issues / follow-up:
+  - The demo backend is still a single-process local HTTP server. The larger
+    accept backlog and reduced default request volume address current product
+    scale, but production deployment should eventually use a supervised ASGI
+    service with explicit request concurrency and health policies.
+
 ## 2026-07-11 - Frontend Control Simplification v1
 
 - Branch: `feature/T455-frontend-control-simplification-v1`
