@@ -17,16 +17,21 @@ export const Dashboard = memo(function Dashboard({ snapshot }: { snapshot: World
   return (
     <aside className="dashboard" aria-label="仿真状态仪表盘">
       <DomainSummary snapshot={snapshot} />
-      <TopologyChangePanel snapshot={snapshot} />
-      <LinkProtocolPanel snapshot={snapshot} />
-      <CouplingFeedbackPanel snapshot={snapshot} />
-      <ChannelHealthPanel snapshot={snapshot} />
       <NetworkView snapshot={snapshot} />
       <ComputeView snapshot={snapshot} />
-      <ComputeQueuePanel snapshot={snapshot} />
-      <OrbitPanel snapshot={snapshot} />
-      <GroundTrackPanel snapshot={snapshot} />
-      <SystemHealth snapshot={snapshot} />
+      <details className="dashboard-advanced">
+        <summary>高级诊断</summary>
+        <div className="dashboard-advanced-content">
+          <TopologyChangePanel snapshot={snapshot} />
+          <LinkProtocolPanel snapshot={snapshot} />
+          <CouplingFeedbackPanel snapshot={snapshot} />
+          <ChannelHealthPanel snapshot={snapshot} />
+          <ComputeQueuePanel snapshot={snapshot} />
+          <OrbitPanel snapshot={snapshot} />
+          <GroundTrackPanel snapshot={snapshot} />
+          <SystemHealth snapshot={snapshot} />
+        </div>
+      </details>
     </aside>
   );
 });

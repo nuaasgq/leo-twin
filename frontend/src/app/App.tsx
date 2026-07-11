@@ -112,6 +112,7 @@ import type {
   DataPanelExportServiceTracePageRequest,
   RuntimeDetailPages
 } from "../dashboard/data_panel/DataPanel";
+import { UserOverview } from "../dashboard/user_overview/UserOverview";
 import "./App.css";
 
 const RUNTIME_STATUS_POLL_MS = 250;
@@ -256,6 +257,7 @@ export function App() {
   const [surface, setSurface] = useState<FrontendSurface>(() =>
     surfaceFromPathname(window.location.pathname)
   );
+  const [advancedDashboardVisible, setAdvancedDashboardVisible] = useState(false);
   const reducer = useMemo(
     () => new WorldStateReducer({ eventLogLimit: 10_000, metricSeriesLimit: 300 }),
     []
@@ -2621,22 +2623,14 @@ export function App() {
             href="/"
             onClick={(event) => navigateWithinApp(event, "/")}
           >
-            三维仿真控制台
+            仿真控制
           </a>
           <a
             className={`surface-tab ${surface === "dashboard" ? "active" : ""}`}
             href="/dashboard"
             onClick={(event) => navigateWithinApp(event, "/dashboard")}
           >
-            数据态势面板
-          </a>
-          <a
-            className="surface-tab surface-tab-external"
-            href={standaloneDashboardHref(window.location.origin)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            弹出数据屏
+            运行概览
           </a>
         </div>
         <div className="topbar-status-cluster" aria-label="前端运行同步状态">
@@ -2651,19 +2645,22 @@ export function App() {
           <div className={`connection-pill ${connectionState}`}>
             {connectionStateLabel(connectionState)}
           </div>
-          <div className="connection-diagnostics" aria-label="连接诊断">
-            {connectionDiagnostics.map((item) => (
-              <span
-                aria-label={item.description ?? `${item.label}：${item.statusLabel}`}
-                className={`connection-diagnostic ${item.status}`}
-                key={item.channel}
-                title={item.description}
-              >
-                <small>{item.detail === undefined ? item.label : `${item.label} · ${item.detail}`}</small>
-                <strong>{item.statusLabel}</strong>
-              </span>
-            ))}
-          </div>
+          <details className="connection-diagnostics" aria-label="连接诊断">
+            <summary>连接详情</summary>
+            <div className="connection-diagnostics-popover">
+              {connectionDiagnostics.map((item) => (
+                <span
+                  aria-label={item.description ?? `${item.label}：${item.statusLabel}`}
+                  className={`connection-diagnostic ${item.status}`}
+                  key={item.channel}
+                  title={item.description}
+                >
+                  <small>{item.detail === undefined ? item.label : `${item.label} · ${item.detail}`}</small>
+                  <strong>{item.statusLabel}</strong>
+                </span>
+              ))}
+            </div>
+          </details>
         </div>
       </header>
       {surface === "dashboard" ? (
@@ -2681,10 +2678,31 @@ export function App() {
             dismissed={backpressureNoticeDismissed}
             onDismiss={dismissBackpressureNotice}
           />
-          <Suspense
+          {!advancedDashboardVisible ? (
+            <UserOverview
+              snapshot={snapshot}
+              runtimeStatus={runtimeStatus}
+              generatedConfig={generatedConfig}
+              displaySimTime={displaySimTime}
+              displayEventCount={displayEventCount}
+              onNavigateControl={(event) => navigateWithinApp(event, "/")}
+              onShowAdvanced={() => setAdvancedDashboardVisible(true)}
+            />
+          ) : (
+            <>
+              <div className="advanced-dashboard-toolbar">
+                <div>
+                  <strong>高级诊断</strong>
+                  <span>面向模型验证、配置审查和运行排障人员</span>
+                </div>
+                <button type="button" onClick={() => setAdvancedDashboardVisible(false)}>
+                  返回运行概览
+                </button>
+              </div>
+              <Suspense
             fallback={
               <div className="surface-loading" role="status">
-                数据面板加载中
+                高级诊断加载中
               </div>
             }
           >
@@ -2946,7 +2964,9 @@ export function App() {
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}
             />
-          </Suspense>
+              </Suspense>
+            </>
+          )}
         </section>
       ) : (
         <section className="workspace control-workspace">

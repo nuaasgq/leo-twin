@@ -5,6 +5,64 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-11 - Frontend User Surface Simplification v1
+
+- Branch: `feature/T454-frontend-user-surface-v1`
+- Commit: pending in this commit
+- Scope: simplify both frontend entry points around normal user decisions. The
+  standalone dashboard now defaults to a compact runtime overview with
+  simulation progress, network quality, route/link health, compute utilization,
+  task status, and two bounded trend charts. The previous full data panel is
+  preserved as an explicitly opened, lazy-loaded `高级诊断` surface. The 3D
+  console dashboard keeps its primary orbit-network-compute summary visible and
+  moves protocol, topology, queue, ground-track, and system diagnostics into a
+  collapsed disclosure. Detailed connection diagnostics are collapsed on
+  desktop and hidden on narrow screens. No backend behavior, Event Kernel,
+  simulation model, protocol contract, packet-level simulation, or forbidden
+  external integration was changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/user_overview/UserOverview.tsx`
+  - `frontend/src/dashboard/Dashboard.tsx`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/userOverview.test.ts`
+  - `frontend/tests/userSurfaceAcceptance.test.js`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test`
+    - Result: passed, 28 test files and 479 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed; TypeScript and Vite production build completed. The
+      existing main-chunk size warning remains informational.
+  - Browser acceptance at `/dashboard`
+    - Result: default view rendered 8 user KPIs, 2 trend charts, and 3 business
+      summaries while the legacy `.data-panel` remained unmounted. Opening
+      `高级诊断` mounted the legacy panel on demand and `返回运行概览` restored
+      the compact view.
+    - Result: desktop and 390 px viewport checks had no horizontal overflow;
+      narrow screens hid synchronization and stream-diagnostic details; browser
+      console reported no frontend errors.
+  - `git diff --check`
+    - Result: passed. Existing line-ending warnings only concern excluded local
+      runtime config files.
+- Problems encountered and handling:
+  - A TypeScript test initially imported `node:fs`, but the frontend TypeScript
+    environment intentionally has no Node typings. Source-structure acceptance
+    assertions were moved to a JavaScript Vitest file while product-logic tests
+    remain in TypeScript.
+  - Browser review found synchronization and connection diagnostics still
+    crowded the mobile header. They are now hidden below 560 px while the
+    user-facing connection status remains visible.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and will not be staged.
+- Known remaining issues / follow-up:
+  - The retained advanced diagnostics bundle is still large and internally
+    complex. It is now isolated from the default user workflow; a later task may
+    split it into operator-specific routes without changing the product-facing
+    overview.
+  - The existing main frontend bundle exceeds Vite's 500 kB advisory threshold.
+    Further code splitting should be handled as a separate performance task.
+
 ## 2026-07-10 - Launcher Tool Discovery v1
 
 - Branch: `feature/T453-launcher-tool-discovery-v1`
