@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-11 - Frontend Control Simplification v1
+
+- Branch: `feature/T455-frontend-control-simplification-v1`
+- Commit: pending in this commit
+- Scope: correct the first frontend simplification so it also covers the `/`
+  simulation-control entry used by normal users. Runtime actions, mode,
+  duration, progress, scale presets, satellite/user/compute-node counts, and
+  traffic class remain visible. Full compute vectors, traffic generation
+  details, orbit controls, visualization layers, protocol/routing controls,
+  physical/channel inputs, and the generated configuration summary remain
+  available through closed disclosure controls. This is a presentation-only
+  change: initialization payload fields and backend semantics are preserved.
+  No Event Kernel, runtime, model, packet-level simulation, or forbidden
+  external integration was changed.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/userSurfaceAcceptance.test.ts`
+  - `frontend/tests/userSurfaceAcceptance.test.js` (removed because the Vitest
+    include policy does not collect JavaScript tests)
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run tests/userSurfaceAcceptance.test.ts --reporter=verbose`
+    - Result: passed, 3 passed. The acceptance test uses Vite raw imports and is
+      collected by the repository's TypeScript-only Vitest include policy.
+  - `pnpm --dir frontend test`
+    - Result: passed, 29 test files and 482 tests after correcting the ignored
+      acceptance-test extension.
+  - `pnpm --dir frontend build`
+    - Result: passed; TypeScript and Vite production build completed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 restart -NoBrowser`
+    - Result: passed; frontend and backend returned HTTP 200 after restart.
+- Problems encountered and handling:
+  - The user opened `/`, while the first simplification primarily changed
+    `/dashboard`. The actual control-panel entry is now simplified as well.
+  - The previous `userSurfaceAcceptance.test.js` was not collected because
+    `vitest.config.ts` includes only `*.test.ts` and `*.test.tsx`. It was
+    replaced with a TypeScript test using `?raw` imports; the corrected test was
+    run directly and passed.
+  - In-app browser automation could fetch the local frontend but its own
+    external telemetry request timed out during the final root-page navigation.
+    Local HTTP health, compiled source, TypeScript build, and collected UI
+    acceptance tests were used as the deterministic validation gates.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and will not be staged.
+- Known remaining issues / follow-up:
+  - The advanced configuration controls remain implemented in one large React
+    component. They are now removed from the default user workflow; splitting
+    them into operator-only modules should be a separate maintainability task.
+
 ## 2026-07-11 - Frontend User Surface Simplification v1
 
 - Branch: `feature/T454-frontend-user-surface-v1`

@@ -1031,6 +1031,9 @@ export function ConfigPanel({
         </div>
       </div>
 
+      <details className="config-subsection" aria-label="专业算力配置">
+        <summary>专业算力配置</summary>
+        <div className="config-subsection-content">
       <div className="control-group">
         <label className="control-label" htmlFor="compute-capacity">
           CPU FP32（GFLOPS）
@@ -1155,10 +1158,12 @@ export function ConfigPanel({
           <option value="EARLIEST_DEADLINE_FIRST">最早截止期优先</option>
         </select>
       </div>
+        </div>
+      </details>
         </section>
 
-        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.orbit}>
-          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.orbit}</div>
+        <details className="config-section config-disclosure" aria-label={CONFIG_PANEL_SECTION_LABELS.orbit}>
+          <summary className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.orbit}</summary>
       <div className="channel-grid" aria-label="轨道参数">
         <div className="control-group">
           <label className="control-label" htmlFor="orbit-update-interval">
@@ -1237,7 +1242,7 @@ export function ConfigPanel({
           </div>
         ))}
       </div>
-        </section>
+        </details>
 
         <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.traffic}>
           <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.traffic}</div>
@@ -1279,6 +1284,9 @@ export function ConfigPanel({
           {trafficCompatibilityNote}
         </div>
 
+        <details className="config-subsection" aria-label="业务详细参数">
+          <summary>业务详细参数</summary>
+          <div className="config-subsection-content channel-grid">
         <div className="control-group">
           <label className="control-label" htmlFor="flow-interval">
             流量间隔
@@ -1379,11 +1387,13 @@ export function ConfigPanel({
             <span>MB</span>
           </div>
         </div>
+          </div>
+        </details>
       </div>
         </section>
 
-        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.runtime}>
-          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.runtime}</div>
+        <details className="config-section config-disclosure" aria-label={CONFIG_PANEL_SECTION_LABELS.runtime}>
+          <summary className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.runtime}</summary>
       <div className="control-group">
         <div className="control-label">可视化图层</div>
         <div className="toggle-grid" aria-label="可视化图层开关">
@@ -1430,10 +1440,10 @@ export function ConfigPanel({
           ))}
         </div>
       </div>
-        </section>
+        </details>
 
-        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.network}>
-          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.network}</div>
+        <details className="config-section config-disclosure" aria-label={CONFIG_PANEL_SECTION_LABELS.network}>
+          <summary className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.network}</summary>
       <div className="scale-preset-grid network-quality-preset-grid" aria-label="网络质量预设">
         {NETWORK_QUALITY_PRESETS.map((preset) => (
           <button
@@ -1588,10 +1598,10 @@ export function ConfigPanel({
           />
         </div>
       </div>
-        </section>
+        </details>
 
-        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.physical}>
-          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.physical}</div>
+        <details className="config-section config-disclosure" aria-label={CONFIG_PANEL_SECTION_LABELS.physical}>
+          <summary className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.physical}</summary>
       <div className="channel-grid" aria-label="信道参数">
         <div className="control-group">
           <label className="control-label" htmlFor="carrier-frequency">
@@ -1762,15 +1772,15 @@ export function ConfigPanel({
           </div>
         </div>
       </div>
-        </section>
+        </details>
 
-        <section
-          className="config-section"
+        <details
+          className="config-section config-disclosure"
           aria-label={CONFIG_PANEL_SECTION_LABELS.activeScenario}
         >
-          <div className="config-section-title">
+          <summary className="config-section-title">
             {CONFIG_PANEL_SECTION_LABELS.activeScenario}
-          </div>
+          </summary>
       <div className="generated-config-summary" aria-label="当前生效场景">
         <div className="summary-title-row">
           <span>当前生效场景</span>
@@ -1822,7 +1832,7 @@ export function ConfigPanel({
           </div>
         </div>
       </div>
-        </section>
+        </details>
       </div>
     </section>
   );
